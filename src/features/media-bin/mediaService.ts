@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { looksLikeMedia, type ProbeErrorCode } from '../../engine/decode/classify';
 import { ProbeError, probeFile } from '../../engine/decode/probe';
 import { newId } from '../../model/factories';
+import { deleteClipsOfAsset } from '../../model/timeline';
 import type { Asset, ID, Project } from '../../model/types';
 import { getMediaFile, hasRoomFor, mediaPathFor, requestPersistentStorage, writeMediaFile } from '../../lib/opfs';
 import { getDerived, putDerived, type DerivedMedia } from '../../store/persistence';
@@ -219,9 +220,13 @@ export async function relinkAsset(asset: Asset, file: File, force = false): Prom
   return 'ok';
 }
 
-/** Undoable; the stored file is kept until the next startup's cleanup so undo still works. */
+/**
+ * Removes the asset and every clip that uses it, as one undo step. The stored file is kept until
+ * the next startup's cleanup so undo still works.
+ */
 export function removeAsset(id: ID) {
   useProjectStore.getState().edit('ops.removeMedia', (p) => {
+    deleteClipsOfAsset(p, id);
     delete p.assets[id];
   });
 }

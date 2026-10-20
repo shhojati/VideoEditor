@@ -27,10 +27,10 @@ describe('parseProject', () => {
 });
 
 describe('factories', () => {
-  it('defaults to 16:9 1080p30 with a video and an audio track', () => {
+  it('defaults to 16:9 1080p30 with an audio track under a video track', () => {
     const p = createProject('x');
     expect(p.settings).toEqual({ width: 1920, height: 1080, fps: 30, sampleRate: 48000 });
-    expect(p.tracks.map((t) => t.kind)).toEqual(['video', 'audio']);
+    expect(p.tracks.map((t) => t.kind)).toEqual(['audio', 'video']);
   });
 
   it('marks Persian/Arabic subtitle tracks as RTL', () => {

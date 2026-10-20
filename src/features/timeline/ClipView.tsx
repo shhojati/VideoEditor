@@ -1,0 +1,177 @@
+import { memo, useEffect, useRef } from 'react';
+import type { Asset, Clip, Track } from '../../model/types';
+import { useMedia } from '../media-bin/mediaService';
+import { beginClipDrag } from './interactions';
+import { TRACK_HEIGHT, useTimelineUi } from './timelineUi';
+
+const COLORS = {
+  video: 'bg-sky-800/90 border-sky-500',
+  image: 'bg-indigo-800/90 border-indigo-400',
+  audio: 'bg-emerald-900/90 border-emerald-500',
+  text: 'bg-amber-800/90 border-amber-500',
+};
+
+interface Props {
+  clip: Clip;
+  track: Track;
+  asset?: Asset;
+  /** Visible time window, for drawing only what is on screen. */
+  view: { t0: number; t1: number };
+  pps: number;
+  selected: boolean;
+}
+
+export const ClipView = memo(function ClipView({ clip, track, asset, view, pps, selected }: Props) {
+  const preview = useTimelineUi((s) => s.drag?.clips[clip.id]);
+  const dragValid = useTimelineUi((s) => s.drag?.valid ?? true);
+  // While dragged to another track, the clip is drawn by that track's lane instead.
+  if (preview && preview.trackId !== track.id) return null;
+  return (
+    <ClipBox
+      clip={preview ? { ...clip, start: preview.start, duration: preview.duration } : clip}
+      original={clip}
+      track={track}
+      asset={asset}
+      view={view}
+      pps={pps}
+      selected={selected}
+      ghost={!!preview}
+      invalid={!!preview && !dragValid}
+    />
+  );
+});
+
+export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invalid?: boolean }) {
+  const { clip, original, track, asset, view, pps, selected, ghost, invalid } = props;
+  const left = clip.start * pps;
+  const width = Math.max(2, clip.duration * pps);
+  const kind = clip.text ? 'text' : (asset?.kind ?? 'video');
+  // Only the on-screen part of the clip gets thumbnails / waveform.
+  const visFrom = Math.max(clip.start, view.t0);
+  const visTo = Math.min(clip.start + clip.duration, view.t1);
+
+  return (
+    <div
+      data-testid="clip"
+      data-clip-id={original.id}
+      data-start={clip.start.toFixed(3)}
+      data-duration={clip.duration.toFixed(3)}
+      data-selected={selected}
+      className={`absolute top-1 overflow-hidden rounded border text-[11px] text-white select-none ${COLORS[kind]} ${
+        selected ? 'ring-2 ring-white' : ''
+      } ${ghost ? 'opacity-80 shadow-lg' : ''} ${invalid ? 'border-red-500! ring-red-500' : ''} ${
+        track.locked ? 'cursor-not-allowed opacity-60' : 'cursor-grab'
+      }`}
+      style={{ left, width, height: TRACK_HEIGHT - 8 }}
+      onPointerDown={(e) => !track.locked && beginClipDrag(e, original.id, 'move')}
+    >
+      {visTo > visFrom && kind === 'video' && <Filmstrip clip={clip} assetId={asset!.id} from={visFrom} to={visTo} pps={pps} />}
+      {visTo > visFrom && (kind === 'audio' || kind === 'image') && (
+        <ClipPreviewStrip clip={clip} asset={asset!} from={visFrom} to={visTo} pps={pps} />
+      )}
+      <span className="pointer-events-none absolute start-1 top-0.5 max-w-full truncate rounded bg-black/50 px-1" dir="auto">
+        {clip.text?.content ?? asset?.name ?? ''}
+      </span>
+      {!track.locked && (
+        <>
+          <div
+            data-testid="trim-start"
+            className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize hover:bg-white/60"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              beginClipDrag(e, original.id, 'trim-start');
+            }}
+          />
+          <div
+            data-testid="trim-end"
+            className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize hover:bg-white/60"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              beginClipDrag(e, original.id, 'trim-end');
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+interface StripProps {
+  clip: Clip;
+  from: number;
+  to: number;
+  pps: number;
+}
+
+/** Thumbnails tiled along the clip; each tile shows the cached frame nearest to its source time. */
+function Filmstrip({ clip, assetId, from, to, pps }: StripProps & { assetId: string }) {
+  const thumbs = useMedia((s) => s.assets[assetId]?.thumbs);
+  if (!thumbs?.urls.length) return null;
+  const h = TRACK_HEIGHT - 10;
+  const tileW = (thumbs.width / thumbs.height) * h;
+  const tileSec = tileW / pps;
+  const first = Math.floor((from - clip.start) / tileSec);
+  const tiles = [];
+  for (let i = first; clip.start + i * tileSec < to; i++) {
+    const srcTime = clip.inPoint + (i + 0.5) * tileSec * clip.speed;
+    let best = 0;
+    for (let k = 1; k < thumbs.times.length; k++)
+      if (Math.abs(thumbs.times[k] - srcTime) < Math.abs(thumbs.times[best] - srcTime)) best = k;
+    tiles.push(
+      <img
+        key={i}
+        src={thumbs.urls[best]}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute top-0 opacity-70"
+        style={{ left: i * tileW, width: tileW, height: h }}
+      />,
+    );
+  }
+  return <>{tiles}</>;
+}
+
+/** Waveform (audio) or repeated still (image), drawn for the visible part only. */
+function ClipPreviewStrip({ clip, asset, from, to, pps }: StripProps & { asset: Asset }) {
+  const media = useMedia((s) => s.assets[asset.id]);
+  const ref = useRef<HTMLCanvasElement>(null);
+  const width = Math.ceil((to - from) * pps);
+  const left = (from - clip.start) * pps;
+  const h = TRACK_HEIGHT - 10;
+  const peaks = media?.waveform;
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || !peaks || width <= 0) return;
+    canvas.width = width;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = 'rgba(167, 243, 208, 0.75)';
+    const buckets = peaks.peaks.length / 2;
+    for (let x = 0; x < width; x++) {
+      const tA = clip.inPoint + ((from - clip.start) + x / pps) * clip.speed;
+      const tB = clip.inPoint + ((from - clip.start) + (x + 1) / pps) * clip.speed;
+      const a = Math.max(0, Math.floor(tA * peaks.peaksPerSecond));
+      const b = Math.min(buckets, Math.max(a + 1, Math.floor(tB * peaks.peaksPerSecond)));
+      let min = 0;
+      let max = 0;
+      for (let k = a; k < b; k++) {
+        min = Math.min(min, peaks.peaks[2 * k]);
+        max = Math.max(max, peaks.peaks[2 * k + 1]);
+      }
+      const y0 = ((1 - max) / 2) * h;
+      ctx.fillRect(x, y0, 1, Math.max(1, ((max - min) / 2) * h));
+    }
+  }, [peaks, width, h, from, clip.start, clip.inPoint, clip.speed, pps]);
+
+  if (asset.kind === 'image') {
+    const url = media?.thumbs?.urls[0];
+    return url ? (
+      <div
+        className="pointer-events-none absolute top-0 opacity-60"
+        style={{ left, width, height: h, backgroundImage: `url(${url})`, backgroundSize: 'auto 100%' }}
+      />
+    ) : null;
+  }
+  return <canvas ref={ref} className="pointer-events-none absolute top-0" style={{ left, width, height: h }} />;
+}

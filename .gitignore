@@ -7,3 +7,5 @@ public/fonts
 public/spike-data
 *.log
 .npmrc
+test-results
+playwright-report

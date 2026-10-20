@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ACCEPT_ATTR } from '../../engine/decode/classify';
 import { formatBytes, formatDuration } from '../../lib/time';
 import type { Asset } from '../../model/types';
+import { assetDrag, useTimelineUi } from '../timeline/timelineUi';
 import { relinkAsset, removeAsset, useMedia, type AssetMediaState } from './mediaService';
 
 const KIND_ICON = { video: '🎬', audio: '🎵', image: '🖼' } as const;
@@ -37,7 +38,17 @@ export function AssetCard({ asset }: { asset: Asset }) {
 
   return (
     <li
-      className="group relative overflow-hidden rounded bg-surface-2 text-xs"
+      draggable={status !== 'missing'}
+      onDragStart={(e) => {
+        assetDrag.assetId = asset.id;
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('application/x-video-editor-asset', asset.id);
+      }}
+      onDragEnd={() => {
+        assetDrag.assetId = null;
+        useTimelineUi.setState({ drag: null });
+      }}
+      className="group relative cursor-grab overflow-hidden rounded bg-surface-2 text-xs"
       data-testid="asset-card"
       data-status={status}
       data-kind={asset.kind}

@@ -46,7 +46,8 @@ export function createProject(name: string, aspect: AspectPreset = '16:9'): Proj
     version: CURRENT_VERSION,
     settings: { ...ASPECT_PRESETS[aspect], fps: 30, sampleRate: 48_000 },
     assets: {},
-    tracks: [createTrack('video'), createTrack('audio')],
+    // Bottom -> top, so the timeline shows video above audio.
+    tracks: [createTrack('audio'), createTrack('video')],
     subtitleTracks: [],
   };
 }

@@ -56,5 +56,29 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 - Removing an asset does not yet check for clips that use it (no clips exist until Phase 3).
 - Filmstrip resolution is fixed at import; the timeline may want denser frames when zoomed in (Phase 3).
 
-### Next: Phase 3 — Timeline editing
-First task: timeline ruler + zoom/scroll + playhead, then drag an asset from the bin onto a track to create a `Clip` (start, duration, inPoint) through `edit()`.
+## Phase 3 — Timeline editing ✅ (2026-10-20)
+
+### Done
+- **Pure operations** (`model/timeline.ts`): create clip from asset, free-space search, split (keeps source continuity and speed), trim with limits (neighbours, source length, 0.1 s minimum; images unlimited), multi-clip move with collision checks, delete / ripple delete, copy / paste / duplicate, edit points. Invariant: clips on a track never overlap and stay sorted.
+- **View** (`features/timeline`): canvas ruler, Ctrl+wheel zoom around the pointer, +/−/Fit buttons, native horizontal + vertical scroll, sticky track headers, playhead with ruler scrubbing, timecode. Video clips show a filmstrip, audio clips a waveform, images a repeated still. Locked tracks are hatched and inert.
+- **Virtualisation**: only clips inside the visible window (in quarter-viewport chunks) are mounted, and only their visible part draws thumbnails/waveforms. ~100 clips over an 11-minute timeline → 7–9 clips mounted.
+- **Interactions**: drag from the media bin (ghost preview, snaps, lands in the nearest free spot; incompatible track or the bottom zone → new track); drag clips (multi-select moves together, across tracks of the same kind); trim either edge; click / Shift- or Ctrl-click selection. Gestures only change a preview and commit once on release → one undo step each; Escape cancels.
+- **Snapping** (`snapping.ts`): to clip edges, playhead, subtitle cue boundaries; 8 px threshold; toolbar magnet toggle; hold Alt to bypass.
+- **Shortcuts** (by physical key, so they also work on a Persian keyboard layout): Space play/pause, S split (selection, or everything under the playhead), Delete / Shift+Delete ripple, ←/→ one frame (Shift: 10), ↑/↓ previous/next edit point, Home/End, Ctrl+C/V/D/A, Ctrl+Z/Y/Shift+Z, Ctrl +/−, Esc.
+- Removing an asset also removes its clips (same undo step). New projects stack audio below video; "+ Audio track" adds at the bottom.
+- **Transport** (`store/transport.ts`): playhead + play state with a temporary wall-clock loop so playback moves the playhead; Phase 4 swaps in the audio-master clock.
+
+### Verified
+- 66 unit tests (adds 22 for timeline ops + snapping).
+- **Playwright E2E** (`npm run e2e`, uses the installed Chrome, no browser download): import → drag to timeline → split at 3 s → trim → move → undo/redo → reload, all asserted on clip positions.
+- In the browser: drops onto occupied / incompatible tracks, mouse move and trim, split/undo/redo via keys.
+- Performance with ~100 clips: scroll ≈ 3 ms per update, zoom ≈ 6 ms median (spikes to ~30 ms). No long tasks. Measured in the hidden in-app browser pane; re-check in a foreground Chrome window.
+
+### Deferred / known issues
+- No marquee (rubber-band) selection and no "magnetic main track" auto-close of gaps (ripple delete covers the common case).
+- Text clips cannot be created yet (Phase 5); the Text track accepts nothing.
+- Zoom re-renders all visible clips; fine at this scale, revisit if the zoom spikes are noticeable.
+- Filmstrip density is fixed at import (4–40 frames); at high zoom neighbouring tiles repeat a frame.
+
+### Next: Phase 4 — Preview and playback
+First task: `renderFrame(project, time, ctx)` for video/image clips (transform, opacity, crop) using a per-asset frame cache on Mediabunny's `CanvasSink`, drawn into the preview canvas when the playhead moves while paused.

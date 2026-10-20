@@ -36,7 +36,14 @@
     "toggleLock": "Toggle track lock",
     "importMedia": "Import media",
     "removeMedia": "Remove media",
-    "relinkMedia": "Relink file"
+    "relinkMedia": "Relink file",
+    "addClip": "Add clip",
+    "moveClips": "Move clips",
+    "trimClip": "Trim clip",
+    "split": "Split",
+    "deleteClips": "Delete clips",
+    "rippleDelete": "Ripple delete",
+    "paste": "Paste"
   },
   "panels": {
     "media": "Media",
@@ -94,5 +101,16 @@
       "kindMismatch": "The chosen file is not the same kind as the original.",
       "durationMismatch": "This file has a different duration than the original. Replace anyway?"
     }
+  },
+  "timeline": {
+    "split": "Split",
+    "delete": "Delete",
+    "snap": "Snap",
+    "snapHint": "Snap to clip edges and the playhead (hold Alt to disable temporarily)",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Fit",
+    "dropHint": "Drag media here from the Media panel",
+    "newTrackHint": "Drop here to create a new track"
   }
 }

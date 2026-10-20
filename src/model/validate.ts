@@ -56,6 +56,11 @@ const asset = z.object({
   duration: nonNeg.optional(),
   width: num.positive().optional(),
   height: num.positive().optional(),
+  fps: num.positive().optional(),
+  hasAudio: z.boolean().optional(),
+  size: nonNeg.optional(),
+  mimeType: z.string().optional(),
+  codecs: z.object({ video: z.string().optional(), audio: z.string().optional() }).optional(),
   fileRef: z.object({ opfsPath: z.string().optional(), handleKey: z.string().optional() }),
 });
 

@@ -36,6 +36,14 @@ export interface Asset {
   duration?: number;
   width?: number;
   height?: number;
+  /** Average frame rate of the video track. */
+  fps?: number;
+  /** False when the file has no (decodable) audio track. */
+  hasAudio?: boolean;
+  /** Bytes; used to sanity-check a relinked file. */
+  size?: number;
+  mimeType?: string;
+  codecs?: { video?: string; audio?: string };
   /** How to re-open the media: a copy in OPFS, or a File System Access handle stored in IndexedDB. */
   fileRef: { opfsPath?: string; handleKey?: string };
 }

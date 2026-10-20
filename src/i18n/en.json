@@ -1,5 +1,8 @@
 {
-  "app": { "title": "Video Editor", "untitled": "Untitled project" },
+  "app": {
+    "title": "Video Editor",
+    "untitled": "Untitled project"
+  },
   "project": {
     "menu": "Projects",
     "new": "New project",
@@ -11,8 +14,18 @@
     "empty": "No projects",
     "loadError": "Could not open project: {{error}}"
   },
-  "save": { "saved": "Saved", "pending": "Unsaved changes", "saving": "Saving…", "error": "Save failed" },
-  "edit": { "undo": "Undo", "redo": "Redo", "undoWith": "Undo: {{label}}", "redoWith": "Redo: {{label}}" },
+  "save": {
+    "saved": "Saved",
+    "pending": "Unsaved changes",
+    "saving": "Saving…",
+    "error": "Save failed"
+  },
+  "edit": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoWith": "Undo: {{label}}",
+    "redoWith": "Redo: {{label}}"
+  },
   "ops": {
     "rename": "Rename",
     "aspect": "Change aspect ratio",
@@ -20,17 +33,66 @@
     "addTrack": "Add track",
     "removeTrack": "Remove track",
     "toggleMute": "Toggle mute",
-    "toggleLock": "Toggle track lock"
+    "toggleLock": "Toggle track lock",
+    "importMedia": "Import media",
+    "removeMedia": "Remove media",
+    "relinkMedia": "Relink file"
   },
   "panels": {
     "media": "Media",
-    "mediaEmpty": "Drop video, audio or image files here (Phase 2)",
     "preview": "Preview",
     "inspector": "Properties",
     "timeline": "Timeline"
   },
-  "settings": { "title": "Project settings", "aspect": "Aspect ratio", "fps": "Frame rate", "size": "Size" },
-  "track": { "video": "Video", "audio": "Audio", "text": "Text", "add": "+ {{kind}} track", "mute": "Mute", "lock": "Lock", "remove": "Remove track", "empty": "No tracks" },
-  "lang": { "switch": "فارسی" },
-  "browser": { "limited": "This browser has limited support. Use the latest Chrome or Edge for the best results." }
+  "settings": {
+    "title": "Project settings",
+    "aspect": "Aspect ratio",
+    "fps": "Frame rate",
+    "size": "Size"
+  },
+  "track": {
+    "video": "Video",
+    "audio": "Audio",
+    "text": "Text",
+    "add": "+ {{kind}} track",
+    "mute": "Mute",
+    "lock": "Lock",
+    "remove": "Remove track",
+    "empty": "No tracks"
+  },
+  "lang": {
+    "switch": "فارسی"
+  },
+  "browser": {
+    "limited": "This browser has limited support. Use the latest Chrome or Edge for the best results."
+  },
+  "media": {
+    "import": "+ Import files",
+    "empty": "Drop video, audio or image files here, or click Import files",
+    "privacy": "Files are stored only on this device (browser storage) and are never uploaded.",
+    "dismiss": "Dismiss",
+    "remove": "Remove from project",
+    "missing": "File not found",
+    "stage": {
+      "probing": "Checking file…",
+      "copying": "Saving to browser storage…"
+    },
+    "errors": {
+      "unsupportedFormat": "This file format is not supported.",
+      "noTracks": "The file has no audio or video track.",
+      "videoCodec": "The video codec ({{codec}}) cannot be decoded in this browser. Convert it to H.264 (MP4).",
+      "audioCodec": "The audio codec ({{codec}}) cannot be decoded in this browser.",
+      "image": "This image cannot be read.",
+      "quota": "Not enough browser storage space.",
+      "copy": "Saving the file failed."
+    },
+    "warnings": {
+      "audioCodec": "The audio ({{codec}}) cannot be decoded; only the picture will be used."
+    },
+    "relink": {
+      "action": "Choose file",
+      "kindMismatch": "The chosen file is not the same kind as the original.",
+      "durationMismatch": "This file has a different duration than the original. Replace anyway?"
+    }
+  }
 }

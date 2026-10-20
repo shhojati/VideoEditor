@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { bootstrap } from '../features/projects/session';
 import { MediaBin } from '../features/media-bin/MediaBin';
+import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
 import { Inspector } from '../features/inspector/Inspector';
 import { TimelinePanel } from '../features/timeline/TimelinePanel';
@@ -17,9 +18,13 @@ export function App() {
   useGlobalShortcuts();
 
   useEffect(() => {
-    const stop = startAutosave();
+    const stopAutosave = startAutosave();
+    const stopMedia = startMediaWatcher();
     void bootstrap(t('app.untitled'));
-    return stop;
+    return () => {
+      stopAutosave();
+      stopMedia();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on startup
   }, []);
 

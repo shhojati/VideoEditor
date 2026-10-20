@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { createProject, type AspectPreset } from '../../model/factories';
 import type { ID } from '../../model/types';
+import { gcMedia } from '../../store/mediaGc';
 import * as db from '../../store/persistence';
 import { useProjectStore } from '../../store/projectStore';
 
@@ -70,6 +71,11 @@ export function bootstrap(defaultName: string): Promise<void> {
 }
 
 async function doBootstrap(defaultName: string) {
+  try {
+    await gcMedia();
+  } catch (e) {
+    console.warn('media cleanup skipped', e); // e.g. OPFS unavailable; never block startup
+  }
   await refreshList();
   const candidates = [await db.getLastProjectId(), ...useProjectList.getState().projects.map((p) => p.id)];
   let firstError: string | undefined;

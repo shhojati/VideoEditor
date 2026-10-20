@@ -108,6 +108,8 @@ export function splitClips(p: Project, time: number, clipIds?: ReadonlySet<ID>):
       right.audio.fadeIn = 0;
       clip.duration = offset;
       clip.audio.fadeOut = 0;
+      // A transition leaving the clip now leaves its right-hand part.
+      for (const t of track.transitions ?? []) if (t.fromClipId === clip.id) t.fromClipId = right.id;
       insertClip(track, right);
       created.push(right.id);
     }

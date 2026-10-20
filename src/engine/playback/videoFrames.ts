@@ -4,7 +4,8 @@
 import type { VideoSample, VideoSampleSink } from 'mediabunny';
 import type { Clip, ID, Project } from '../../model/types';
 import { readers } from '../decode/mediaReader';
-import { sourceTimeAt, visualClipsAt, type Drawable } from '../render/renderFrame';
+import { clipVisibleRange } from '../../model/transitions';
+import { frameSourceTime, visualClipsAt, type Drawable } from '../render/renderFrame';
 
 const READ_AHEAD = 6;
 /** Start decoding clips this long before they become visible during playback (s). */
@@ -90,7 +91,7 @@ export class VideoFrames {
     for (const { clip } of active) {
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
       if (asset?.kind !== 'video') continue;
-      const src = sourceTimeAt(clip, t);
+      const src = frameSourceTime(clip, t, asset.duration);
       const held = this.held.get(clip.id);
       if (held && covers(held, src)) continue;
       const entry = this.seeks.get(clip.id) ?? { busy: false };
@@ -137,14 +138,16 @@ export class VideoFrames {
       if (track.kind !== 'video') continue;
       for (const clip of track.clips) {
         if (this.streams.has(clip.id)) continue;
-        const end = clip.start + clip.duration;
-        if (end <= t || clip.start > t + PREROLL) continue;
+        // Transitions make a clip visible before its start and after its end.
+        const vis = clipVisibleRange(track, clip);
+        if (vis.end <= t || vis.start > t + PREROLL) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (asset?.kind !== 'video') continue;
         const sink = readers.peek(asset)?.video;
         if (!sink) continue; // opens in the background; picked up on a later frame
-        const from = sourceTimeAt(clip, Math.max(t, clip.start));
-        this.streams.set(clip.id, new ClipStream(sink, from, clip.inPoint + clip.duration * clip.speed));
+        const from = frameSourceTime(clip, Math.max(t, vis.start), asset.duration);
+        const to = frameSourceTime(clip, vis.end, asset.duration) + 1e-3;
+        this.streams.set(clip.id, new ClipStream(sink, from, to));
       }
     }
   }
@@ -158,7 +161,7 @@ export class VideoFrames {
       active.add(clip.id);
       const stream = this.streams.get(clip.id);
       if (!stream) continue;
-      const src = sourceTimeAt(clip, t);
+      const src = frameSourceTime(clip, t, clip.assetId ? project.assets[clip.assetId]?.duration : undefined);
       const frame = stream.take(src);
       if (frame) this.setHeld(clip.id, frame);
       const held = this.held.get(clip.id);
@@ -176,8 +179,9 @@ export class VideoFrames {
     }
     // Finished clips release their stream and frame.
     for (const [id, s] of this.streams) {
-      const ref = project.tracks.flatMap((tr) => tr.clips).find((c) => c.id === id);
-      if (!ref || ref.start + ref.duration <= t) {
+      const track = project.tracks.find((tr) => tr.clips.some((c) => c.id === id));
+      const ref = track?.clips.find((c) => c.id === id);
+      if (!track || !ref || clipVisibleRange(track, ref).end <= t) {
         s.cancel();
         this.streams.delete(id);
       }

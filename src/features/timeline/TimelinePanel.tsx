@@ -12,6 +12,8 @@ import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
 import { Ruler } from './Ruler';
 import { SubtitleLane } from './SubtitleLane';
+import { CutMarkers } from './CutMarkers';
+import { onTransitionDragOver, onTransitionDrop } from '../transitions/transitionActions';
 import { HEADER_WIDTH, RULER_HEIGHT, select, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
 const KINDS: TrackKind[] = ['video', 'audio', 'text'];
@@ -213,9 +215,9 @@ const TrackRow = memo(function TrackRow({
         onPointerDown={(e) => {
           if (e.target === e.currentTarget && !e.shiftKey && !e.ctrlKey) select([]);
         }}
-        onDragOver={(e) => onLaneDragOver(e, track.id)}
+        onDragOver={(e) => onTransitionDragOver(e, project, track.id) || onLaneDragOver(e, track.id)}
         onDragLeave={onLaneDragLeave}
-        onDrop={(e) => onLaneDrop(e, track.id)}
+        onDrop={(e) => onTransitionDrop(e, project, track.id) || onLaneDrop(e, track.id)}
       >
         {visible.map((clip) => (
           <ClipView
@@ -247,6 +249,7 @@ const TrackRow = memo(function TrackRow({
           );
         })}
         {assetGhost && <AssetGhost start={assetGhost.start} duration={assetGhost.duration} pps={pps} />}
+        <CutMarkers project={project} track={track} pps={pps} />
       </div>
     </div>
   );

@@ -30,6 +30,8 @@ interface TimelineUiState {
   selection: ID[];
   snapping: boolean;
   drag: DragPreview | null;
+  /** Cut highlighted while a transition card is dragged over it (cutKey). */
+  cutHover?: string;
 }
 
 export const useTimelineUi = create<TimelineUiState>()(() => ({

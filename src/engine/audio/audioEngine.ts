@@ -4,7 +4,7 @@
 // is the master clock for the whole player (plan §4.4).
 import type { Clip, Project } from '../../model/types';
 import { readers } from '../decode/mediaReader';
-import { clipGainAt } from '../fade';
+import { audioEnvelope, type AudioEnvelope } from '../fade';
 import { sourceTimeAt } from '../render/renderFrame';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
@@ -49,10 +49,11 @@ export class AudioEngine {
     for (const track of project.tracks) {
       if (track.muted || track.kind === 'text') continue;
       for (const clip of track.clips) {
-        if (clip.start + clip.duration <= t0 || clip.audio.volume <= 0) continue;
+        const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined));
+        if (env.end <= t0 || clip.audio.volume <= 0) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;
-        void this.playClip(clip, asset, gen);
+        void this.playClip(clip, env, asset, gen);
       }
     }
   }
@@ -70,10 +71,11 @@ export class AudioEngine {
     return this.ctxStart + (t - this.t0);
   }
 
-  private async playClip(clip: Clip, asset: NonNullable<Project['assets'][string]>, gen: number) {
+  private async playClip(clip: Clip, env: AudioEnvelope, asset: NonNullable<Project['assets'][string]>, gen: number) {
     const ctx = this.ctx!;
-    const from = Math.max(this.t0, clip.start);
-    const end = clip.start + clip.duration;
+    // Transitions extend the audible range past the clip's own edges.
+    const from = Math.max(this.t0, env.start);
+    const end = env.end;
     // Wait until the clip is close enough to bother decoding.
     while (gen === this.generation && this.toCtx(from) - ctx.currentTime > SCHEDULE_AHEAD) await sleep(250);
     if (gen !== this.generation) return;
@@ -83,10 +85,11 @@ export class AudioEngine {
     const gain = ctx.createGain();
     gain.connect(this.master!);
     this.gains.push(gain);
-    scheduleGain(gain.gain, clip, from, end, (t) => this.toCtx(t));
+    scheduleEnvelope(gain.gain, env, from, end, (t) => this.toCtx(t));
 
-    const srcFrom = sourceTimeAt(clip, from);
-    const srcTo = clip.inPoint + clip.duration * clip.speed;
+    // Before the source starts there is nothing to play (silence), so clamp to 0.
+    const srcFrom = Math.max(0, sourceTimeAt(clip, from));
+    const srcTo = sourceTimeAt(clip, end);
     try {
       for await (const { buffer, timestamp } of reader.audio.buffers(srcFrom, srcTo)) {
         if (gen !== this.generation) return;
@@ -136,16 +139,18 @@ export class AudioEngine {
   }
 }
 
-/** Volume and linear fades as gain automation, starting mid-clip if playback starts there. */
-export function scheduleGain(param: AudioParam, clip: Clip, from: number, end: number, toCtx: (t: number) => number) {
-  const { fadeIn, fadeOut } = clip.audio;
-  param.setValueAtTime(clipGainAt(clip, from), toCtx(from));
-  const fadeInEnd = clip.start + fadeIn;
-  if (fadeIn > 0 && fadeInEnd > from) param.linearRampToValueAtTime(clipGainAt(clip, fadeInEnd), toCtx(fadeInEnd));
-  if (fadeOut > 0) {
-    const fadeOutStart = end - fadeOut;
-    if (fadeOutStart > from) param.setValueAtTime(clipGainAt(clip, fadeOutStart), toCtx(fadeOutStart));
-    param.linearRampToValueAtTime(0, toCtx(end));
+/**
+ * Gain automation for an envelope from timeline time `from` to `end`: a fixed value, plus a value curve
+ * over each ramp (fades, transition crossfades). Starting mid-ramp starts mid-curve.
+ */
+export function scheduleEnvelope(param: AudioParam, env: AudioEnvelope, from: number, end: number, toCtx: (t: number) => number) {
+  const ramps = env.ramps.map(([a, b]) => [Math.max(a, from), Math.min(b, end)] as const).filter(([a, b]) => b - a > 1e-3);
+  // An event at the very start of a curve would overlap it (Web Audio rejects that).
+  if (!ramps.length || ramps[0][0] > from + 1e-3) param.setValueAtTime(env.gainAt(from), toCtx(from));
+  for (const [a, b] of ramps) {
+    const n = Math.max(2, Math.ceil((b - a) * 60));
+    const curve = Float32Array.from({ length: n }, (_, i) => env.gainAt(a + ((b - a) * i) / (n - 1)));
+    param.setValueCurveAtTime(curve, toCtx(a), b - a);
   }
 }
 

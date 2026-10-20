@@ -212,4 +212,37 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 - Bundler emits a second, unused 27 MB copy of the ONNX Runtime WASM (`dist/assets`), referenced by transformers.js internally.
 - No CI server configured (no remote repository); `npm run ci` is ready to drop into one.
 
-### Next: transitions (post-MVP, see above)
+## Post-MVP 1 — Transitions ✅ (2026-10-20)
+
+### Done
+- **Model** (`model/transitions.ts`): `Track.transitions` — kind, duration, from/to clip on a cut between touching clips. The transition is centred on the cut, defaults to 0.5 s and is capped at 3 s, and each half fits inside its clip next to that clip's other transition. **14 kinds**:
+  - crossfade
+  - dip to black / white
+  - wipe left / right / up / down
+  - slide left / right
+  - push left / right
+  - zoom in / out
+  - blur
+
+  Audio tracks accept crossfade only.
+- **Always valid**: every `edit()` ends with `normalizeTransitions`, so transitions are dropped when clips move apart or are deleted, shortened when a trim makes them too long, and moved to the right-hand part when the outgoing clip is split. No-op edits stay no-ops.
+- **Rendering** (`render/transitions.ts`, `renderFrame.ts`): a per-track draw plan (plain clip or transition at progress p) blended in `renderFrame`, so preview = export. Motion uses smoothstep easing. Text and media alpha now multiply, so transitions also fade text clips.
+- **Footage beyond the cut**: the outgoing clip keeps playing and the incoming clip starts early, using real media where it exists; otherwise the first/last frame is held. Preview streams and export exact frames decode both clips over the extended range.
+- **Audio crossfade**: equal-power (sin/cos) over the part of the window where both clips have real audio. With handles it is a full crossfade at constant power; without them it shrinks to a clean cut (no level dip). The same envelope drives Web Audio value curves in the player and the export mix; clip fades still apply on sides without a transition.
+- **UI**: a **Transitions** tab (drag a card onto a cut; the target cut highlights). Every cut gets a ◆ marker, and each transition a badge spanning its duration; both sit in a bottom strip so trim handles stay usable. The inspector picks the type and duration (one undo step per drag) and removes it; Delete also removes a selected transition. fa/en strings.
+
+### Verified
+- 150 unit tests (adds rules, validity after move/delete/trim/split, blend maths per kind, draw plan, equal-power envelopes with and without handles).
+- **E2E `e2e/transitions.spec.ts`**: red and blue clips with tones and 0.5 s handles; Crossfade dragged from the tab onto the cut; duration 1 s.
+  - Preview midpoint (127,0,128) matches the exported frame (127,0,127), with pure colours outside the window and the timeline length unchanged.
+  - Audio RMS at the cut 0.209 vs 0.211 beside it: constant power.
+  - Switching to Dip to black gives a black midpoint; undo restores the crossfade; moving a clip away removes the transition.
+- All other E2E, production smoke and axe still pass. An earlier marker position blocked trimming at a cut; the timeline E2E caught it and the markers moved to the bottom strip.
+
+### Known issues / not done
+- Transitions only between clips on the same track that touch; no "transition from/to black" at the timeline start or end yet (use dip on a cut, or a fade).
+- Without handles video holds a frame; there is no automatic overlap mode (CapCut-style shortening of the timeline) as an alternative.
+- No per-transition easing or direction options beyond the 14 kinds.
+
+### Next
+Owner to try the MVP plus transitions on real footage, the internal server and VLC.

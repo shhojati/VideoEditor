@@ -21,9 +21,11 @@ import {
 } from 'mediabunny';
 import { ensureAacEncoder, type AacSource } from '../engine/export/aac';
 import { audibleClips, limit, mixClip, type DecodedRange } from '../engine/export/audioMix';
+import { audioEnvelope } from '../engine/fade';
 import { AUDIO_BITRATE, AUDIO_RATE, frameCount, outputSize, videoBitrate, type ExportSettings } from '../engine/export/settings';
 import { MediaReader } from '../engine/decode/mediaReader';
-import { renderFrame, sourceTimeAt, visualClipsAt, type Drawable } from '../engine/render/renderFrame';
+import { frameSourceTime, renderFrame, sourceTimeAt, visualClipsAt, type Drawable } from '../engine/render/renderFrame';
+import { clipVisibleRange } from '../model/transitions';
 import { ensureFont } from '../lib/fonts';
 import { getMediaFile } from '../lib/opfs';
 import { timelineDuration } from '../model/timeline';
@@ -70,16 +72,16 @@ class ExactClipFrames {
   private done = false;
 
   constructor(
-    private readonly clip: Clip,
     private readonly opfsPath: string,
+    /** Last source time needed (extended for an outgoing transition). */
+    private readonly srcEnd: number,
   ) {}
 
   async at(srcTime: number): Promise<VideoSample | null> {
     if (!this.it) {
       const track = await (await openInput(this.opfsPath)).getPrimaryVideoTrack();
       if (!track) return null;
-      const end = this.clip.inPoint + this.clip.duration * this.clip.speed;
-      this.it = new VideoSampleSink(track).samples(srcTime, end);
+      this.it = new VideoSampleSink(track).samples(srcTime, this.srcEnd + 1e-3);
       this.cur = (await this.it.next()).value ?? null;
       this.next = (await this.it.next()).value ?? null;
     }
@@ -141,9 +143,11 @@ async function mixAudio(project: Project, duration: number): Promise<[Float32Arr
   if (!clips.length) return null;
   const n = Math.ceil(duration * AUDIO_RATE);
   const mix: [Float32Array, Float32Array] = [new Float32Array(n), new Float32Array(n)];
-  for (const [i, { clip, opfsPath }] of clips.entries()) {
-    const range = await decodeRange(opfsPath, clip.inPoint, clip.inPoint + clip.duration * clip.speed);
-    if (range) mixClip(mix, AUDIO_RATE, clip, range);
+  for (const [i, { clip, track, opfsPath }] of clips.entries()) {
+    // Transitions extend a clip's audible range (crossfades) past its own edges.
+    const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined));
+    const range = await decodeRange(opfsPath, Math.max(0, sourceTimeAt(clip, env.start)), sourceTimeAt(clip, env.end));
+    if (range) mixClip(mix, AUDIO_RATE, clip, range, env);
     post({ type: 'progress', phase: 'audio', done: i + 1, total: clips.length });
   }
   limit(mix);
@@ -225,7 +229,7 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
         streams.delete(id);
       }
       held.clear();
-      for (const { clip } of active) {
+      for (const { clip, track } of active) {
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset?.fileRef.opfsPath) continue;
         if (asset.kind === 'image') {
@@ -234,8 +238,11 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
           if (img) held.set(clip.id, img);
         } else if (asset.kind === 'video') {
           let s = streams.get(clip.id);
-          if (!s) streams.set(clip.id, (s = new ExactClipFrames(clip, asset.fileRef.opfsPath)));
-          const frame = await s.at(sourceTimeAt(clip, t));
+          if (!s) {
+            const srcEnd = frameSourceTime(clip, clipVisibleRange(track, clip).end, asset.duration);
+            streams.set(clip.id, (s = new ExactClipFrames(asset.fileRef.opfsPath, srcEnd)));
+          }
+          const frame = await s.at(frameSourceTime(clip, t, asset.duration));
           if (frame) held.set(clip.id, frame);
         }
       }

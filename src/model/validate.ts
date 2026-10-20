@@ -51,6 +51,17 @@ const track = z.object({
   muted: z.boolean(),
   locked: z.boolean(),
   clips: z.array(clip),
+  transitions: z
+    .array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(['crossfade', 'dipBlack', 'dipWhite', 'wipeLeft', 'wipeRight', 'wipeUp', 'wipeDown', 'slideLeft', 'slideRight', 'pushLeft', 'pushRight', 'zoomIn', 'zoomOut', 'blur']),
+        duration: num.positive(),
+        fromClipId: z.string(),
+        toClipId: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 const asset = z.object({

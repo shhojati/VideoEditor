@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { normalizeTransitions } from '../model/transitions';
 import type { Project } from '../model/types';
 import * as H from './history';
 
@@ -18,7 +19,18 @@ export const useProjectStore = create<ProjectState>()((set) => ({
   load: (project) => set({ history: H.createHistory(project) }),
   close: () => set({ history: null }),
   edit: (label, recipe, opts) =>
-    set((s) => (s.history ? { history: H.edit(s.history, label, recipe, opts) } : s)),
+    set((s) =>
+      s.history
+        ? {
+            // Every edit ends with the transition clean-up, so moves/trims/deletes never leave a
+            // transition on clips that no longer touch.
+            history: H.edit(s.history, label, (d) => {
+              recipe(d);
+              normalizeTransitions(d);
+            }, opts),
+          }
+        : s,
+    ),
   undo: () => set((s) => (s.history ? { history: H.undo(s.history) } : s)),
   redo: () => set((s) => (s.history ? { history: H.redo(s.history) } : s)),
 }));

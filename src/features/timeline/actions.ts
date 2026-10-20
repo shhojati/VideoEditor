@@ -13,6 +13,7 @@ import {
 import type { ID, Project } from '../../model/types';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
+import { findTransition, removeTransitions } from '../../model/transitions';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clampPps, HEADER_WIDTH, select, useTimelineUi } from './timelineUi';
@@ -69,10 +70,12 @@ export function deleteSelection(ripple = false) {
   if (!p) return;
   const sel = editableSelection(p);
   const cues = new Set(useTimelineUi.getState().selection.filter((id) => findCue(p, id)));
-  if (!sel.size && !cues.size) return;
+  const transitions = new Set(useTimelineUi.getState().selection.filter((id) => findTransition(p, id)));
+  if (!sel.size && !cues.size && !transitions.size) return;
   edit(ripple ? 'ops.rippleDelete' : 'ops.deleteClips', (d) => {
     deleteClips(d, sel, ripple);
     deleteCues(d, cues);
+    removeTransitions(d, transitions);
   });
   select([]);
 }

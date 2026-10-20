@@ -56,6 +56,38 @@ export interface Track {
   muted: boolean;
   locked: boolean;
   clips: Clip[];
+  /** Transitions between touching clips of this track (see model/transitions.ts). */
+  transitions?: Transition[];
+}
+
+export type TransitionKind =
+  | 'crossfade'
+  | 'dipBlack'
+  | 'dipWhite'
+  | 'wipeLeft'
+  | 'wipeRight'
+  | 'wipeUp'
+  | 'wipeDown'
+  | 'slideLeft'
+  | 'slideRight'
+  | 'pushLeft'
+  | 'pushRight'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'blur';
+
+/**
+ * A transition on the cut between two touching clips (fromClipId ends where toClipId starts),
+ * centred on the cut: it runs from cut - duration/2 to cut + duration/2. The outgoing clip keeps
+ * playing past its end and the incoming one starts early, using media beyond the trim points when
+ * available, otherwise holding the first/last frame.
+ */
+export interface Transition {
+  id: ID;
+  kind: TransitionKind;
+  duration: number;
+  fromClipId: ID;
+  toClipId: ID;
 }
 
 /**

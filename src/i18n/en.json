@@ -62,14 +62,19 @@
     "subtitleStyle": "Subtitle style",
     "subtitleLanguage": "Subtitle language",
     "subtitleVisibility": "Show/hide subtitles",
-    "autoSubtitles": "Auto subtitles"
+    "autoSubtitles": "Auto subtitles",
+    "addTransition": "Add transition",
+    "removeTransition": "Remove transition",
+    "transitionKind": "Change transition type",
+    "transitionDuration": "Change transition duration"
   },
   "panels": {
     "media": "Media",
     "preview": "Preview",
     "inspector": "Properties",
     "timeline": "Timeline",
-    "subtitles": "Subtitles"
+    "subtitles": "Subtitles",
+    "transitions": "Transitions"
   },
   "settings": {
     "title": "Project settings",
@@ -405,6 +410,32 @@
       "noSnap": "Disable snapping while dragging",
       "deselect": "Clear selection",
       "help": "Show this list"
+    }
+  },
+  "transitions": {
+    "help": "Drag a transition onto the cut between two touching clips, or click a ◆ cut marker on the timeline.",
+    "addAtCut": "Add a transition at this cut",
+    "title": "Transition",
+    "kind": "Type",
+    "timing": "Duration",
+    "remove": "Remove transition",
+    "tooShort": "These clips are too short for a transition.",
+    "handlesNote": "Centred on the cut. Where there is no extra footage beyond the cut, the first/last frame is held.",
+    "kinds": {
+      "crossfade": "Crossfade",
+      "dipBlack": "Dip to black",
+      "dipWhite": "Dip to white",
+      "wipeLeft": "Wipe left",
+      "wipeRight": "Wipe right",
+      "wipeUp": "Wipe up",
+      "wipeDown": "Wipe down",
+      "slideLeft": "Slide left",
+      "slideRight": "Slide right",
+      "pushLeft": "Push left",
+      "pushRight": "Push right",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "blur": "Blur"
     }
   }
 }

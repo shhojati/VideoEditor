@@ -20,7 +20,7 @@ export function drawTextClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number,
   const lineH = size * LINE_HEIGHT;
 
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha *= alpha;
   ctx.translate(canvasW / 2 + clip.transform.x * canvasW, canvasH / 2 + clip.transform.y * canvasH);
   if (clip.transform.rotation) ctx.rotate((clip.transform.rotation * Math.PI) / 180);
   ctx.direction = text.rtl ? 'rtl' : 'ltr';

@@ -7,6 +7,9 @@ import { useProjectStore } from '../../store/projectStore';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { ClipInspector } from './ClipInspector';
 import { findCue } from '../../model/subtitles';
+import { findTransition } from '../../model/transitions';
+import { parseCutKey } from '../transitions/transitionActions';
+import { TransitionInspector } from './TransitionInspector';
 import { SubtitleStyleInspector } from '../subtitles/SubtitleStyleInspector';
 import { Section, SelectField } from './controls';
 
@@ -18,10 +21,19 @@ export function Inspector({ project }: { project: Project }) {
   const selection = useTimelineUi((s) => s.selection);
   const existing = selection.filter((id) => findClip(project, id));
   const cueTrack = selection.map((id) => findCue(project, id)?.track).find(Boolean);
+  // A selected transition, or a selected cut without one.
+  const cut = selection
+    .map((id) => {
+      const tr = findTransition(project, id)?.transition;
+      return tr ? { fromId: tr.fromClipId, toId: tr.toClipId } : parseCutKey(id);
+    })
+    .find(Boolean);
 
   return (
     <Panel title={t('panels.inspector')}>
-      {cueTrack && !existing.length ? (
+      {cut && !existing.length ? (
+        <TransitionInspector key={cut.fromId + cut.toId} project={project} fromId={cut.fromId} toId={cut.toId} />
+      ) : cueTrack && !existing.length ? (
         <SubtitleStyleInspector key={cueTrack.id} project={project} trackId={cueTrack.id} />
       ) : existing.length === 1 ? (
         <ClipInspector key={existing[0]} project={project} clipId={existing[0]} />

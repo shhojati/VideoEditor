@@ -62,14 +62,19 @@
     "subtitleStyle": "سبک زیرنویس",
     "subtitleLanguage": "زبان زیرنویس",
     "subtitleVisibility": "نمایش/پنهان زیرنویس",
-    "autoSubtitles": "زیرنویس خودکار"
+    "autoSubtitles": "زیرنویس خودکار",
+    "addTransition": "افزودن ترنزیشن",
+    "removeTransition": "حذف ترنزیشن",
+    "transitionKind": "تغییر نوع ترنزیشن",
+    "transitionDuration": "تغییر مدت ترنزیشن"
   },
   "panels": {
     "media": "رسانه‌ها",
     "preview": "پیش‌نمایش",
     "inspector": "ویژگی‌ها",
     "timeline": "خط زمان",
-    "subtitles": "زیرنویس"
+    "subtitles": "زیرنویس",
+    "transitions": "ترنزیشن"
   },
   "settings": {
     "title": "تنظیمات پروژه",
@@ -405,6 +410,32 @@
       "noSnap": "غیرفعال کردن چسبندگی هنگام کشیدن",
       "deselect": "لغو انتخاب",
       "help": "نمایش همین فهرست"
+    }
+  },
+  "transitions": {
+    "help": "یک ترنزیشن را روی محل برش بین دو کلیپ چسبیده بکشید، یا روی ◆ محل برش در خط زمان بزنید.",
+    "addAtCut": "افزودن ترنزیشن در این برش",
+    "title": "ترنزیشن",
+    "kind": "نوع",
+    "timing": "مدت",
+    "remove": "حذف ترنزیشن",
+    "tooShort": "کلیپ‌ها برای ترنزیشن خیلی کوتاه‌اند.",
+    "handlesNote": "ترنزیشن روی محل برش متمرکز است؛ اگر ویدیوی اضافه‌ای بعد از برش نباشد، اولین/آخرین فریم ثابت می‌ماند.",
+    "kinds": {
+      "crossfade": "محو متقاطع",
+      "dipBlack": "محو به سیاه",
+      "dipWhite": "محو به سفید",
+      "wipeLeft": "پاک‌شدن به چپ",
+      "wipeRight": "پاک‌شدن به راست",
+      "wipeUp": "پاک‌شدن به بالا",
+      "wipeDown": "پاک‌شدن به پایین",
+      "slideLeft": "لغزش به چپ",
+      "slideRight": "لغزش به راست",
+      "pushLeft": "هل دادن به چپ",
+      "pushRight": "هل دادن به راست",
+      "zoomIn": "زوم به داخل",
+      "zoomOut": "زوم به بیرون",
+      "blur": "تاری"
     }
   }
 }

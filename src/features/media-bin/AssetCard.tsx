@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ACCEPT_ATTR } from '../../engine/decode/classify';
 import { formatBytes, formatDuration } from '../../lib/time';
 import type { Asset } from '../../model/types';
+import { useMobileUi } from '../../app/layout';
+import { addAssetAtPlayhead } from '../timeline/interactions';
 import { assetDrag, useTimelineUi } from '../timeline/timelineUi';
 import { relinkAsset, removeAsset, useMedia, type AssetMediaState } from './mediaService';
 
@@ -97,8 +99,23 @@ export function AssetCard({ asset }: { asset: Asset }) {
             ⚠
           </span>
         )}
+        {status !== 'missing' && (
+          <button
+            className="rounded px-1 text-neutral-400 opacity-0 group-hover:opacity-100 hover:bg-surface-3 hover:text-white focus:opacity-100 pointer-coarse:px-2 pointer-coarse:py-1 pointer-coarse:opacity-100"
+            aria-label={`${t('media.addToTimeline')}: ${asset.name}`}
+            title={t('media.addToTimeline')}
+            data-testid="asset-add"
+            onClick={() => {
+              addAssetAtPlayhead(asset.id);
+              // Mobile: drop the sheet so the new clip is visible on the timeline.
+              useMobileUi.setState({ sheet: null });
+            }}
+          >
+            +
+          </button>
+        )}
         <button
-          className="rounded px-1 text-neutral-400 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-200 focus:opacity-100"
+          className="rounded px-1 text-neutral-400 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-200 focus:opacity-100 pointer-coarse:px-2 pointer-coarse:py-1 pointer-coarse:opacity-100"
           aria-label={`${t('media.remove')} ${asset.name}`}
           title={t('media.remove')}
           onClick={() => removeAsset(asset.id)}

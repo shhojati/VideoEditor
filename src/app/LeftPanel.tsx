@@ -22,7 +22,8 @@ export function LeftPanel({ project }: { project: Project }) {
   );
   return (
     <section className="flex min-h-0 min-w-0 flex-col bg-surface-1">
-      <div role="tablist" className="flex border-b border-line">
+      {/* Phones switch these tabs from the bottom navigation instead. */}
+      <div role="tablist" className="flex border-b border-line max-md:hidden">
         {tabBtn('media', t('panels.media'))}
         {tabBtn('subtitles', t('panels.subtitles'))}
         {tabBtn('transitions', t('panels.transitions'))}

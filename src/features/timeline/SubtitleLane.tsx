@@ -1,11 +1,12 @@
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMobileUi } from '../../app/layout';
 import { lintCues } from '../../model/subtitles';
 import type { Cue, SubtitleTrack } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { editCueText, useSubtitlesUi } from '../subtitles/subtitlesUi';
 import { beginCueDrag } from './cueInteractions';
-import { HEADER_WIDTH, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
+import { TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
 /** One subtitle track as a timeline lane of cue blocks (virtualised like clips). */
 export const SubtitleLane = memo(function SubtitleLane({
@@ -20,6 +21,7 @@ export const SubtitleLane = memo(function SubtitleLane({
   const { t } = useTranslation();
   const edit = useProjectStore((s) => s.edit);
   const selection = useTimelineUi((s) => s.selection);
+  const headerWidth = useTimelineUi((s) => s.headerWidth);
   const previews = useTimelineUi((s) => s.drag?.cues);
   const dragValid = useTimelineUi((s) => s.drag?.valid ?? true);
   const issues = useMemo(() => lintCues(track.cues), [track.cues]);
@@ -29,12 +31,15 @@ export const SubtitleLane = memo(function SubtitleLane({
     <div className="flex border-b border-line" style={{ height: TRACK_HEIGHT - 12 }} data-testid="subtitle-lane">
       <div
         className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-e border-line bg-surface-2 px-2 text-xs"
-        style={{ width: HEADER_WIDTH }}
+        style={{ width: headerWidth }}
       >
         <span className="h-3 w-1 rounded bg-fuchsia-500" />
         <button
           className="flex-1 truncate text-start hover:underline"
-          onClick={() => useSubtitlesUi.setState({ activeTrackId: track.id, tab: 'subtitles' })}
+          onClick={() => {
+            useSubtitlesUi.setState({ activeTrackId: track.id, tab: 'subtitles' });
+            useMobileUi.setState({ sheet: 'panels' });
+          }}
         >
           {t('subtitles.lane', { lang: t(`subtitles.languages.${track.language}`, track.language) })}
         </button>
@@ -83,7 +88,7 @@ function CueBlock(props: { cue: Cue; trackId: string; pps: number; rtl: boolean;
       data-end={cue.end.toFixed(3)}
       className={`absolute top-1 bottom-1 cursor-grab overflow-hidden rounded border px-1 text-[11px] leading-5 text-white select-none ${
         props.warn ? 'border-amber-400 bg-fuchsia-900/90' : 'border-fuchsia-400 bg-fuchsia-800/90'
-      } ${props.selected ? 'ring-2 ring-white' : ''} ${props.ghost ? 'opacity-80' : ''} ${props.invalid ? 'border-red-500!' : ''}`}
+      } ${props.selected ? 'touch-none ring-2 ring-white' : ''} ${props.ghost ? 'opacity-80' : ''} ${props.invalid ? 'border-red-500!' : ''}`}
       style={{ left: cue.start * pps, width: Math.max(2, (cue.end - cue.start) * pps) }}
       title={t('subtitles.editHint')}
       onPointerDown={(e) => beginCueDrag(e, cue.id, 'move')}
@@ -93,14 +98,14 @@ function CueBlock(props: { cue: Cue; trackId: string; pps: number; rtl: boolean;
         {cue.text || '…'}
       </span>
       <div
-        className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize hover:bg-white/60"
+        className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize touch-none hover:bg-white/60 pointer-coarse:w-3"
         onPointerDown={(e) => {
           e.stopPropagation();
           beginCueDrag(e, cue.id, 'trim-start');
         }}
       />
       <div
-        className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize hover:bg-white/60"
+        className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize touch-none hover:bg-white/60 pointer-coarse:w-3"
         onPointerDown={(e) => {
           e.stopPropagation();
           beginCueDrag(e, cue.id, 'trim-end');

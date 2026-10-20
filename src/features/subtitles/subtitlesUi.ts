@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useMobileUi } from '../../app/layout';
 import type { ID } from '../../model/types';
 
 /** UI state for the left panel (Media / Subtitles tabs) and the subtitle editor. */
@@ -14,5 +15,7 @@ export const useSubtitlesUi = create<{
 }));
 
 /** Open the Subtitles tab on this cue's track and focus its text. */
-export const editCueText = (trackId: ID, cueId: ID) =>
+export const editCueText = (trackId: ID, cueId: ID) => {
   useSubtitlesUi.setState({ tab: 'subtitles', activeTrackId: trackId, focusCueId: cueId });
+  useMobileUi.setState({ sheet: 'panels' });
+};

@@ -51,7 +51,8 @@ export function CutMarkers({ project, track, pps }: { project: Project; track: T
             data-testid="cut-handle"
             aria-label={t('transitions.addAtCut')}
             title={t('transitions.addAtCut')}
-            className={`absolute z-10 h-2.5 w-2.5 rotate-45 rounded-sm border transition-opacity ${
+            // The ::after pseudo-element widens the hit area for fingers.
+            className={`absolute z-10 h-2.5 w-2.5 rotate-45 rounded-sm border transition-opacity pointer-coarse:after:absolute pointer-coarse:after:-inset-2 pointer-coarse:after:content-[''] ${
               selected || highlighted ? 'border-white bg-accent opacity-100' : 'border-white/70 bg-surface-3 opacity-40 hover:opacity-100'
             }`}
             style={{ left: x - 5, top: TRACK_HEIGHT - 11 }}

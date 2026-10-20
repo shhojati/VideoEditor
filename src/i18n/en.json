@@ -74,7 +74,11 @@
     "inspector": "Properties",
     "timeline": "Timeline",
     "subtitles": "Subtitles",
-    "transitions": "Transitions"
+    "transitions": "Transitions",
+    "close": "Close panel",
+    "resizeTimeline": "Resize timeline (drag, or arrow keys)",
+    "resizeStart": "Resize the media panel",
+    "resizeEnd": "Resize the properties panel"
   },
   "settings": {
     "title": "Project settings",
@@ -100,6 +104,7 @@
     "empty": "Drop video, audio or image files here, or click Import files",
     "privacy": "Files are stored only on this device (browser storage) and are never uploaded.",
     "dismiss": "Dismiss",
+    "addToTimeline": "Add to timeline at the playhead",
     "remove": "Remove from project",
     "missing": "File not found",
     "stage": {
@@ -133,7 +138,8 @@
     "zoomOut": "Zoom out",
     "fit": "Fit",
     "dropHint": "Drag media here from the Media panel",
-    "newTrackHint": "Drop here to create a new track"
+    "newTrackHint": "Drop here to create a new track",
+    "tapHint": "Open Media below and tap + on a file to add it at the playhead"
   },
   "transport": {
     "play": "Play",

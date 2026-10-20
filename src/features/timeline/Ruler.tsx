@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { formatDuration } from '../../lib/time';
 import { useTransport } from '../../store/transport';
-import { HEADER_WIDTH, RULER_HEIGHT, useTimelineUi } from './timelineUi';
+import { RULER_HEIGHT, useTimelineUi } from './timelineUi';
 
 /** Tick spacing that keeps labels at least ~70px apart. */
 const STEPS = [1 / 30, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
@@ -11,7 +11,7 @@ export function Ruler() {
   const ref = useRef<HTMLCanvasElement>(null);
   const pps = useTimelineUi((s) => s.pps);
   const scrollX = useTimelineUi((s) => s.scrollX);
-  const width = useTimelineUi((s) => s.viewportWidth) - HEADER_WIDTH;
+  const width = useTimelineUi((s) => s.viewportWidth - s.headerWidth);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -48,7 +48,7 @@ export function Ruler() {
       ref={ref}
       data-testid="ruler"
       style={{ width, height: RULER_HEIGHT }}
-      className="block cursor-ew-resize"
+      className="block cursor-ew-resize touch-none"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         useTransport.getState().pause();

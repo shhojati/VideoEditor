@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { playbackEngine } from '../engine/playback/engine';
 import { ExportDialog } from '../features/export/ExportDialog';
@@ -7,10 +7,14 @@ import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
 import { bootstrap } from '../features/projects/session';
 import { TimelinePanel } from '../features/timeline/TimelinePanel';
+import { HEADER_WIDTH, HEADER_WIDTH_COMPACT, useTimelineUi } from '../features/timeline/timelineUi';
 import { startAutosave } from '../store/autosave';
 import { useProject } from '../store/projectStore';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useColumnShare, useIsMobile, useTimelineShare } from './layout';
 import { LeftPanel } from './LeftPanel';
+import { MobileLayout } from './MobileLayout';
+import { ColumnSplitter, TimelineSplitter } from './Splitter';
 import { Onboarding } from './Onboarding';
 import { useGlobalShortcuts } from './shortcuts';
 import { ShortcutSheet } from './ShortcutSheet';
@@ -33,7 +37,14 @@ export function App() {
 function Editor() {
   const { t } = useTranslation();
   const project = useProject();
+  const mobile = useIsMobile();
+  const timelineShare = useTimelineShare((s) => s.desktop);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const columns = useColumnShare();
   useGlobalShortcuts();
+
+  useEffect(() => useTimelineUi.setState({ headerWidth: mobile ? HEADER_WIDTH_COMPACT : HEADER_WIDTH }), [mobile]);
 
   useEffect(() => {
     const stopAutosave = startAutosave();
@@ -53,15 +64,30 @@ function Editor() {
       <ErrorBoundary area={t('app.title')}>
         <TopBar />
       </ErrorBoundary>
-      {project && (
+      {project && mobile && (
         <>
-          <main className="grid min-h-0 flex-1 grid-cols-[minmax(200px,20%)_minmax(0,1fr)_minmax(240px,22%)] gap-px bg-line">
+          <MobileLayout project={project} />
+          <ErrorBoundary area={t('export.title')}>
+            <ExportDialog project={project} />
+          </ErrorBoundary>
+          <Onboarding project={project} />
+        </>
+      )}
+      {project && !mobile && (
+        <>
+          <main
+            ref={mainRef}
+            className="grid min-h-0 flex-1"
+            style={{ gridTemplateColumns: `max(160px, ${columns.start * 100}%) 4px minmax(0, 1fr) 4px max(160px, ${columns.end * 100}%)` }}
+          >
             <ErrorBoundary area={t('panels.media')}>
               <LeftPanel project={project} />
             </ErrorBoundary>
+            <ColumnSplitter column="start" container={mainRef} />
             <ErrorBoundary area={t('panels.preview')}>
               <PreviewPanel project={project} />
             </ErrorBoundary>
+            <ColumnSplitter column="end" container={mainRef} />
             <ErrorBoundary area={t('panels.inspector')}>
               <Inspector project={project} />
             </ErrorBoundary>
@@ -69,7 +95,8 @@ function Editor() {
           <ErrorBoundary area={t('export.title')}>
             <ExportDialog project={project} />
           </ErrorBoundary>
-          <div className="flex h-[34%] min-h-[180px] flex-col">
+          <TimelineSplitter kind="desktop" target={timelineRef} />
+          <div ref={timelineRef} className="flex min-h-[120px] shrink-0 flex-col" style={{ height: `${timelineShare * 100}%` }}>
             <ErrorBoundary area={t('panels.timeline')}>
               <TimelinePanel project={project} />
             </ErrorBoundary>

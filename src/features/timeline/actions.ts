@@ -16,7 +16,7 @@ import { deleteCues, findCue, splitCue } from '../../model/subtitles';
 import { findTransition, removeTransitions } from '../../model/transitions';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
-import { clampPps, HEADER_WIDTH, select, useTimelineUi } from './timelineUi';
+import { clampPps, select, useTimelineUi } from './timelineUi';
 
 const project = () => useProjectStore.getState().history?.present;
 const edit = (...args: Parameters<ReturnType<typeof useProjectStore.getState>['edit']>) =>
@@ -133,8 +133,8 @@ export function seekToEnd() {
 
 /** Zoom keeping the time under `anchorX` (px from the lane origin, i.e. after the header) fixed. */
 export function zoomBy(factor: number, anchorX?: number) {
-  const { pps, scrollX, viewportWidth } = useTimelineUi.getState();
-  const x = anchorX ?? (viewportWidth - HEADER_WIDTH) / 2;
+  const { pps, scrollX, viewportWidth, headerWidth } = useTimelineUi.getState();
+  const x = anchorX ?? (viewportWidth - headerWidth) / 2;
   const anchorTime = (scrollX + x) / pps;
   const next = clampPps(pps * factor);
   useTimelineUi.setState({ pps: next, scrollX: Math.max(0, anchorTime * next - x) });
@@ -142,8 +142,8 @@ export function zoomBy(factor: number, anchorX?: number) {
 
 export function zoomToFit() {
   const p = project();
-  const { viewportWidth } = useTimelineUi.getState();
+  const { viewportWidth, headerWidth } = useTimelineUi.getState();
   const d = p ? timelineDuration(p) : 0;
   if (d <= 0) return;
-  useTimelineUi.setState({ pps: clampPps(((viewportWidth - HEADER_WIDTH) * 0.95) / d), scrollX: 0 });
+  useTimelineUi.setState({ pps: clampPps(((viewportWidth - headerWidth) * 0.95) / d), scrollX: 0 });
 }

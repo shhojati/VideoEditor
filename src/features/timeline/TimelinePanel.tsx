@@ -36,7 +36,7 @@ export function TimelinePanel({ project }: { project: Project }) {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col border-t border-line bg-surface-1" aria-label={t('panels.timeline')}>
-      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs">
+      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
         {KINDS.map((kind) => (
           <Button
             key={kind}
@@ -100,9 +100,10 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
   const pps = useTimelineUi((s) => s.pps);
   const scrollX = useTimelineUi((s) => s.scrollX);
   const viewportWidth = useTimelineUi((s) => s.viewportWidth);
+  const headerWidth = useTimelineUi((s) => s.headerWidth);
   const guide = useTimelineUi((s) => s.drag?.guide);
   const tracks = [...project.tracks].reverse();
-  const laneWidth = Math.max((duration + TAIL_SECONDS) * pps, viewportWidth - HEADER_WIDTH);
+  const laneWidth = Math.max((duration + TAIL_SECONDS) * pps, viewportWidth - headerWidth);
   // Visible window, quantised to quarter-viewport chunks plus a chunk of margin on each side, so
   // scrolling only re-renders clips when a chunk boundary is crossed.
   const chunk = viewportWidth / pps / 4;
@@ -124,7 +125,7 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
-      const x = e.clientX - el.getBoundingClientRect().left - HEADER_WIDTH;
+      const x = e.clientX - el.getBoundingClientRect().left - useTimelineUi.getState().headerWidth;
       zoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2, Math.max(0, x));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -139,9 +140,9 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
     () =>
       useTransport.subscribe((s) => {
         if (!s.playing) return;
-        const { pps: z, scrollX: sx, viewportWidth: vw } = useTimelineUi.getState();
+        const { pps: z, scrollX: sx, viewportWidth: vw, headerWidth: hw } = useTimelineUi.getState();
         const x = s.time * z;
-        if (x > sx + vw - HEADER_WIDTH - 40 || x < sx) useTimelineUi.setState({ scrollX: Math.max(0, x - 40) });
+        if (x > sx + vw - hw - 40 || x < sx) useTimelineUi.setState({ scrollX: Math.max(0, x - 40) });
       }),
     [],
   );
@@ -154,10 +155,10 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
       className="relative min-h-0 flex-1 overflow-auto"
       onScroll={(e) => useTimelineUi.setState({ scrollX: e.currentTarget.scrollLeft })}
     >
-      <div className="relative" style={{ width: HEADER_WIDTH + laneWidth }}>
+      <div className="relative" style={{ width: headerWidth + laneWidth }}>
         <div className="sticky top-0 z-30 flex border-b border-line bg-surface-1" style={{ height: RULER_HEIGHT }}>
-          <div className="sticky left-0 z-10 shrink-0 border-e border-line bg-surface-1" style={{ width: HEADER_WIDTH }} />
-          <div className="sticky" style={{ left: HEADER_WIDTH }}>
+          <div className="sticky left-0 z-10 shrink-0 border-e border-line bg-surface-1" style={{ width: headerWidth }} />
+          <div className="sticky" style={{ left: headerWidth }}>
             <Ruler />
           </div>
         </div>
@@ -175,7 +176,7 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
         {guide !== undefined && (
           <div
             className="pointer-events-none absolute top-0 bottom-0 z-20 w-px bg-yellow-300"
-            style={{ left: HEADER_WIDTH + guide * pps }}
+            style={{ left: headerWidth + guide * pps }}
           />
         )}
       </div>
@@ -269,9 +270,12 @@ function NewTrackZone({ pps, project }: { pps: number; project: Project }) {
   const { t } = useTranslation();
   const ghost = useTimelineUi((s) => (s.drag?.asset && s.drag.asset.trackId === null ? s.drag.asset : undefined));
   const empty = project.tracks.every((tr) => tr.clips.length === 0);
+  const headerWidth = useTimelineUi((s) => s.headerWidth);
+  // Compact header = mobile layout, where media is added by tapping rather than dropping.
+  const compact = headerWidth < HEADER_WIDTH;
   return (
     <div className="flex" style={{ height: TRACK_HEIGHT }}>
-      <div className="sticky left-0 z-10 shrink-0 border-e border-line bg-surface-1" style={{ width: HEADER_WIDTH }} />
+      <div className="sticky left-0 z-10 shrink-0 border-e border-line bg-surface-1" style={{ width: headerWidth }} />
       <div
         data-lane
         data-track-id=""
@@ -281,8 +285,8 @@ function NewTrackZone({ pps, project }: { pps: number; project: Project }) {
         onDragLeave={onLaneDragLeave}
         onDrop={(e) => onLaneDrop(e, null)}
       >
-        <span className="pointer-events-none sticky left-2 inline-block p-3 text-xs text-neutral-400">
-          {empty ? t('timeline.dropHint') : t('timeline.newTrackHint')}
+        <span className="pointer-events-none sticky left-2 inline-block max-w-64 p-3 text-xs text-neutral-400">
+          {empty ? t(compact ? 'timeline.tapHint' : 'timeline.dropHint') : !compact && t('timeline.newTrackHint')}
         </span>
         {ghost && <AssetGhost start={ghost.start} duration={ghost.duration} pps={pps} />}
       </div>
@@ -297,13 +301,16 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
       const tr = p.tracks.find((x) => x.id === track.id);
       if (tr) tr[key] = !tr[key];
     });
+  const headerWidth = useTimelineUi((s) => s.headerWidth);
+  const compact = headerWidth < HEADER_WIDTH;
   return (
     <div
-      className="sticky left-0 z-10 flex shrink-0 items-center gap-2 border-e border-line bg-surface-2 px-2 text-xs"
-      style={{ width: HEADER_WIDTH }}
+      className={`sticky left-0 z-10 flex shrink-0 items-center border-e border-line bg-surface-2 text-xs ${compact ? 'gap-1 px-1' : 'gap-2 px-2'}`}
+      style={{ width: headerWidth }}
+      title={t(`track.${track.kind}`)}
     >
       <span className={`h-3 w-1 rounded ${KIND_COLOR[track.kind]}`} />
-      <span className="flex-1">{t(`track.${track.kind}`)}</span>
+      <span className="min-w-0 flex-1 truncate">{!compact && t(`track.${track.kind}`)}</span>
       <Toggle label={t('track.mute')} on={track.muted} onClick={() => flip('muted')}>
         M
       </Toggle>
@@ -343,11 +350,12 @@ function Toggle(props: { label: string; on: boolean; onClick: () => void; childr
 /** Subscribes to the transport alone so playback does not re-render the whole timeline. */
 function Playhead({ pps }: { pps: number }) {
   const time = useTransport((s) => s.time);
+  const headerWidth = useTimelineUi((s) => s.headerWidth);
   return (
     <div
       data-testid="playhead"
       className="pointer-events-none absolute top-0 bottom-0 z-20 w-px bg-red-500"
-      style={{ left: HEADER_WIDTH + time * pps }}
+      style={{ left: headerWidth + time * pps }}
     >
       <div className="absolute -left-1.5 top-0 h-3 w-3 rotate-45 bg-red-500" />
     </div>

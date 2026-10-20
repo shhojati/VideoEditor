@@ -45,6 +45,10 @@ body,
 #root {
   height: 100%;
 }
+/* Mobile browsers: follow the visible viewport as the address bar shows and hides. */
+#root {
+  height: 100dvh;
+}
 body {
   @apply bg-surface-0 text-neutral-200 antialiased;
   font-family: var(--font-sans);

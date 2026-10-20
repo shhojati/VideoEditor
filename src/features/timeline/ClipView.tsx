@@ -58,7 +58,8 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       data-duration={clip.duration.toFixed(3)}
       data-selected={selected}
       className={`absolute top-1 overflow-hidden rounded border text-[11px] text-white select-none ${COLORS[kind]} ${
-        selected ? 'ring-2 ring-white' : ''
+        // Touch: a selected clip drags; an unselected one lets a swipe scroll the timeline.
+        selected ? 'touch-none ring-2 ring-white' : ''
       } ${ghost ? 'opacity-80 shadow-lg' : ''} ${invalid ? 'border-red-500! ring-red-500' : ''} ${
         track.locked ? 'cursor-not-allowed opacity-60' : 'cursor-grab'
       }`}
@@ -76,7 +77,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
         <>
           <div
             data-testid="trim-start"
-            className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize hover:bg-white/60"
+            className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize touch-none hover:bg-white/60 pointer-coarse:w-3.5"
             onPointerDown={(e) => {
               e.stopPropagation();
               beginClipDrag(e, original.id, 'trim-start');
@@ -84,7 +85,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
           />
           <div
             data-testid="trim-end"
-            className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize hover:bg-white/60"
+            className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize touch-none hover:bg-white/60 pointer-coarse:w-3.5"
             onPointerDown={(e) => {
               e.stopPropagation();
               beginClipDrag(e, original.id, 'trim-end');

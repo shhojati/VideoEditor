@@ -36,7 +36,7 @@ export function TransportBar({ fps }: { fps: number }) {
     });
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-t border-line bg-surface-1 px-2 py-1 text-xs">
+    <div className="flex flex-wrap items-center gap-1 border-t border-line bg-surface-1 px-2 py-1 text-xs max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
       <button className={iconBtn} onClick={() => jumpToEdit(-1)} title={t('transport.prevEdit')} aria-label={t('transport.prevEdit')}>
         ⏮
       </button>
@@ -59,7 +59,7 @@ export function TransportBar({ fps }: { fps: number }) {
       <button className={iconBtn} onClick={() => jumpToEdit(1)} title={t('transport.nextEdit')} aria-label={t('transport.nextEdit')}>
         ⏭
       </button>
-      <span className="mx-2 font-mono text-neutral-200" data-testid="preview-timecode">
+      <span className="mx-2 font-mono text-neutral-200 max-md:mx-1" data-testid="preview-timecode">
         {formatTimecode(time, fps)}
         <span className="text-neutral-400"> / {formatTimecode(duration, fps)}</span>
       </span>
@@ -71,7 +71,8 @@ export function TransportBar({ fps }: { fps: number }) {
       >
         🔁
       </button>
-      <label className="flex items-center gap-1" title={t('transport.volume')}>
+      {/* Phones use the hardware volume keys. */}
+      <label className="flex items-center gap-1 max-md:hidden" title={t('transport.volume')}>
         🔊
         <input
           type="range"

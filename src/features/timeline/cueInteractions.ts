@@ -76,6 +76,7 @@ export function beginCueDrag(e: ReactPointerEvent, cueId: ID, mode: 'move' | 'tr
   const finish = (commit: boolean) => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
     window.removeEventListener('keydown', onKey);
     useTimelineUi.setState({ drag: null });
     if (!commit || !moved || !preview?.valid || !preview.cues) return;
@@ -91,7 +92,10 @@ export function beginCueDrag(e: ReactPointerEvent, cueId: ID, mode: 'move' | 'tr
   };
   const onUp = () => finish(true);
   const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && finish(false);
+  // Touch: the browser took the gesture over (a pan on an unselected cue).
+  const onCancel = () => finish(false);
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
   window.addEventListener('keydown', onKey);
 }

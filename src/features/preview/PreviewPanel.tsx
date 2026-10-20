@@ -19,7 +19,11 @@ export function PreviewPanel({ project }: { project: Project }) {
   useEffect(() => {
     const box = boxRef.current!;
     const ro = new ResizeObserver(() => {
-      const s = Math.min(box.clientWidth / width, box.clientHeight / height);
+      // clientWidth/Height include the padding; fit inside it.
+      const cs = getComputedStyle(box);
+      const w = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const h = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const s = Math.max(0, Math.min(w / width, h / height));
       setSize({ w: Math.floor(width * s), h: Math.floor(height * s) });
     });
     ro.observe(box);

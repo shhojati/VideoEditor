@@ -77,6 +77,7 @@ export function beginClipDrag(e: ReactPointerEvent, clipId: ID, mode: 'move' | '
   const finish = (commit: boolean) => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
     window.removeEventListener('keydown', onKey);
     useTimelineUi.setState({ drag: null });
     if (!commit || !moved || !preview) return;
@@ -101,8 +102,11 @@ export function beginClipDrag(e: ReactPointerEvent, clipId: ID, mode: 'move' | '
   };
   const onUp = () => finish(true);
   const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && finish(false);
+  // Touch: the browser took the gesture over (a pan on an unselected clip).
+  const onCancel = () => finish(false);
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
   window.addEventListener('keydown', onKey);
 }
 
@@ -206,6 +210,27 @@ export function onLaneDrop(e: DragEvent, trackId: ID | null) {
   assetDrag.assetId = null;
   if (!preview?.asset) return;
   const { assetId, trackId: target, start } = preview.asset;
+  addAssetClip(assetId, target, start);
+}
+
+/**
+ * Tap-to-add (touch screens have no drag and drop): at the playhead, on the topmost unlocked track
+ * that takes the asset and has room there, else on a new track.
+ */
+export function addAssetAtPlayhead(assetId: ID) {
+  const p = project();
+  const asset = p.assets[assetId];
+  if (!asset) return;
+  const start = useTransport.getState().time;
+  const duration = createClip(asset, start).duration;
+  const target = [...p.tracks]
+    .reverse()
+    .find((t) => !t.locked && trackAccepts(t, asset.kind) && isFree(t, start, duration));
+  addAssetClip(assetId, target?.id ?? null, start);
+}
+
+/** One undo step: a clip of the asset at `start`, on `target` or (null) a new track. */
+function addAssetClip(assetId: ID, target: ID | null, start: number) {
   let clipId = '';
   useProjectStore.getState().edit('ops.addClip', (d) => {
     const asset = d.assets[assetId];

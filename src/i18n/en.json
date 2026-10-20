@@ -66,7 +66,8 @@
     "addTransition": "Add transition",
     "removeTransition": "Remove transition",
     "transitionKind": "Change transition type",
-    "transitionDuration": "Change transition duration"
+    "transitionDuration": "Change transition duration",
+    "platform": "Change platform"
   },
   "panels": {
     "media": "Media",
@@ -84,7 +85,8 @@
     "title": "Project settings",
     "aspect": "Aspect ratio",
     "fps": "Frame rate",
-    "size": "Size"
+    "size": "Size",
+    "platform": "Platform"
   },
   "track": {
     "video": "Video",
@@ -445,5 +447,27 @@
       "zoomOut": "Zoom out",
       "blur": "Blur"
     }
+  },
+  "newProject": {
+    "title": "New project",
+    "name": "Project name",
+    "size": "Video size",
+    "platform": "Maximum length",
+    "none": "No limit",
+    "noLimit": "any length",
+    "upTo": "up to {{time}}",
+    "create": "Create project",
+    "cancel": "Cancel"
+  },
+  "platforms": {
+    "instagramReels": "Instagram Reels",
+    "instagramPost": "Instagram post",
+    "youtube": "YouTube",
+    "tiktok": "TikTok"
+  },
+  "length": {
+    "over": "The video is {{duration}} long, but {{platform}} allows at most {{max}}.",
+    "exportHint": "Trim the timeline, or export anyway.",
+    "exportAnyway": "Export anyway"
   }
 }

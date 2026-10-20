@@ -1,7 +1,7 @@
 // Project lifecycle: what is open, creating, switching, renaming and deleting projects.
 import { create } from 'zustand';
 import { createProject, type AspectPreset } from '../../model/factories';
-import type { ID } from '../../model/types';
+import type { ID, Platform } from '../../model/types';
 import { gcMedia } from '../../store/mediaGc';
 import * as db from '../../store/persistence';
 import { useProjectStore } from '../../store/projectStore';
@@ -24,8 +24,8 @@ async function open(project: Parameters<typeof db.saveProject>[0]) {
   await refreshList();
 }
 
-export async function newProject(name: string, aspect: AspectPreset = '16:9') {
-  const project = createProject(name, aspect);
+export async function newProject(name: string, aspect: AspectPreset = '16:9', platform?: Platform) {
+  const project = createProject(name, aspect, platform);
   await db.saveProject(project);
   await open(project);
 }

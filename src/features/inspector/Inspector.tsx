@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Panel } from '../../app/ui';
+import { formatDuration } from '../../lib/time';
 import { ASPECT_PRESETS, aspectOf, type AspectPreset } from '../../model/factories';
+import { PLATFORM_MAX_DURATION, PLATFORMS } from '../../model/platforms';
+import type { Platform } from '../../model/types';
 import { findClip } from '../../model/timeline';
 import type { Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
@@ -67,6 +70,20 @@ function ProjectSettings({ project }: { project: Project }) {
         value={aspectOf(project.settings) ?? ''}
         options={(Object.keys(ASPECT_PRESETS) as AspectPreset[]).map((k) => ({ value: k, label: k }))}
         onChange={(v) => edit('ops.aspect', (p) => Object.assign(p.settings, ASPECT_PRESETS[v as AspectPreset]))}
+      />
+      <SelectField
+        label={t('settings.platform')}
+        value={project.settings.platform ?? ''}
+        options={[
+          { value: '', label: t('newProject.none') },
+          ...PLATFORMS.map((k) => ({ value: k, label: `${t(`platforms.${k}`)} (≤ ${formatDuration(PLATFORM_MAX_DURATION[k])})` })),
+        ]}
+        onChange={(v) =>
+          edit('ops.platform', (p) => {
+            if (v) p.settings.platform = v as Platform;
+            else delete p.settings.platform;
+          })
+        }
       />
       <SelectField
         label={t('settings.fps')}

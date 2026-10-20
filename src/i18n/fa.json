@@ -66,7 +66,8 @@
     "addTransition": "افزودن ترنزیشن",
     "removeTransition": "حذف ترنزیشن",
     "transitionKind": "تغییر نوع ترنزیشن",
-    "transitionDuration": "تغییر مدت ترنزیشن"
+    "transitionDuration": "تغییر مدت ترنزیشن",
+    "platform": "تغییر پلتفرم"
   },
   "panels": {
     "media": "رسانه‌ها",
@@ -84,7 +85,8 @@
     "title": "تنظیمات پروژه",
     "aspect": "نسبت تصویر",
     "fps": "نرخ فریم",
-    "size": "ابعاد"
+    "size": "ابعاد",
+    "platform": "پلتفرم"
   },
   "track": {
     "video": "ویدیو",
@@ -445,5 +447,27 @@
       "zoomOut": "زوم به بیرون",
       "blur": "تاری"
     }
+  },
+  "newProject": {
+    "title": "پروژه جدید",
+    "name": "نام پروژه",
+    "size": "ابعاد ویدیو",
+    "platform": "حداکثر مدت",
+    "none": "بدون محدودیت",
+    "noLimit": "هر مدتی",
+    "upTo": "تا {{time}}",
+    "create": "ساخت پروژه",
+    "cancel": "انصراف"
+  },
+  "platforms": {
+    "instagramReels": "ریلز اینستاگرام",
+    "instagramPost": "پست اینستاگرام",
+    "youtube": "یوتیوب",
+    "tiktok": "تیک‌تاک"
+  },
+  "length": {
+    "over": "مدت ویدیو {{duration}} است، اما {{platform}} حداکثر {{max}} را می‌پذیرد.",
+    "exportHint": "تایم‌لاین را کوتاه کنید، یا با همین مدت خروجی بگیرید.",
+    "exportAnyway": "خروجی با همین مدت"
   }
 }

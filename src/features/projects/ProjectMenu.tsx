@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { useProject } from '../../store/projectStore';
-import { deleteProject, newProject, openProject, refreshList, useProjectList } from './session';
+import { useNewProjectDialog } from './NewProjectDialog';
+import { deleteProject, openProject, refreshList, useProjectList } from './session';
 
 export function ProjectMenu() {
   const { t, i18n } = useTranslation();
@@ -44,7 +45,7 @@ export function ProjectMenu() {
             className="w-full rounded px-2 py-1.5 text-start text-sm hover:bg-surface-3"
             onClick={() => {
               setOpen(false);
-              void newProject(t('app.untitled'));
+              useNewProjectDialog.setState({ open: true });
             }}
           >
             {t('project.new')}

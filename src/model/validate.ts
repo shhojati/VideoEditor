@@ -115,6 +115,7 @@ export const projectSchema = z.object({
     height: num.int().positive(),
     fps: num.positive(),
     sampleRate: num.int().positive(),
+    platform: z.enum(['instagramReels', 'instagramPost', 'youtube', 'tiktok']).optional(),
   }),
   assets: z.record(z.string(), asset),
   tracks: z.array(track),

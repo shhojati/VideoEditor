@@ -9,11 +9,15 @@ export interface Rect {
   height: number;
 }
 
+export type Platform = 'instagramReels' | 'instagramPost' | 'youtube' | 'tiktok';
+
 export interface ProjectSettings {
   width: number;
   height: number;
   fps: number;
   sampleRate: number;
+  /** Where the video will be published; sets the length limit the editor warns about. */
+  platform?: Platform;
 }
 
 export interface Project {

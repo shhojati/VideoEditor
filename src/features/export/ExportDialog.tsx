@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { estimateBytes, outputSize, type ExportSettings } from '../../engine/export/settings';
 import { formatBytes, formatDuration } from '../../lib/time';
+import { overLimitBy } from '../../model/platforms';
 import { timelineDuration } from '../../model/timeline';
+import { lengthWarningText } from '../projects/LengthWarning';
 import type { Project } from '../../model/types';
 import { friendlyError } from '../../app/toasts';
 import { Segmented } from '../inspector/controls';
@@ -27,6 +29,7 @@ export function ExportDialog({ project }: { project: Project }) {
   const duration = timelineDuration(project);
   const size = outputSize(project.settings, settings.resolution);
   const running = state.stage === 'audio' || state.stage === 'video';
+  const tooLong = overLimitBy(project) > 0;
   const hasSubtitles = project.subtitleTracks.some((s) => !s.hidden && s.cues.length);
 
   return (
@@ -56,6 +59,11 @@ export function ExportDialog({ project }: { project: Project }) {
                 bytes: formatBytes(estimateBytes(duration, size.width, size.height, settings.fps, settings.quality)),
               })}
             </p>
+            {tooLong && (
+              <p className="rounded border border-amber-700 bg-amber-900/40 p-2 text-xs text-amber-200" role="alert" data-testid="export-length-warning">
+                {lengthWarningText(project, t)} {t('length.exportHint')}
+              </p>
+            )}
           </>
         )}
 
@@ -101,7 +109,7 @@ export function ExportDialog({ project }: { project: Project }) {
               <Button onClick={closeExportDialog}>{t('export.close')}</Button>
               {state.stage !== 'done' && (
                 <Button className="bg-accent! text-white" disabled={duration <= 0} onClick={() => void startExport(project, settings)} data-testid="export-start">
-                  {t('export.start')}
+                  {tooLong ? t('length.exportAnyway') : t('export.start')}
                 </Button>
               )}
             </>

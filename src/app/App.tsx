@@ -5,6 +5,7 @@ import { ExportDialog } from '../features/export/ExportDialog';
 import { Inspector } from '../features/inspector/Inspector';
 import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
+import { NewProjectDialog } from '../features/projects/NewProjectDialog';
 import { bootstrap } from '../features/projects/session';
 import { TimelinePanel } from '../features/timeline/TimelinePanel';
 import { HEADER_WIDTH, HEADER_WIDTH_COMPACT, useTimelineUi } from '../features/timeline/timelineUi';
@@ -104,6 +105,7 @@ function Editor() {
           <Onboarding project={project} />
         </>
       )}
+      <NewProjectDialog />
       <ShortcutSheet />
     </>
   );

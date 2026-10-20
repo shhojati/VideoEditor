@@ -98,7 +98,7 @@ export function AssetCard({ asset }: { asset: Asset }) {
           </span>
         )}
         <button
-          className="rounded px-1 text-neutral-500 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-200 focus:opacity-100"
+          className="rounded px-1 text-neutral-400 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-200 focus:opacity-100"
           aria-label={`${t('media.remove')} ${asset.name}`}
           title={t('media.remove')}
           onClick={() => removeAsset(asset.id)}

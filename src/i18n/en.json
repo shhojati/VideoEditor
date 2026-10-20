@@ -90,9 +90,6 @@
   "lang": {
     "switch": "فارسی"
   },
-  "browser": {
-    "limited": "This browser has limited support. Use the latest Chrome or Edge for the best results."
-  },
   "media": {
     "import": "+ Import files",
     "empty": "Drop video, audio or image files here, or click Import files",
@@ -339,12 +336,75 @@
     },
     "eta": "about {{time}} left",
     "done": "Created \"{{name}}\" ({{bytes}}) in {{seconds}} s ({{ratio}}× the video length).",
-    "opusWarning": "This browser cannot encode AAC; audio was saved as Opus, which some players cannot play.",
+    "opusWarning": "No AAC encoder was available (neither the browser's nor the built-in one); audio was saved as Opus, which some players cannot play.",
     "download": "Download file",
     "error": "Export failed: {{message}}",
     "cancelled": "Export cancelled.",
     "cancel": "Cancel",
     "close": "Close",
-    "start": "Start export"
+    "start": "Start export",
+    "softwareAac": "This browser has no AAC encoder; the audio was encoded with the app's built-in AAC encoder."
+  },
+  "caps": {
+    "blockedTitle": "This browser cannot run the editor",
+    "blockedHelp": "Use the latest Chrome or Edge. The app must be opened over https or localhost, and the server must send the Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers (see docs/DEPLOY.md).",
+    "items": {
+      "secureContext": "The page is not on a secure connection (https or localhost), so the browser disables its video features.",
+      "webcodecs": "WebCodecs (video decoding and encoding) is not available.",
+      "h264": "H.264 video encoding is not supported, so exporting is impossible.",
+      "opfs": "Browser file storage (OPFS) is not available, so media cannot be imported.",
+      "offscreenCanvas": "OffscreenCanvas is not available.",
+      "isolation": "The server does not send the COOP/COEP headers; automatic subtitles will run slower.",
+      "webgpu": "WebGPU is not available; automatic subtitles will run on the CPU, more slowly.",
+      "saveDialog": "The save dialog is not available; exports are saved as downloads."
+    }
+  },
+  "errors": {
+    "panel": "The \"{{area}}\" panel ran into an error. Your project is saved.",
+    "details": "Details",
+    "retry": "Try again",
+    "reload": "Reload page",
+    "quota": "Browser storage is full. Remove some media or projects.",
+    "memory": "Not enough memory. Lower the export resolution or close other tabs.",
+    "unexpected": "Unexpected error: {{message}}"
+  },
+  "onboarding": {
+    "title": "Welcome to the video editor 👋",
+    "step1": "Drop video, audio or image files onto the Media panel.",
+    "step2": "Drag them onto the timeline; split (S), trim and move them.",
+    "step3": "Add titles with \"T+ Text\", and create or auto-generate subtitles in the Subtitles tab.",
+    "step4": "Make an MP4 with the Export button.",
+    "sample": "Open sample project",
+    "loading": "Building sample…",
+    "hide": "Don't show again",
+    "sampleName": "Sample project",
+    "sampleTitle": "سلام!",
+    "sampleCue1": "این یک پروژه نمونه است.",
+    "sampleCue2": "زیرنویس‌ها را در زبانه «زیرنویس» ویرایش کنید."
+  },
+  "shortcuts": {
+    "open": "Keyboard shortcuts",
+    "title": "Keyboard shortcuts",
+    "layoutNote": "Shortcuts follow the physical keys, so they also work with a Persian keyboard layout.",
+    "items": {
+      "playPause": "Play / pause",
+      "split": "Split at playhead",
+      "delete": "Delete selection",
+      "rippleDelete": "Delete and close the gap",
+      "frame": "One frame back/forward",
+      "tenFrames": "Ten frames back/forward",
+      "editPoints": "Previous/next edit",
+      "startEnd": "Timeline start/end",
+      "undo": "Undo",
+      "redo": "Redo",
+      "copyPaste": "Copy / paste",
+      "duplicate": "Duplicate",
+      "selectAll": "Select all",
+      "zoom": "Zoom timeline",
+      "zoomWheel": "Zoom at the pointer",
+      "noSnap": "Disable snapping while dragging",
+      "deselect": "Clear selection",
+      "help": "Show this list"
+    }
   }
 }

@@ -19,6 +19,7 @@ import {
   canEncodeAudio,
   type VideoSample,
 } from 'mediabunny';
+import { ensureAacEncoder, type AacSource } from '../engine/export/aac';
 import { audibleClips, limit, mixClip, type DecodedRange } from '../engine/export/audioMix';
 import { AUDIO_BITRATE, AUDIO_RATE, frameCount, outputSize, videoBitrate, type ExportSettings } from '../engine/export/settings';
 import { MediaReader } from '../engine/decode/mediaReader';
@@ -34,7 +35,7 @@ export type ExportRequest =
 
 export type ExportMessage =
   | { type: 'progress'; phase: 'audio' | 'video'; done: number; total: number }
-  | { type: 'done'; blob?: Blob; bytes: number; ms: number; audioCodec: string | null; width: number; height: number }
+  | { type: 'done'; blob?: Blob; bytes: number; ms: number; audioCodec: string | null; aacSource: AacSource | null; width: number; height: number }
   | { type: 'cancelled' }
   | { type: 'error'; message: string };
 
@@ -168,7 +169,10 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
 
   const audio = await mixAudio(project, duration);
   checkCancel();
-  const audioCodec = audio ? ((await canEncodeAudio('aac')) ? 'aac' : (await canEncodeAudio('opus')) ? 'opus' : null) : null;
+  // AAC from the browser, or the bundled WASM encoder; Opus only if even that fails to load.
+  let aacSource: AacSource | null = null;
+  if (audio) aacSource = await ensureAacEncoder().catch(() => null);
+  const audioCodec = !audio ? null : (await canEncodeAudio('aac')) ? 'aac' : (await canEncodeAudio('opus')) ? 'opus' : null;
 
   const writable = file ? await file.createWritable() : null;
   const target = writable ? new StreamTarget(writable, { chunked: true }) : new BufferTarget();
@@ -252,7 +256,7 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
 
   const blob = target instanceof BufferTarget ? new Blob([target.buffer!], { type: 'video/mp4' }) : undefined;
   const bytes = blob?.size ?? (await file!.getFile()).size;
-  post({ type: 'done', blob, bytes, ms: performance.now() - t0, audioCodec, width, height });
+  post({ type: 'done', blob, bytes, ms: performance.now() - t0, audioCodec, aacSource: audioCodec === 'aac' ? aacSource : null, width, height });
 }
 
 self.onmessage = async (e: MessageEvent<ExportRequest>) => {

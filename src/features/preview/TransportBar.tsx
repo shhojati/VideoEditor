@@ -61,7 +61,7 @@ export function TransportBar({ fps }: { fps: number }) {
       </button>
       <span className="mx-2 font-mono text-neutral-200" data-testid="preview-timecode">
         {formatTimecode(time, fps)}
-        <span className="text-neutral-500"> / {formatTimecode(duration, fps)}</span>
+        <span className="text-neutral-400"> / {formatTimecode(duration, fps)}</span>
       </span>
       <button
         className={`${iconBtn} ${loop ? 'bg-accent/40' : ''}`}

@@ -6,6 +6,8 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 60_000,
   fullyParallel: false,
+  // Serial: the playback sync test measures real-time behaviour and flakes when other specs load the CPU.
+  workers: 1,
   reporter: [['list']],
   use: {
     baseURL: `http://localhost:${PORT}`,

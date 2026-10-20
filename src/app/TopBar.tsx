@@ -13,6 +13,7 @@ import {
 } from '../store/projectStore';
 import { Button } from './ui';
 import { useExport } from '../features/export/exportService';
+import { useShortcutSheet } from './ShortcutSheet';
 
 export function TopBar() {
   const { t, i18n } = useTranslation();
@@ -55,6 +56,9 @@ export function TopBar() {
       <div className="ms-auto flex gap-2">
         <Button className="bg-accent! text-white" disabled={!project} onClick={() => useExport.setState({ open: true })} data-testid="open-export">
           ⤓ {t('export.open')}
+        </Button>
+        <Button onClick={() => useShortcutSheet.setState({ open: true })} aria-label={t('shortcuts.open')} title={t('shortcuts.open') + ' (?)'}>
+          ⌨
         </Button>
         <Button onClick={() => void i18n.changeLanguage(i18n.language === 'fa' ? 'en' : 'fa')}>
           {t('lang.switch')}

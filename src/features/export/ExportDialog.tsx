@@ -5,6 +5,7 @@ import { estimateBytes, outputSize, type ExportSettings } from '../../engine/exp
 import { formatBytes, formatDuration } from '../../lib/time';
 import { timelineDuration } from '../../model/timeline';
 import type { Project } from '../../model/types';
+import { friendlyError } from '../../app/toasts';
 import { Segmented } from '../inspector/controls';
 import { cancelExport, closeExportDialog, startExport, useExport } from './exportService';
 
@@ -81,6 +82,7 @@ export function ExportDialog({ project }: { project: Project }) {
               })}
             </p>
             {state.result.audioCodec === 'opus' && <p className="text-amber-300">{t('export.opusWarning')}</p>}
+            {state.result.aacSource === 'wasm' && <p className="text-neutral-400" data-testid="software-aac">{t('export.softwareAac')}</p>}
             {state.result.url && (
               <a className="inline-block rounded bg-accent px-3 py-1.5 text-white" href={state.result.url} download={state.result.name} data-testid="export-download">
                 {t('export.download')}
@@ -88,7 +90,7 @@ export function ExportDialog({ project }: { project: Project }) {
             )}
           </div>
         )}
-        {state.stage === 'error' && <p className="text-xs text-red-300" role="alert">{t('export.error', { message: state.error })}</p>}
+        {state.stage === 'error' && <p className="text-xs text-red-300" role="alert">{t('export.error', { message: friendlyError(state.error, t) })}</p>}
         {state.stage === 'cancelled' && <p className="text-xs text-neutral-400">{t('export.cancelled')}</p>}
 
         <div className="flex justify-end gap-2 pt-1">

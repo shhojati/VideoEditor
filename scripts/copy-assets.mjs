@@ -2,7 +2,7 @@
 // Runs automatically before dev/build so the app never touches a CDN at runtime.
 // Also writes public/fonts/manifest.json, used to register fonts with the FontFace API (which,
 // unlike CSS @font-face, also works inside workers).
-import { cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -14,7 +14,9 @@ function copyMatching(srcDir, destDir, test) {
   for (const f of readdirSync(srcDir)) if (test(f)) cpSync(join(srcDir, f), join(destDir, f));
 }
 
-copyMatching(join(nm, 'onnxruntime-web/dist'), join(pub, 'wasm'), (f) => /^ort-wasm.*\.(wasm|mjs)$/.test(f));
+// Only the asyncify build is used (src/workers/stt.worker.ts sets wasmPaths to it).
+rmSync(join(pub, 'wasm'), { recursive: true, force: true });
+copyMatching(join(nm, 'onnxruntime-web/dist'), join(pub, 'wasm'), (f) => /^ort-wasm-simd-threaded\.asyncify\.(wasm|mjs)$/.test(f));
 
 // ---- fonts ----
 /** Fonts offered for text and subtitles. Subsets: Persian/Arabic + Latin. */

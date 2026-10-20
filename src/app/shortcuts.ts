@@ -14,6 +14,7 @@ import {
 import { select } from '../features/timeline/timelineUi';
 import { useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
+import { useShortcutSheet } from './ShortcutSheet';
 
 type Handler = (e: KeyboardEvent) => void;
 
@@ -43,6 +44,8 @@ const PLAIN: Record<string, Handler> = {
   Home: () => useTransport.getState().seek(0),
   End: seekToEnd,
   Escape: () => select([]),
+  // '?' (Shift + /); the same physical key gives '؟' on a Persian layout.
+  Slash: (e) => e.shiftKey && useShortcutSheet.setState({ open: true }),
 };
 
 function isTypingTarget(el: EventTarget | null) {

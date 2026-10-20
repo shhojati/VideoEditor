@@ -70,7 +70,7 @@ export function NumberField({ label, value, min, max, step = 0.01, factor = 1, u
           if (e.key === 'Escape') setDraft(null);
         }}
       />
-      {unit && <span className="w-4 text-neutral-500">{unit}</span>}
+      {unit && <span className="w-4 text-neutral-400">{unit}</span>}
     </Row>
   );
 }
@@ -104,7 +104,7 @@ export function ColorField(props: {
         onChange={(e) => props.onChange(e.target.value)}
       />
       {/* Colours with alpha (e.g. a translucent box) keep their alpha when picked again. */}
-      <span className="font-mono text-[10px] text-neutral-500" dir="ltr">
+      <span className="font-mono text-[10px] text-neutral-400" dir="ltr">
         {props.value ?? ''}
       </span>
     </Row>

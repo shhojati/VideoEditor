@@ -163,7 +163,7 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
         {project.subtitleTracks.map((st) => (
           <SubtitleLane key={st.id} track={st} view={view} pps={pps} />
         ))}
-        {tracks.length === 0 && <div className="p-3 text-sm text-neutral-500">{t('track.empty')}</div>}
+        {tracks.length === 0 && <div className="p-3 text-sm text-neutral-400">{t('track.empty')}</div>}
         {tracks.map((track) => (
           <TrackRow key={track.id} track={track} project={project} view={view} pps={pps} />
         ))}
@@ -278,7 +278,7 @@ function NewTrackZone({ pps, project }: { pps: number; project: Project }) {
         onDragLeave={onLaneDragLeave}
         onDrop={(e) => onLaneDrop(e, null)}
       >
-        <span className="pointer-events-none sticky left-2 inline-block p-3 text-xs text-neutral-500">
+        <span className="pointer-events-none sticky left-2 inline-block p-3 text-xs text-neutral-400">
           {empty ? t('timeline.dropHint') : t('timeline.newTrackHint')}
         </span>
         {ghost && <AssetGhost start={ghost.start} duration={ghost.duration} pps={pps} />}
@@ -310,7 +310,7 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
       <button
         aria-label={t('track.remove')}
         title={t('track.remove')}
-        className="rounded px-1 text-neutral-500 hover:bg-red-900/50 hover:text-red-200"
+        className="rounded px-1 text-neutral-400 hover:bg-red-900/50 hover:text-red-200"
         onClick={() =>
           edit('ops.removeTrack', (p) => {
             p.tracks = p.tracks.filter((x) => x.id !== track.id);

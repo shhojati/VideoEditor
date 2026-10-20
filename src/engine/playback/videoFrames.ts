@@ -68,7 +68,7 @@ export class VideoFrames {
   private readonly seeks = new Map<ID, { target?: number; busy: boolean }>();
   private readonly streams = new Map<ID, ClipStream>();
   /** Frames presented during playback vs. the clock, for the A/V sync check. */
-  readonly stats = { frames: 0, dropped: 0, maxLag: 0, sumLag: 0 };
+  readonly stats = { frames: 0, dropped: 0, maxLag: 0, sumLag: 0, worstAt: -1 };
 
   constructor(private readonly onFrame: () => void) {}
 
@@ -127,6 +127,7 @@ export class VideoFrames {
     this.stopStreams();
     this.project = project;
     this.stats.frames = this.stats.dropped = this.stats.maxLag = this.stats.sumLag = 0;
+    this.stats.worstAt = -1;
     this.ensureStreams(t);
   }
 
@@ -167,7 +168,10 @@ export class VideoFrames {
         this.stats.frames++;
         if (lag > 0) this.stats.dropped++;
         this.stats.sumLag += lag;
-        this.stats.maxLag = Math.max(this.stats.maxLag, lag);
+        if (lag > this.stats.maxLag) {
+          this.stats.maxLag = lag;
+          this.stats.worstAt = t; // timeline time of the worst lag, for diagnosis
+        }
       }
     }
     // Finished clips release their stream and frame.

@@ -80,7 +80,7 @@ export function MediaBin() {
         ))}
 
         {assets.length === 0 && imports.length === 0 ? (
-          <div className="flex-1 rounded border border-dashed border-line p-6 text-center text-sm text-neutral-500">
+          <div className="flex-1 rounded border border-dashed border-line p-6 text-center text-sm text-neutral-400">
             {t('media.empty')}
           </div>
         ) : (
@@ -90,7 +90,7 @@ export function MediaBin() {
             ))}
           </ul>
         )}
-        <p className="mt-auto pt-2 text-[11px] text-neutral-500">{t('media.privacy')}</p>
+        <p className="mt-auto pt-2 text-[11px] text-neutral-400">{t('media.privacy')}</p>
       </div>
     </>
   );

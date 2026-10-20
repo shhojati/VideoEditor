@@ -13,7 +13,7 @@ interface ExportState {
   startedAt?: number;
   /** Seconds left, estimated from video progress so far. */
   eta?: number;
-  result?: { url?: string; name: string; bytes: number; seconds: number; savedToDisk: boolean; audioCodec: string | null };
+  result?: { url?: string; name: string; bytes: number; seconds: number; savedToDisk: boolean; audioCodec: string | null; aacSource: 'native' | 'wasm' | null };
   error?: string;
 }
 
@@ -73,6 +73,7 @@ export async function startExport(project: Project, settings: ExportSettings) {
           seconds: data.ms / 1000,
           savedToDisk: !data.blob,
           audioCodec: data.audioCodec,
+          aacSource: data.aacSource,
         },
       });
       if (settings.srt) for (const st of project.subtitleTracks) if (!st.hidden && st.cues.length) exportSubtitleFile(project, st, 'srt');

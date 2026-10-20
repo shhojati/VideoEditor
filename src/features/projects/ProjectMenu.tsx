@@ -50,7 +50,7 @@ export function ProjectMenu() {
             {t('project.new')}
           </button>
           <div className="my-1 border-t border-line" />
-          {projects.length === 0 && <div className="px-2 py-1.5 text-sm text-neutral-500">{t('project.empty')}</div>}
+          {projects.length === 0 && <div className="px-2 py-1.5 text-sm text-neutral-400">{t('project.empty')}</div>}
           <ul className="max-h-80 overflow-auto">
             {projects.map((p) => {
               const isCurrent = p.id === current?.id;
@@ -68,7 +68,7 @@ export function ProjectMenu() {
                       {p.name}
                       {isCurrent && <span className="ms-2 text-xs text-accent">({t('project.current')})</span>}
                     </div>
-                    <div className="text-xs text-neutral-500">{dateFmt.format(p.updatedAt)}</div>
+                    <div className="text-xs text-neutral-400">{dateFmt.format(p.updatedAt)}</div>
                   </button>
                   <button
                     className="rounded px-2 py-1 text-xs text-red-300 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 focus:opacity-100"

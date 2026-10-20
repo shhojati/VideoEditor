@@ -192,5 +192,24 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 ## After Phase 8 (decided 2026-10-20)
 - **Transitions** as the first post-MVP feature: crossfade/dissolve (with audio crossfade), dip to black/white, wipe/slide/push, zoom/blur. Design: a transition on the cut between two touching clips, centred on the cut and capped by source handles, blended in `renderFrame`, with two-clip decoding during the window, a Transitions tab, and an inspector for type and duration.
 
-### Next: Phase 8 — Polish, reliability, release
-First task: error boundaries and a startup capability check (WebCodecs, OPFS, cross-origin isolation, WebGPU) with clear guidance, then a static production build with the required COOP/COEP headers documented for the internal host.
+## Phase 8 — Polish, reliability, release ✅ (2026-10-20)
+
+### Done
+- **Startup capability check** (`app/capabilities.ts`, `StartupCheck.tsx`). Required: secure context (https/localhost), WebCodecs, H.264 encode, OPFS, OffscreenCanvas; if any is missing, the editor is replaced by an explanation. Optional: COOP/COEP isolation, WebGPU, AAC encode, save dialog; these show a dismissible notice of what is degraded.
+- **Errors**: per-panel error boundaries (one broken panel doesn't take down the editor; the project is autosaved independently), global toasts for unhandled errors, friendly messages for storage quota and out-of-memory (also in the export dialog).
+- **Onboarding**: a welcome card on empty projects with the four steps and "Open sample project". The sample is generated in the browser (no bundled media): an animated video with soft audio, a Persian title in Lalezar and two subtitles. A **keyboard shortcut sheet** opens with `?` (or the ⌨ button) and works with the Persian layout.
+- **Accessibility**: axe scan in fa and en with no serious or critical violations. Fixed contrast (accent blue → blue-600, 5.2:1 with white; secondary grey text lightened to ≥ 4.5:1). Icon buttons have labels, dialogs use `role=dialog`, focus outlines are visible.
+- **Release build**: `npm run build` → `dist/` (~55 MB app + ~1.1 GB models). Test audio (`spike-data`) is excluded from builds, only the ONNX Runtime WASM variant that is used gets shipped, and an app icon was added. **[docs/DEPLOY.md](DEPLOY.md)** covers HTTPS, COOP/COEP, MIME types and caching for nginx / IIS / Apache, plus a verification checklist. New **README.md**.
+- **Tests**: `npm run e2e:prod` builds and runs the production bundle. A new user's path (sample → split → edit subtitle → `?` sheet → export → valid MP4 → reload) runs with **zero console errors**, plus the axe scan. `npm run ci` runs lint, typecheck, unit, E2E and production smoke. Guard tests catch invisible bidi characters in source and fa/en translation key mismatches.
+
+### Verified
+- Lint, typecheck, 132 unit tests, dev E2E (timeline, playback, text, subtitles, export ×2), production smoke + axe: all green.
+- The playback E2E failed once when run in parallel with the other specs and a fresh `dist` build on a busy machine (one 2.7 s video stall). Run alone it passed with 0 dropped frames and 0 lag. The frame source now records `worstAt` (timeline time of the worst lag) to diagnose this if it recurs.
+
+- **AAC everywhere** (owner request after seeing the Opus warning): `engine/export/aac.ts` uses the browser's AAC encoder when present, otherwise registers `@mediabunny/aac-encoder` (libavcodec in WASM, MPL-2.0, ~1 MB, loaded lazily, WASM embedded in an inline worker, no network). It covers Firefox, Windows N/KN without the Media Feature Pack, and some Chromium builds. The export dialog notes when it was used; Opus remains only as a last resort. The "no AAC" startup notice was removed. E2E `e2e/aac.spec.ts` simulates a browser without AAC, and the output is still AAC, audible, with no off-origin requests.
+
+### Known issues / open
+- Bundler emits a second, unused 27 MB copy of the ONNX Runtime WASM (`dist/assets`), referenced by transformers.js internally.
+- No CI server configured (no remote repository); `npm run ci` is ready to drop into one.
+
+### Next: transitions (post-MVP, see above)

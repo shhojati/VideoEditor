@@ -60,7 +60,7 @@ export function AutoSubtitles({ project }: { project: Project }) {
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={selectedOnly && hasSelectedClip} disabled={!hasSelectedClip || busy} onChange={(e) => setSelectedOnly(e.target.checked)} />
-            <span className={hasSelectedClip ? '' : 'text-neutral-500'}>{t('stt.selectedOnly')}</span>
+            <span className={hasSelectedClip ? '' : 'text-neutral-400'}>{t('stt.selectedOnly')}</span>
           </label>
 
           {busy ? (
@@ -73,14 +73,14 @@ export function AutoSubtitles({ project }: { project: Project }) {
                 <div className="h-1.5 rounded bg-accent transition-[width]" style={{ width: `${Math.round(stt.progress * 100)}%` }} />
               </div>
               {stt.rtf !== undefined && (
-                <div className="text-neutral-500" dir="ltr">
+                <div className="text-neutral-400" dir="ltr">
                   {t('stt.speed', { rtf: stt.rtf.toFixed(2), device: stt.device === 'webgpu' ? 'WebGPU' : 'WASM' })}
                 </div>
               )}
               <Button className="text-xs" onClick={cancelAutoSubtitles}>
                 {t('stt.cancel')}
               </Button>
-              <p className="text-neutral-500">{t('stt.background')}</p>
+              <p className="text-neutral-400">{t('stt.background')}</p>
             </div>
           ) : (
             <Button
@@ -101,10 +101,10 @@ export function AutoSubtitles({ project }: { project: Project }) {
           {stt.stage === 'error' && (
             <p className="text-red-300" role="alert">
               {t(`stt.errors.${stt.error}`)}
-              {stt.detail && <span className="block text-[10px] text-neutral-500" dir="ltr">{stt.detail}</span>}
+              {stt.detail && <span className="block text-[10px] text-neutral-400" dir="ltr">{stt.detail}</span>}
             </p>
           )}
-          {Object.values(stt.models).some((v) => v === false) && <p className="text-[11px] text-neutral-500">{t('stt.installHint')}</p>}
+          {Object.values(stt.models).some((v) => v === false) && <p className="text-[11px] text-neutral-400">{t('stt.installHint')}</p>}
         </div>
       )}
     </section>

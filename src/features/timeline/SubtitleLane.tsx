@@ -42,7 +42,7 @@ export const SubtitleLane = memo(function SubtitleLane({
           aria-pressed={!track.hidden}
           aria-label={t('subtitles.toggleVisible')}
           title={t('subtitles.toggleVisible')}
-          className={`w-6 rounded py-0.5 ${track.hidden ? 'bg-surface-3 text-neutral-500' : 'bg-accent text-white'}`}
+          className={`w-6 rounded py-0.5 ${track.hidden ? 'bg-surface-3 text-neutral-400' : 'bg-accent text-white'}`}
           onClick={() =>
             edit('ops.subtitleVisibility', (p) => {
               const st = p.subtitleTracks.find((x) => x.id === track.id);

@@ -6,8 +6,8 @@ type CueState = { start: number; end: number; text: string; flag?: string };
 const cues = (page: Page) =>
   page.evaluate(() => {
     type P = { subtitleTracks: { cues: CueState[] }[] };
-    const w = window as unknown as { __stores: { project: { getState: () => { history: { present: P } } } } };
-    return w.__stores.project.getState().history.present.subtitleTracks.at(-1)?.cues ?? [];
+    const w = window as unknown as { __stores?: { project: { getState: () => { history: { present: P } | null } } } };
+    return w.__stores?.project.getState().history?.present.subtitleTracks.at(-1)?.cues ?? [];
   });
 
 /** Clicks the export button and returns the downloaded file's name and raw bytes as text. */

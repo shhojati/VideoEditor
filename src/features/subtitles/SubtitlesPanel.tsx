@@ -107,8 +107,8 @@ export function SubtitlesPanel({ project }: { project: Project }) {
 
       <AutoSubtitles project={project} />
 
-      {track ? <CueList track={track} /> : <p className="p-4 text-center text-neutral-500">{t('subtitles.empty')}</p>}
-      <p className="mt-auto pt-2 text-[11px] text-neutral-500">{t('media.privacy')}</p>
+      {track ? <CueList track={track} /> : <p className="p-4 text-center text-neutral-400">{t('subtitles.empty')}</p>}
+      <p className="mt-auto pt-2 text-[11px] text-neutral-400">{t('media.privacy')}</p>
     </div>
   );
 }
@@ -199,7 +199,7 @@ const CueRow = memo(function CueRow(props: {
       }`}
     >
       <div className="flex items-center gap-1 font-mono text-[10px] text-neutral-400" dir="ltr">
-        <span className="w-6 text-neutral-500">{props.index + 1}</span>
+        <span className="w-6 text-neutral-400">{props.index + 1}</span>
         <button className="hover:text-white" onClick={seekHere} title={t('subtitles.seek')}>
           {formatTimecode(cue.start, fps)} → {formatTimecode(cue.end, fps)}
         </button>

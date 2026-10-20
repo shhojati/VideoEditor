@@ -6,10 +6,10 @@ type TextState = { content: string; rtl: boolean; fontSize: number; color: strin
 const texts = (page: Page) =>
   page.evaluate(() => {
     type P = { tracks: { clips: { start: number; text?: unknown; transform: { y: number } }[] }[] };
-    const w = window as unknown as { __stores: { project: { getState: () => { history: { present: P } } } } };
-    return w.__stores.project
-      .getState()
-      .history.present.tracks.flatMap((t) => t.clips)
+    const w = window as unknown as { __stores?: { project: { getState: () => { history: { present: P } | null } } } };
+    // Before the project has (re)loaded there is no history yet.
+    return (w.__stores?.project.getState().history?.present.tracks ?? [])
+      .flatMap((t) => t.clips)
       .filter((c) => c.text)
       .sort((a, b) => a.start - b.start)
       .map((c) => ({ ...(c.text as object), y: c.transform.y })) as (TextState & { y: number })[];
@@ -93,5 +93,5 @@ test('Persian and English text: create, style live, undo/redo every property', a
   // Survives reload.
   await expect(page.getByTestId('save-status')).toHaveAttribute('data-status', 'saved');
   await page.reload();
-  expect(await texts(page)).toHaveLength(2);
+  await expect.poll(() => texts(page).then((x) => x.length)).toBe(2);
 });

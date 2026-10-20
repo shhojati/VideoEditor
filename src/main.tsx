@@ -4,6 +4,13 @@ import './i18n';
 import './index.css';
 import { App } from './app/App';
 
+if (import.meta.env.DEV) {
+  // Handles for debugging and E2E checks; not present in production builds.
+  void Promise.all([import('./store/transport'), import('./store/projectStore')]).then(([t, p]) => {
+    Object.assign(window, { __stores: { transport: t.useTransport, project: p.useProjectStore } });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

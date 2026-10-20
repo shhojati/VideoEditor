@@ -36,6 +36,7 @@ const clip = z.object({
     rotation: num,
     opacity: num.min(0).max(1),
     crop: rect.optional(),
+    fit: z.enum(['contain', 'cover']).optional(),
   }),
   audio: z.object({ volume: nonNeg, fadeIn: nonNeg, fadeOut: nonNeg }),
   text: textProps.optional(),

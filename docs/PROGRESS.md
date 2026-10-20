@@ -80,5 +80,30 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 - Zoom re-renders all visible clips; fine at this scale, revisit if the zoom spikes are noticeable.
 - Filmstrip density is fixed at import (4–40 frames); at high zoom neighbouring tiles repeat a frame.
 
-### Next: Phase 4 — Preview and playback
-First task: `renderFrame(project, time, ctx)` for video/image clips (transform, opacity, crop) using a per-asset frame cache on Mediabunny's `CanvasSink`, drawn into the preview canvas when the playhead moves while paused.
+## Phase 4 — Preview and playback ✅ (2026-10-20)
+
+### Done
+- **`renderFrame(project, t, ctx, lookup)`** (`engine/render/renderFrame.ts`): pure, synchronous compositor shared with the future exporter. Visual tracks bottom → top; per clip: fit (`contain` default / `cover`), crop (fractions of the source), scale, rotation, offset (fractions of the canvas), opacity. Text clips get basic drawing (`render/text.ts`) until Phase 5. `Transform` gained optional `fit`; semantics are documented on the type.
+- **Video frames** (`engine/playback/videoFrames.ts`): paused → one exact seek per clip at a time with newest-request-wins, so scrubbing never builds a backlog; playing → a read-ahead stream per clip (6 frames, starting 1 s before a clip appears), frames the clock has passed are dropped. Every `VideoSample` is closed when replaced.
+- **Readers** (`engine/decode/mediaReader.ts`): one Mediabunny `Input` per asset with video + audio sinks (images: one `ImageBitmap`), opened lazily and closed when the asset leaves the project.
+- **Audio** (`engine/audio/audioEngine.ts`): each audible clip decodes progressively and schedules buffers 2 s ahead on the `AudioContext`; per-clip gain (volume + linear fade automation, correct when starting mid-fade), track mute, master volume, speed via `playbackRate`. Its output clock (`getOutputTimestamp`, latency-compensated) is the master clock.
+- **Engine** (`engine/playback/engine.ts`): reacts to the transport store (play / pause / seek / volume / loop), restarts 150 ms after an edit made while playing, stops at the end or loops, renders into the preview.
+- **Preview UI**: letterboxed canvas sized to the panel × devicePixelRatio (capped at project resolution); transport bar with previous/next edit, ±1 frame, play/pause, HH:MM:SS:FF timecode, loop, volume, Fit/Fill for selected clips. Aspect presets from Phase 1.
+
+### Verified
+- 78 unit tests (adds placement/crop/rotation, layer order, fades, gain automation).
+- **Paused seek accuracy**: 12 random seeks across clips all landed on the frame containing the requested time; 55 ms median, 128 ms max (budget 500 ms).
+- **A/V sync E2E** (`e2e/playback.spec.ts`, headless Chrome, ~2.4 min): 5 video clips (with in-points) + 6 audio clips with fades, 120 s. **Shown frame never trailed the clock (max lag 0 ms), 0 dropped of ~7,200 frames (~60 fps), 0 late audio buffers of 11,257** (DoD < 80 ms). Clock tracked wall time.
+- Fit/Fill: a 9:16 clip with `cover` fills the 16:9 frame.
+
+### Decisions
+- **Decoding runs on the main thread, not in a worker** (plan §4.4 said worker). WebCodecs already decodes on its own threads; only demuxing is JS, and measurements above show no frame loss. `VideoFrames` is the only consumer, so moving it into a worker later (transferring `VideoFrame`s) stays contained if real 1080p camera footage needs it.
+- Speed changes use `playbackRate`, so audio pitch shifts with speed. Pitch-preserving speed is post-MVP.
+
+### Deferred / known issues
+- Measured with generated 960×540 H.264; long-GOP 1080p camera files will seek slower (decode from the previous keyframe).
+- No on-canvas handles for move/scale/rotate yet (inspector numbers come in Phase 5).
+- The in-app browser pane suppresses `requestAnimationFrame` while hidden, so the preview only repaints when visible; Chrome tabs behave normally.
+
+### Next: Phase 5 — Text overlays and inspector
+First task: clip inspector (transform, opacity, speed, volume/fades) editing the selected clip through `edit()` with `mergeKey` so slider drags are one undo step.

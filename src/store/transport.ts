@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 
 interface TransportState {
-  /** Playhead position (s). */
+  /** Playhead position (s). Written by the playback engine while playing. */
   time: number;
   playing: boolean;
-  /** Where playback stops (timeline end); set by the timeline. */
+  /** Timeline end (s); set by the timeline. */
   duration: number;
+  loop: boolean;
+  /** Master volume 0..1. */
+  volume: number;
   seek: (t: number) => void;
   play: () => void;
   pause: () => void;
@@ -13,40 +16,17 @@ interface TransportState {
 }
 
 /**
- * Playhead + play state. Phase 3 drives it with a wall-clock rAF loop so the playhead moves;
- * Phase 4 replaces the loop with the audio-master clock of the playback engine.
+ * Player intent and position. UI code only flips these flags; engine/playback reacts to the changes
+ * (starts audio, streams frames) and writes `time` from the audio clock while playing.
  */
-export const useTransport = create<TransportState>()((set, get) => {
-  let raf = 0;
-  let last = 0;
-  const tick = (now: number) => {
-    const { time, duration, playing } = get();
-    if (!playing) return;
-    const next = time + (now - last) / 1000;
-    last = now;
-    if (next >= duration) {
-      set({ time: duration, playing: false });
-      return;
-    }
-    set({ time: next });
-    raf = requestAnimationFrame(tick);
-  };
-  return {
-    time: 0,
-    playing: false,
-    duration: 0,
-    seek: (t) => set({ time: Math.max(0, t) }),
-    play: () => {
-      if (get().playing || get().duration <= 0) return;
-      if (get().time >= get().duration) set({ time: 0 });
-      last = performance.now();
-      set({ playing: true });
-      raf = requestAnimationFrame(tick);
-    },
-    pause: () => {
-      cancelAnimationFrame(raf);
-      set({ playing: false });
-    },
-    toggle: () => (get().playing ? get().pause() : get().play()),
-  };
-});
+export const useTransport = create<TransportState>()((set, get) => ({
+  time: 0,
+  playing: false,
+  duration: 0,
+  loop: false,
+  volume: 1,
+  seek: (t) => set({ time: Math.max(0, t) }),
+  play: () => get().duration > 0 && set({ playing: true }),
+  pause: () => set({ playing: false }),
+  toggle: () => (get().playing ? get().pause() : get().play()),
+}));

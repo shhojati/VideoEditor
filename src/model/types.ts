@@ -58,13 +58,22 @@ export interface Track {
   clips: Clip[];
 }
 
+/**
+ * Placement of a visual clip on the canvas. The (cropped) media is first fitted to the canvas
+ * (`fit`, default 'contain'), then scaled, rotated about its centre and offset.
+ */
 export interface Transform {
+  /** Offset of the centre, as a fraction of canvas width (0 = centred, 0.5 = right edge). */
   x: number;
+  /** Offset of the centre, as a fraction of canvas height (0 = centred, 0.5 = bottom edge). */
   y: number;
   scale: number;
+  /** Degrees, clockwise. */
   rotation: number;
   opacity: number;
+  /** Visible part of the source, as fractions (0..1) of its display size. */
   crop?: Rect;
+  fit?: 'contain' | 'cover';
 }
 
 export interface ClipAudio {

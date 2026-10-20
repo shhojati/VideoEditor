@@ -10,6 +10,7 @@ import { TimelinePanel } from '../features/timeline/TimelinePanel';
 import { startAutosave } from '../store/autosave';
 import { useProject } from '../store/projectStore';
 import { TopBar } from './TopBar';
+import { ExportDialog } from '../features/export/ExportDialog';
 import { BrowserNotice } from './BrowserNotice';
 import { useGlobalShortcuts } from './shortcuts';
 
@@ -42,6 +43,7 @@ export function App() {
             <PreviewPanel project={project} />
             <Inspector project={project} />
           </main>
+          <ExportDialog project={project} />
           <div className="flex h-[34%] min-h-[180px] flex-col">
             <TimelinePanel project={project} />
           </div>

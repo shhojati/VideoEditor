@@ -96,8 +96,17 @@ test('auto subtitles from Persian speech (STT_E2E=1)', async ({ page }) => {
   await page.getByTestId('tab-subtitles').click();
   await page.getByTestId('auto-subtitles').getByRole('button').first().click();
   await page.getByTestId('stt-model').selectOption('tiny');
+  page.on('console', (m) => m.type() === 'error' && console.log('[page]', m.text()));
+  page.on('load', () => console.log('[page] (re)loaded'));
+  const status = setInterval(() => {
+    void page.getByTestId('auto-subtitles').innerText().then((t) => console.log('[stt]', t.replace(/\s+/g, ' ').slice(0, 160)), () => {});
+  }, 30_000);
   await page.getByTestId('stt-start').click();
-  await expect(page.getByTestId('stt-done')).toBeVisible({ timeout: 14 * 60_000 });
+  // Finish = done message or an error (fail fast and show it).
+  const outcome = page.getByTestId('stt-done').or(page.getByTestId('auto-subtitles').getByRole('alert'));
+  await expect(outcome).toBeVisible({ timeout: 14 * 60_000 });
+  clearInterval(status);
+  await expect(page.getByTestId('stt-done'), await outcome.innerText()).toBeVisible();
   const c = await cues(page);
   expect(c.length).toBeGreaterThan(5);
   expect(c.every((x) => x.end > x.start)).toBe(true);

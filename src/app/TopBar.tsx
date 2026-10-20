@@ -12,6 +12,7 @@ import {
   useUndoLabel,
 } from '../store/projectStore';
 import { Button } from './ui';
+import { useExport } from '../features/export/exportService';
 
 export function TopBar() {
   const { t, i18n } = useTranslation();
@@ -51,7 +52,10 @@ export function TopBar() {
       >
         {t(`save.${status}`)}
       </span>
-      <div className="ms-auto">
+      <div className="ms-auto flex gap-2">
+        <Button className="bg-accent! text-white" disabled={!project} onClick={() => useExport.setState({ open: true })} data-testid="open-export">
+          ⤓ {t('export.open')}
+        </Button>
         <Button onClick={() => void i18n.changeLanguage(i18n.language === 'fa' ? 'en' : 'fa')}>
           {t('lang.switch')}
         </Button>

@@ -318,5 +318,33 @@
       "failed": "Speech recognition failed."
     },
     "installHint": "Download missing models with scripts/fetch-models.mjs into public/models."
+  },
+  "export": {
+    "open": "Export",
+    "title": "Export video (MP4)",
+    "resolution": "Resolution",
+    "fps": "Frame rate",
+    "quality": "Quality",
+    "qualities": {
+      "low": "Small file",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "burnSubtitles": "Burn subtitles into the picture",
+    "alsoSrt": "Also save subtitles as SRT",
+    "summary": "{{size}} · {{duration}} long · up to {{bytes}}",
+    "stage": {
+      "audio": "Preparing audio…",
+      "video": "Rendering video…"
+    },
+    "eta": "about {{time}} left",
+    "done": "Created \"{{name}}\" ({{bytes}}) in {{seconds}} s ({{ratio}}× the video length).",
+    "opusWarning": "This browser cannot encode AAC; audio was saved as Opus, which some players cannot play.",
+    "download": "Download file",
+    "error": "Export failed: {{message}}",
+    "cancelled": "Export cancelled.",
+    "cancel": "Cancel",
+    "close": "Close",
+    "start": "Start export"
   }
 }

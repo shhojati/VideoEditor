@@ -318,5 +318,33 @@
       "failed": "تبدیل گفتار ناموفق بود."
     },
     "installHint": "مدل‌های نصب‌نشده را با scripts/fetch-models.mjs دانلود و در public/models قرار دهید."
+  },
+  "export": {
+    "open": "خروجی",
+    "title": "خروجی ویدیو (MP4)",
+    "resolution": "کیفیت تصویر",
+    "fps": "نرخ فریم",
+    "quality": "کیفیت فشرده‌سازی",
+    "qualities": {
+      "low": "کم‌حجم",
+      "medium": "متوسط",
+      "high": "بالا"
+    },
+    "burnSubtitles": "زیرنویس روی تصویر نوشته شود",
+    "alsoSrt": "فایل SRT زیرنویس هم ذخیره شود",
+    "summary": "{{size}} · مدت {{duration}} · حداکثر {{bytes}}",
+    "stage": {
+      "audio": "آماده‌سازی صدا…",
+      "video": "ساخت ویدیو…"
+    },
+    "eta": "حدود {{time}} مانده",
+    "done": "«{{name}}» ساخته شد ({{bytes}}) در {{seconds}} ثانیه ({{ratio}}× زمان ویدیو).",
+    "opusWarning": "این مرورگر AAC را پشتیبانی نمی‌کند؛ صدا با Opus ذخیره شد که ممکن است در برخی پخش‌کننده‌ها پخش نشود.",
+    "download": "دانلود فایل",
+    "error": "خروجی ناموفق بود: {{message}}",
+    "cancelled": "خروجی لغو شد.",
+    "cancel": "لغو",
+    "close": "بستن",
+    "start": "شروع خروجی"
   }
 }

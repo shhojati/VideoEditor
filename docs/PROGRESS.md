@@ -147,7 +147,7 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 ### Verified (DoD)
 - **Persian end to end in the in-app browser**: a 145 s video with real Persian speech (12 Common Voice clips, twice) → auto subtitles with `small` on WebGPU in **3.5 min including model load (≈1.2× real time; the Phase 0 spike measured 2.9×)** → 26 well-timed cues, no repetition loops. Four cues corrected in the list, Boxed preset and Persian digits applied → preview shows `آیا حضرت عالی مرا صدا زدید؟` with correct joining and `؟` placement → SRT exported with BOM, CRLF and per-line RLM. Network: models and WASM from localhost only.
 - 125 unit tests (adds SRT/VTT incl. malformed and RTL-mark cases, cue ops, lint rules, auto-fix, digits, balanced wrapping, 16 kHz mixing, window planning, repetition collapse, segment → cue).
-- E2E `e2e/subtitles.spec.ts`: import SRT (Persian, RLM, `<i>`, a broken block) → edit text → drag a cue → split with S → undo/redo → Persian digits → exported SRT checked byte for byte. An opt-in E2E (`STT_E2E=1`) runs real speech-to-text with `tiny`.
+- E2E `e2e/subtitles.spec.ts`: import SRT (Persian, RLM, `<i>`, a broken block) → edit text → drag a cue → split with S → undo/redo → Persian digits → exported SRT checked byte for byte. An opt-in E2E (`STT_E2E=1`) runs real speech-to-text with `tiny` on 72 s of Persian speech in headless Chrome: passes in 1.1 min.
 - ⚠ Not verified in VLC: VLC is not installed here. Please open an exported `.srt` with your video in VLC once.
 
 ### Bugs found and fixed
@@ -161,5 +161,36 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 - Per-cue style overrides, cue copy/paste and multi-track subtitle stacking (two visible tracks at the same position overlap) are not done.
 - Speed ≠ 1 clips are fed to STT at the changed speed (pitch shifted), which may lower accuracy.
 
-### Next: Phase 7 — Export
-First task: export dialog (resolution, fps, quality, burn-in on/off, also export `.srt`) and a worker pipeline that calls `renderFrame` per frame with exact-frame decoding, mixes audio with `OfflineAudioContext`-equivalent logic, and muxes H.264 + AAC with Mediabunny.
+## Phase 7 — Export ✅ (2026-10-20)
+
+### Done
+- **Dialog** (`features/export`): 720p/1080p (short side, aspect kept, even sizes), 24/25/30/50/60 fps, quality Small/Medium/High (≈0.06/0.12/0.2 bits per pixel per frame; 1080p30 Medium ≈ 7.5 Mbps), burn in subtitles on/off, also save `.srt` for each visible subtitle track, an upper-bound size estimate, progress with ETA, and cancel. Opened from the **Export** button in the top bar.
+- **Pipeline** (`workers/export.worker.ts`, plan §4.5): for each output frame it decodes exact source frames sequentially per clip (`ExactClipFrames`, never drops), draws with the same `renderFrame` as the preview into an `OffscreenCanvas`, and encodes H.264 (keyframe every 2 s) with backpressure. Fonts for text and subtitles are loaded inside the worker via the `FontFace` manifest.
+- **Audio**: workers have no Web Audio, so `engine/export/audioMix.ts` mixes offline: each audible clip's source range is decoded, resampled to 48 kHz with linear interpolation following speed, multiplied by the player's volume/fade curve, summed and limited. It is encoded as AAC 160 kbps (Opus with a warning if AAC is unavailable) in 1 s chunks, interleaved with video so the muxer never holds the whole file.
+- **Output**: with the File System Access save dialog the MP4 streams straight to the chosen file (`StreamTarget`, chunked), and a cancelled or failed export removes the partial file. Without it, the file is built in memory (`fastStart`) and offered as a download.
+
+### Verified
+- 131 unit tests (adds output size, bitrate, frame count, mix placement / in-point / speed / interpolation / fades / summing).
+- **E2E `e2e/export.spec.ts`** (Mediabunny probes the output in place of ffprobe, which is not installed here):
+  - **Download path**: duration 8.000 s (±50 ms required), H.264 + AAC, 1280×720. Burned-in Persian subtitle box present during the cue and gone after it, the red image at 7 s, and audio RMS 0.21, the exact level of the source tone.
+  - **Streaming path**: the export lands in the file returned by the save dialog; duration, codecs checked.
+- **Performance DoD (`EXPORT_PERF=1`)**: 2-minute 1080p30 project (5 video clips, 6 audio clips with fades, 30 burned-in Persian subtitles) exported in **50 s = 0.42× real time** (target < 2×), duration exactly 120.000 s, 38 MB. A frame at 41 s shows the correct source frame (330) and correctly shaped subtitle.
+- ⚠ Not verified in VLC / Windows player (not installed). Please open one export in a desktop player.
+
+### Decisions
+- Audio is mixed into whole-timeline buffers (stereo float, ~23 MB per minute) rather than streamed block by block: simple and exact, and well within the 1.5 GB budget for ≤ 5-minute projects. Revisit for long-form.
+- MP4 written to disk is not "fast start" (index at the end), which is fine for local playback and editing; downloads are fast-start.
+
+### Deferred / known issues
+- No memory measurement inside the worker beyond the design (frames closed promptly, encoder backpressure, 1 s audio chunks).
+- Speed-changed audio is resampled (pitch shifts), matching preview.
+- Hardware-encoder availability varies by machine; the encoder is chosen by the browser.
+
+### Testing note
+- E2E runs share a Vite **dev** server (they use dev-only hooks such as `window.__stores` and the spike fixtures). Editing source files while E2E is running hot-reloads the page under test and makes long tests fail spuriously. That caused one false STT failure; the isolated re-run passed.
+
+## After Phase 8 (decided 2026-10-20)
+- **Transitions** as the first post-MVP feature: crossfade/dissolve (with audio crossfade), dip to black/white, wipe/slide/push, zoom/blur. Design: a transition on the cut between two touching clips, centred on the cut and capped by source handles, blended in `renderFrame`, with two-clip decoding during the window, a Transitions tab, and an inspector for type and duration.
+
+### Next: Phase 8 — Polish, reliability, release
+First task: error boundaries and a startup capability check (WebCodecs, OPFS, cross-origin isolation, WebGPU) with clear guidance, then a static production build with the required COOP/COEP headers documented for the internal host.

@@ -1,0 +1,52 @@
+import { CURRENT_VERSION } from './migrations';
+import type { ID, Project, ProjectSettings, SubtitleStyle, SubtitleTrack, Track, TrackKind } from './types';
+
+export const newId = (): ID => crypto.randomUUID();
+
+export type AspectPreset = '16:9' | '9:16' | '1:1' | '4:5';
+
+/** Canvas size for each aspect preset at 1080p-class resolution. */
+export const ASPECT_PRESETS: Record<AspectPreset, { width: number; height: number }> = {
+  '16:9': { width: 1920, height: 1080 },
+  '9:16': { width: 1080, height: 1920 },
+  '1:1': { width: 1080, height: 1080 },
+  '4:5': { width: 1080, height: 1350 },
+};
+
+export function aspectOf(settings: Pick<ProjectSettings, 'width' | 'height'>): AspectPreset | undefined {
+  return (Object.keys(ASPECT_PRESETS) as AspectPreset[]).find(
+    (k) => ASPECT_PRESETS[k].width === settings.width && ASPECT_PRESETS[k].height === settings.height,
+  );
+}
+
+export function createTrack(kind: TrackKind): Track {
+  return { id: newId(), kind, muted: false, locked: false, clips: [] };
+}
+
+export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
+  fontFamily: 'Vazirmatn',
+  fontSize: 48,
+  color: '#ffffff',
+  strokeColor: '#000000',
+  strokeWidth: 4,
+  position: 'bottom',
+  marginY: 60,
+  maxWidthPct: 80,
+};
+
+export function createSubtitleTrack(language = 'fa'): SubtitleTrack {
+  const rtl = ['fa', 'ar', 'he', 'ur'].includes(language);
+  return { id: newId(), language, rtl, style: { ...DEFAULT_SUBTITLE_STYLE }, cues: [] };
+}
+
+export function createProject(name: string, aspect: AspectPreset = '16:9'): Project {
+  return {
+    id: newId(),
+    name,
+    version: CURRENT_VERSION,
+    settings: { ...ASPECT_PRESETS[aspect], fps: 30, sampleRate: 48_000 },
+    assets: {},
+    tracks: [createTrack('video'), createTrack('audio')],
+    subtitleTracks: [],
+  };
+}

@@ -1,0 +1,9 @@
+node_modules
+dist
+public/models/*
+!public/models/README.md
+public/wasm
+public/fonts
+public/spike-data
+*.log
+.npmrc

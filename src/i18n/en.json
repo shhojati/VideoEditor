@@ -1,0 +1,36 @@
+{
+  "app": { "title": "Video Editor", "untitled": "Untitled project" },
+  "project": {
+    "menu": "Projects",
+    "new": "New project",
+    "open": "Open",
+    "delete": "Delete",
+    "confirmDelete": "Delete project \"{{name}}\"? This cannot be undone.",
+    "rename": "Project name",
+    "current": "current",
+    "empty": "No projects",
+    "loadError": "Could not open project: {{error}}"
+  },
+  "save": { "saved": "Saved", "pending": "Unsaved changes", "saving": "Saving…", "error": "Save failed" },
+  "edit": { "undo": "Undo", "redo": "Redo", "undoWith": "Undo: {{label}}", "redoWith": "Redo: {{label}}" },
+  "ops": {
+    "rename": "Rename",
+    "aspect": "Change aspect ratio",
+    "fps": "Change frame rate",
+    "addTrack": "Add track",
+    "removeTrack": "Remove track",
+    "toggleMute": "Toggle mute",
+    "toggleLock": "Toggle track lock"
+  },
+  "panels": {
+    "media": "Media",
+    "mediaEmpty": "Drop video, audio or image files here (Phase 2)",
+    "preview": "Preview",
+    "inspector": "Properties",
+    "timeline": "Timeline"
+  },
+  "settings": { "title": "Project settings", "aspect": "Aspect ratio", "fps": "Frame rate", "size": "Size" },
+  "track": { "video": "Video", "audio": "Audio", "text": "Text", "add": "+ {{kind}} track", "mute": "Mute", "lock": "Lock", "remove": "Remove track", "empty": "No tracks" },
+  "lang": { "switch": "فارسی" },
+  "browser": { "limited": "This browser has limited support. Use the latest Chrome or Edge for the best results." }
+}

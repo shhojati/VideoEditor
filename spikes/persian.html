@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spike 3: Persian</title><link rel="stylesheet" href="./fonts.css"></head>
+<body><h2>Spike 3: Persian text on canvas</h2><canvas id="c" width="1280" height="720"></canvas><pre id="out"></pre>
+<script type="module">
+await document.fonts.load('48px Vazirmatn');
+out.textContent = `Vazirmatn loaded: ${document.fonts.check('48px Vazirmatn')}\n`;
+const ctx = c.getContext('2d');
+ctx.fillStyle = '#356'; ctx.fillRect(0, 0, 1280, 720);
+const lines = [
+  'سلام دنیا، این یک زیرنویس آزمایشی است',
+  'آیا این درست است؟ بله.',
+  'نسخه 2.5 از React در سال ۱۴۰۳ منتشر شد!',
+  '«نقل قول» با (پرانتز) و ۱۲۳٬۴۵۶ تومان',
+];
+// Each line drawn with background box + stroke + fill, direction rtl, centered.
+let y = 120;
+for (const [i, text] of lines.entries()) {
+  ctx.direction = 'rtl';
+  ctx.font = `${i === 0 ? 700 : 500} 52px Vazirmatn`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.roundRect(640 - w / 2 - 24, y - 44, w + 48, 88, 12); ctx.fill();
+  ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = '#000';
+  ctx.strokeText(text, 640, y);
+  ctx.fillStyle = i === 0 ? '#ffd400' : '#fff';
+  ctx.fillText(text, 640, y);
+  y += 140;
+}
+// Reference: the same first line rendered by the DOM (browser layout) for visual comparison.
+out.textContent += 'Compare canvas line 1 with the DOM reference below.\n';
+window.spikeResult = out.textContent;
+</script>
+<p dir="rtl" style="font: 700 40px Vazirmatn; background:#356; padding:8px">سلام دنیا، این یک زیرنویس آزمایشی است</p>
+</body></html>

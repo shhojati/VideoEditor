@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spike 2: export</title><link rel="stylesheet" href="./fonts.css"></head>
+<body><h2>Spike 2: export MP4</h2><button id="go">Export 5s test MP4</button>
+<pre id="out"></pre><video id="v" controls width="640"></video> <a id="dl" download="spike-export.mp4"></a>
+<script type="module">
+import { exportTestVideo } from './export-lib.ts';
+go.onclick = async () => {
+  out.textContent = 'working...';
+  try {
+    const r = await exportTestVideo();
+    out.textContent = r.log.join('\n');
+    const url = URL.createObjectURL(r.blob);
+    v.src = url; dl.href = url; dl.textContent = 'download';
+    v.onloadedmetadata = () => { out.textContent += `\n<video> duration=${v.duration.toFixed(3)} ${v.videoWidth}x${v.videoHeight}`; window.spikeResult = out.textContent; };
+  } catch (e) { out.textContent = 'FAIL ' + e; window.spikeResult = 'FAIL ' + e; }
+};
+</script></body></html>

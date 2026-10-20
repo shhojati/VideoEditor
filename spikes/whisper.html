@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spike 4: whisper</title><link rel="stylesheet" href="./fonts.css"></head>
+<body><h2>Spike 4: Whisper offline</h2>
+<select id="model"><option>tiny</option><option selected>base</option><option>small</option></select>
+<select id="device"><option>webgpu</option><option>wasm</option></select>
+<select id="src"><option value="fa">Persian Common Voice (12 clips concat)</option><option value="en">English JFK</option><option value="file">file…</option></select>
+<input type="file" id="file" accept="audio/*,video/*"> <button id="go">Run</button>
+<pre id="out"></pre><pre id="res" dir="auto" style="font-family:Vazirmatn"></pre>
+<script type="module">
+const log = (s) => { out.textContent += s + '\n'; };
+async function decode16k(arrayBuffers, gap = 0.4) {
+  const ac = new AudioContext({ sampleRate: 16000 });   // decodeAudioData resamples to the context rate
+  const parts = [];
+  for (const ab of arrayBuffers) parts.push((await ac.decodeAudioData(ab)).getChannelData(0), new Float32Array(16000 * gap));
+  await ac.close();
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const pcm = new Float32Array(total); let o = 0;
+  for (const p of parts) { pcm.set(p, o); o += p.length; }
+  return pcm;
+}
+go.onclick = async () => {
+  out.textContent = ''; res.textContent = '';
+  log(`crossOriginIsolated=${crossOriginIsolated} webgpu=${!!navigator.gpu}`);
+  let bufs, ref = '';
+  if (src.value === 'fa') {
+    bufs = await Promise.all([...Array(12).keys()].map((i) => fetch(`/spike-data/s${i}.mp3`).then((r) => r.arrayBuffer())));
+    ref = (await (await fetch('/spike-data/ref.json')).json()).join(' | ');
+  } else if (src.value === 'en') bufs = [await (await fetch('/spike-data/jfk.wav')).arrayBuffer()];
+  else bufs = [await file.files[0].arrayBuffer()];
+  const audio = await decode16k(bufs);
+  const dur = audio.length / 16000;
+  log(`audio ${dur.toFixed(1)}s`);
+  const w = new Worker(new URL('./stt.worker.ts', import.meta.url), { type: 'module' });
+  let last = '';
+  w.onmessage = ({ data }) => {
+    if (data.type === 'progress') { const s = `${data.p.status} ${data.p.file ?? ''}`; if (s !== last) { log(s); last = s; } }
+    else if (data.type === 'error') { log('ERROR ' + data.message); window.spikeResult = out.textContent; }
+    else {
+      log(`fetched origins: ${data.origins.join(', ')}`);
+      log(`load ${(data.loadMs / 1000).toFixed(1)}s, transcribe ${(data.runMs / 1000).toFixed(1)}s => RTF ${(data.runMs / 1000 / dur).toFixed(2)}x`);
+      res.textContent = (data.out.chunks ?? []).map((c) => `[${c.timestamp[0]?.toFixed(1)}-${c.timestamp[1]?.toFixed(1)}] ${c.text}`).join('\n') + '\n\nREF: ' + ref;
+      window.spikeResult = out.textContent + '\n' + res.textContent;
+    }
+  };
+  w.postMessage({ audio, model: model.value, device: device.value, language: src.value === 'en' ? 'en' : 'fa' }, [audio.buffer]);
+};
+</script></body></html>

@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spike 1: decode</title><link rel="stylesheet" href="./fonts.css"></head>
+<body><h2>Spike 1: decode + seek</h2>
+<input type="file" id="file" accept="video/*"> or <button id="gen">use generated test video</button>
+<div><input type="range" id="seek" min="0" max="1000" value="0" style="width:640px"> <span id="ts"></span></div>
+<canvas id="c" width="1280" height="720"></canvas><pre id="out"></pre>
+<script type="module">
+import { Input, ALL_FORMATS, BlobSource, CanvasSink } from 'mediabunny';
+import { exportTestVideo } from './export-lib.ts';
+const ctx = c.getContext('2d');
+let sink, duration = 0;
+const log = (s) => { out.textContent += s + '\n'; };
+
+async function open(blob) {
+  out.textContent = '';
+  const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
+  const track = await input.getPrimaryVideoTrack();
+  duration = await input.computeDuration();
+  log(`format=${(await input.getFormat()).name} codec=${track.codec} ${track.displayWidth}x${track.displayHeight} duration=${duration.toFixed(3)}s`);
+  log(`decodable=${await track.canDecode()}`);
+  sink = new CanvasSink(track, { width: 1280, height: 720, fit: 'contain', poolSize: 4 });
+
+  // Random seeks: latency + timestamp accuracy.
+  const lat = [];
+  let maxErr = 0;
+  for (let i = 0; i < 20; i++) {
+    const t = Math.random() * duration * 0.98;
+    const s = performance.now();
+    const fr = await sink.getCanvas(t);
+    lat.push(performance.now() - s);
+    // frame shown at t must satisfy fr.timestamp <= t < fr.timestamp + fr.duration
+    if (fr) maxErr = Math.max(maxErr, t < fr.timestamp ? fr.timestamp - t : Math.max(0, t - (fr.timestamp + fr.duration)));
+    if (fr) ctx.drawImage(fr.canvas, 0, 0);
+  }
+  lat.sort((a, b) => a - b);
+  log(`random seek: median=${lat[10].toFixed(1)}ms max=${lat[19].toFixed(1)}ms; max frame-window error=${maxErr.toFixed(4)}s`);
+
+  // Sequential decode throughput.
+  const s = performance.now();
+  let n = 0;
+  for await (const fr of sink.canvases(0, Math.min(duration, 5))) { ctx.drawImage(fr.canvas, 0, 0); n++; }
+  const sec = (performance.now() - s) / 1000;
+  log(`sequential: ${n} frames in ${sec.toFixed(2)}s => ${(n / sec).toFixed(0)} fps`);
+  window.spikeResult = out.textContent;
+}
+file.onchange = () => file.files[0] && open(file.files[0]);
+gen.onclick = async () => { out.textContent = 'generating...'; open((await exportTestVideo(10)).blob); };
+seek.oninput = async () => {
+  if (!sink) return;
+  const t = (seek.value / 1000) * duration;
+  const fr = await sink.getCanvas(t);
+  if (fr) { ctx.drawImage(fr.canvas, 0, 0); ts.textContent = `req ${t.toFixed(3)} got ${fr.timestamp.toFixed(3)}`; }
+};
+</script></body></html>

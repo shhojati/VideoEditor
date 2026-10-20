@@ -1,0 +1,7 @@
+@font-face { font-family: 'Vazirmatn'; src: url('/fonts/vazirmatn/Vazirmatn[wght].woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('/fonts/inter/inter-latin-400-normal.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url('/fonts/inter/inter-latin-700-normal.woff2') format('woff2'); font-weight: 700; }
+body { font-family: Inter, Vazirmatn, sans-serif; background: #111; color: #eee; padding: 16px; }
+pre { background: #000; padding: 8px; white-space: pre-wrap; }
+canvas { background: #222; max-width: 100%; }
+a { color: #8cf; }

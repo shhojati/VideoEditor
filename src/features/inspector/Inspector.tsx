@@ -1,62 +1,63 @@
 import { useTranslation } from 'react-i18next';
 import { Panel } from '../../app/ui';
 import { ASPECT_PRESETS, aspectOf, type AspectPreset } from '../../model/factories';
+import { findClip } from '../../model/timeline';
 import type { Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
+import { useTimelineUi } from '../timeline/timelineUi';
+import { ClipInspector } from './ClipInspector';
+import { Section, SelectField } from './controls';
 
 const FPS_OPTIONS = [24, 25, 30, 50, 60];
 
-/** Clip properties come in Phase 5; for now: project settings (undoable). */
+/** One selected clip → its properties; otherwise the project settings. */
 export function Inspector({ project }: { project: Project }) {
   const { t } = useTranslation();
-  const edit = useProjectStore((s) => s.edit);
-  const { width, height, fps } = project.settings;
+  const selection = useTimelineUi((s) => s.selection);
+  const existing = selection.filter((id) => findClip(project, id));
 
   return (
     <Panel title={t('panels.inspector')}>
-      <div className="space-y-3 p-3 text-sm">
-        <h3 className="font-medium text-neutral-300">{t('settings.title')}</h3>
-        <label className="flex items-center justify-between gap-2">
-          <span>{t('settings.aspect')}</span>
-          <select
-            className="rounded bg-surface-3 px-2 py-1"
-            value={aspectOf(project.settings) ?? ''}
-            onChange={(e) =>
-              edit('ops.aspect', (p) => Object.assign(p.settings, ASPECT_PRESETS[e.target.value as AspectPreset]))
-            }
-          >
-            {(Object.keys(ASPECT_PRESETS) as AspectPreset[]).map((k) => (
-              <option key={k} value={k} dir="ltr">
-                {k}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center justify-between gap-2">
-          <span>{t('settings.fps')}</span>
-          <select
-            className="rounded bg-surface-3 px-2 py-1"
-            value={fps}
-            onChange={(e) =>
-              edit('ops.fps', (p) => {
-                p.settings.fps = Number(e.target.value);
-              })
-            }
-          >
-            {FPS_OPTIONS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="flex items-center justify-between gap-2 text-neutral-400">
-          <span>{t('settings.size')}</span>
-          <span dir="ltr" data-testid="canvas-size">
-            {width}×{height}
-          </span>
-        </div>
-      </div>
+      {existing.length === 1 ? (
+        <ClipInspector key={existing[0]} project={project} clipId={existing[0]} />
+      ) : (
+        <>
+          {existing.length > 1 && (
+            <p className="border-b border-line px-3 py-2 text-xs text-neutral-400">
+              {t('inspector.multi', { count: existing.length })}
+            </p>
+          )}
+          <ProjectSettings project={project} />
+        </>
+      )}
     </Panel>
+  );
+}
+
+function ProjectSettings({ project }: { project: Project }) {
+  const { t } = useTranslation();
+  const edit = useProjectStore((s) => s.edit);
+  const { width, height, fps } = project.settings;
+  return (
+    <Section title={t('settings.title')}>
+      <SelectField
+        label={t('settings.aspect')}
+        value={aspectOf(project.settings) ?? ''}
+        options={(Object.keys(ASPECT_PRESETS) as AspectPreset[]).map((k) => ({ value: k, label: k }))}
+        onChange={(v) => edit('ops.aspect', (p) => Object.assign(p.settings, ASPECT_PRESETS[v as AspectPreset]))}
+      />
+      <SelectField
+        label={t('settings.fps')}
+        value={fps}
+        options={FPS_OPTIONS.map((f) => ({ value: f, label: String(f) }))}
+        onChange={(v) => edit('ops.fps', (p) => void (p.settings.fps = v))}
+      />
+      <div className="flex items-center gap-2 text-xs text-neutral-400">
+        <span className="w-24">{t('settings.size')}</span>
+        <span dir="ltr" data-testid="canvas-size">
+          {width}×{height}
+        </span>
+      </div>
+    </Section>
   );
 }

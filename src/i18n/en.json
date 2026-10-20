@@ -44,7 +44,9 @@
     "deleteClips": "Delete clips",
     "rippleDelete": "Ripple delete",
     "paste": "Paste",
-    "fit": "Change fit"
+    "fit": "Change fit",
+    "addText": "Add text",
+    "clipProp": "Change clip property"
   },
   "panels": {
     "media": "Media",
@@ -127,5 +129,69 @@
     "fill": "Fill",
     "fitHint": "Show the selected clips whole inside the frame",
     "fillHint": "Make the selected clips fill the frame (edges are cropped)"
+  },
+  "text": {
+    "add": "Text",
+    "default": "Type your text"
+  },
+  "inspector": {
+    "textClip": "Text clip",
+    "locked": "track is locked",
+    "multi": "{{count}} clips selected",
+    "timing": "Timing",
+    "start": "Start",
+    "duration": "Duration",
+    "speed": "Speed",
+    "transform": "Transform",
+    "x": "Horizontal",
+    "y": "Vertical",
+    "scale": "Scale",
+    "rotation": "Rotation",
+    "opacity": "Opacity",
+    "fit": "Mode",
+    "crop": {
+      "left": "Crop left",
+      "right": "Crop right",
+      "top": "Crop top",
+      "bottom": "Crop bottom"
+    },
+    "audio": "Audio",
+    "volume": "Volume",
+    "fadeIn": "Fade in",
+    "fadeOut": "Fade out",
+    "text": "Text",
+    "content": "Text",
+    "font": "Font",
+    "weight": "Weight",
+    "weights": {
+      "100": "Thin",
+      "300": "Light",
+      "400": "Regular",
+      "500": "Medium",
+      "700": "Bold",
+      "900": "Black"
+    },
+    "size": "Font size",
+    "color": "Colour",
+    "align": "Align",
+    "alignLeft": "Left",
+    "alignCenter": "Centre",
+    "alignRight": "Right",
+    "direction": "Direction",
+    "rtl": "Right-to-left",
+    "ltr": "Left-to-right",
+    "maxWidth": "Line width",
+    "background": "Background",
+    "stroke": "Outline",
+    "strokeWidth": "Outline width",
+    "shadow": "Shadow",
+    "shadowBlur": "Shadow blur",
+    "fade": "Animation",
+    "fades": {
+      "none": "None",
+      "quick": "Quick fade",
+      "slow": "Slow fade",
+      "custom": "Custom"
+    }
   }
 }

@@ -1,5 +1,6 @@
 // Timeline commands shared by the toolbar and keyboard shortcuts. Each project change is one undo step.
 import {
+  addTextClip,
   copyClips,
   deleteClips,
   editPoints,
@@ -10,6 +11,7 @@ import {
   type ClipboardItem,
 } from '../../model/timeline';
 import type { ID, Project } from '../../model/types';
+import { detectRtl } from '../../engine/render/textLayout';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clampPps, HEADER_WIDTH, select, useTimelineUi } from './timelineUi';
@@ -21,6 +23,27 @@ const edit = (...args: Parameters<ReturnType<typeof useProjectStore.getState>['e
 /** Selected clips that are on unlocked tracks and still exist. */
 export function editableSelection(p: Project): Set<ID> {
   return new Set(useTimelineUi.getState().selection.filter((id) => findClip(p, id) && !findClip(p, id)!.track.locked));
+}
+
+/** New text clip at the playhead, selected so the inspector opens on it. */
+export function addText(content: string) {
+  let id = '';
+  edit('ops.addText', (d) => {
+    id = addTextClip(d, useTransport.getState().time, {
+      content,
+      fontFamily: 'Vazirmatn',
+      fontSize: 72,
+      fontWeight: 700,
+      color: '#ffffff',
+      strokeColor: '#000000',
+      strokeWidth: 6,
+      align: 'center',
+      rtl: detectRtl(content),
+      fadeIn: 0,
+      fadeOut: 0,
+    });
+  });
+  select([id]);
 }
 
 export function splitAtPlayhead() {

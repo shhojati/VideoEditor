@@ -7,7 +7,7 @@ import type { Project, Track, TrackKind } from '../../model/types';
 import { formatDuration } from '../../lib/time';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
-import { deleteSelection, splitAtPlayhead, zoomBy, zoomToFit } from './actions';
+import { addText, deleteSelection, splitAtPlayhead, zoomBy, zoomToFit } from './actions';
 import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
 import { Ruler } from './Ruler';
@@ -46,6 +46,9 @@ export function TimelinePanel({ project }: { project: Project }) {
             {t('track.add', { kind: t(`track.${kind}`) })}
           </Button>
         ))}
+        <Button className="text-xs" onClick={() => addText(t('text.default'))} data-testid="btn-add-text">
+          T+ {t('text.add')}
+        </Button>
         <span className="mx-1 h-4 w-px bg-line" />
         <Button className="text-xs" onClick={splitAtPlayhead} title={`${t('timeline.split')} (S)`} data-testid="btn-split">
           ✂ {t('timeline.split')}

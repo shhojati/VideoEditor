@@ -16,8 +16,11 @@ const textProps = z.object({
   strokeColor: z.string().optional(),
   strokeWidth: nonNeg.optional(),
   bgColor: z.string().optional(),
+  shadowColor: z.string().optional(),
+  shadowBlur: nonNeg.optional(),
   align: z.enum(['left', 'center', 'right']),
   rtl: z.boolean(),
+  maxWidth: num.min(0.05).max(1).optional(),
   fadeIn: nonNeg,
   fadeOut: nonNeg,
 });

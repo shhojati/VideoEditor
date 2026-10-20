@@ -5,7 +5,8 @@ import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { AudioEngine } from '../audio/audioEngine';
 import { readers } from '../decode/mediaReader';
-import { renderFrame } from '../render/renderFrame';
+import { ensureFont, isFontReady } from '../../lib/fonts';
+import { renderFrame, visualClipsAt } from '../render/renderFrame';
 import { VideoFrames } from './videoFrames';
 
 /** Restart playback this long after the last edit made while playing (s). */
@@ -148,6 +149,16 @@ class PlaybackEngine {
     if (!project || !canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    // Fonts load on first use; draw now with the fallback and again once the real font is in.
+    for (const { clip } of visualClipsAt(project, t)) {
+      const text = clip.text;
+      if (text && !isFontReady(text.fontFamily, text.fontWeight)) {
+        ensureFont(text.fontFamily, text.fontWeight).then(
+          () => this.requestRender(),
+          (e) => console.warn('font failed to load', text.fontFamily, e),
+        );
+      }
+    }
     ctx.setTransform(canvas.width / project.settings.width, 0, 0, canvas.height / project.settings.height, 0, 0);
     renderFrame(project, t, ctx, this.video.lookup);
   }

@@ -105,5 +105,29 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 - No on-canvas handles for move/scale/rotate yet (inspector numbers come in Phase 5).
 - The in-app browser pane suppresses `requestAnimationFrame` while hidden, so the preview only repaints when visible; Chrome tabs behave normally.
 
-### Next: Phase 5 — Text overlays and inspector
-First task: clip inspector (transform, opacity, speed, volume/fades) editing the selected clip through `edit()` with `mergeKey` so slider drags are one undo step.
+## Phase 5 — Text overlays and inspector ✅ (2026-10-20)
+
+### Done
+- **Fonts**: five bundled, self-hosted fonts — Vazirmatn (variable), Lalezar, Noto Naskh Arabic, Markazi Text (all Persian-capable) and Inter. `copy-assets.mjs` parses the fontsource CSS into `public/fonts/manifest.json` (Persian + Latin subsets with unicode ranges); `lib/fonts.ts` registers them through the `FontFace` API on first use (so the Phase 7 export worker can do the same). Missing glyphs fall back to Vazirmatn. The engine redraws once a font has loaded.
+- **Text clips**: "T+ Text" adds a clip at the playhead on a free text track (or a new one on top), selected for editing. Rendering (`engine/render/text.ts`): word wrap at a max line width without ever breaking inside a word (ZWNJ-safe, `textLayout.ts`), alignment, RTL/LTR, rounded background box, outline, shadow, fade in/out, plus the clip transform.
+- **Direction**: follows the first strong character of the text automatically, until the user picks a direction by hand.
+- **Inspector** (`features/inspector`): one selected clip → Timing (start, duration, speed 0.5–2× with presets), Text (content, font, weight, size, colour, align, direction, line width, background, outline, shadow, fade presets + exact fades), Transform (x/y as % of the frame, scale, rotation, opacity, fit/fill, crop on 4 sides), Audio (volume 0–200%, fades). Locked tracks show it read-only. Otherwise → project settings.
+- **Undo**: every control goes through `edit()` with a per-clip, per-property `mergeKey`, so a slider drag or a typing burst is one undo step, and each property undoes independently.
+- `setClipSpeed` keeps the source range (shortening the clip if the next one is in the way); `addTextClip`; `Transform.fit`; `TextProps` gained shadow and max width.
+
+### Verified
+- 92 unit tests (adds wrapping incl. ZWNJ, direction detection, text-clip placement, speed).
+- **E2E `e2e/text.spec.ts`** (DoD): Persian text → size, colour, font, background, position changed → red Lalezar pixels confirmed in the preview → five undos revert those properties in reverse order → five redos restore them → English text added as LTR → reload keeps both. Screenshots of both previews checked: Persian joining and punctuation are correct.
+- All three E2E specs and lint/typecheck pass.
+
+### Bugs found and fixed
+- Replacing the default (English) text with Persian kept the clip LTR → direction now follows the content unless overridden.
+- New text started with a fade-in, so it was invisible on the frame where it was created → new text has no fade by default (presets are one click away).
+
+### Deferred / known issues
+- No on-canvas handles (drag/scale text in the preview); position is set numerically.
+- Text edits multi-selection: inspector shows only "N clips selected".
+- A colour picked with `<input type=color>` has no alpha; translucent boxes need a later alpha slider.
+
+### Next: Phase 6 — Subtitles
+First task (6a): subtitle tracks in the model's `subtitleTracks` shown as a timeline lane with draggable/trimmable cues, plus a cue list panel (inline edit, set start/end to playhead, add/delete/split/merge).

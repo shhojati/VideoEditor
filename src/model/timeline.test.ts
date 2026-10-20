@@ -2,6 +2,7 @@ import { produce } from 'immer';
 import { describe, expect, it } from 'vitest';
 import { createProject, createTrack } from './factories';
 import {
+  addTextClip,
   canMove,
   clipEnd,
   copyClips,
@@ -13,6 +14,7 @@ import {
   moveClips,
   nearestFreeStart,
   pasteClips,
+  setClipSpeed,
   splitClips,
   trimClip,
   trimLimits,
@@ -168,4 +170,34 @@ describe('copy / paste', () => {
 
 it('editPoints lists unique sorted edges', () => {
   expect(editPoints(setup())).toEqual([0, 4, 6, 10]);
+});
+
+describe('text clips and speed', () => {
+  const text = {
+    content: 'سلام', fontFamily: 'Vazirmatn', fontSize: 72, fontWeight: 700, color: '#fff',
+    align: 'center' as const, rtl: true, fadeIn: 0, fadeOut: 0,
+  };
+
+  it('adds text on a free text track, creating one on top when needed', () => {
+    const p = setup();
+    const a = addTextClip(p, 1, text);
+    expect(p.tracks.at(-1)!.kind).toBe('text');
+    const b = addTextClip(p, 2, text); // overlaps a -> second text track
+    expect(p.tracks.filter((t) => t.kind === 'text')).toHaveLength(2);
+    const c = addTextClip(p, 10, text); // fits after a on the first text track
+    expect(findClip(p, c)!.track).toBe(findClip(p, a)!.track);
+    expect(findClip(p, b)!.clip.text!.content).toBe('سلام');
+  });
+
+  it('speed changes the timeline length but keeps the source range', () => {
+    const p = setup();
+    expect(setClipSpeed(p, 'b', 2)).toBe(2);
+    expect(clip(p, 'b')).toMatchObject({ duration: 2, speed: 2, inPoint: 2 });
+  });
+
+  it('slowing down is limited by the next clip and the allowed range', () => {
+    const p = setup();
+    expect(setClipSpeed(p, 'a', 0.1)).toBe(0.5); // clamped
+    expect(clip(p, 'a').duration).toBe(6); // would be 8, next clip starts at 6
+  });
 });

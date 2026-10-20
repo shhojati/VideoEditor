@@ -2,7 +2,7 @@
 // inside useProjectStore().edit() (Immer draft) — or on a plain object in tests.
 // Invariant: clips on one track never overlap and are kept sorted by start.
 import { newId } from './factories';
-import type { Asset, AssetKind, Clip, ID, Project, Track, TrackKind } from './types';
+import type { Asset, AssetKind, Clip, ID, Project, TextProps, Track, TrackKind } from './types';
 
 /** Shortest clip a trim or split may leave behind (s). */
 export const MIN_CLIP_DURATION = 0.1;
@@ -18,7 +18,7 @@ export const clipEnd = (c: Pick<Clip, 'start' | 'duration'>) => c.start + c.dura
 export function trackAccepts(track: Pick<Track, 'kind'>, assetKind: AssetKind): boolean {
   if (track.kind === 'video') return assetKind === 'video' || assetKind === 'image';
   if (track.kind === 'audio') return assetKind === 'audio';
-  return false;
+  return false; // text tracks hold text clips only
 }
 
 export const trackKindFor = (assetKind: AssetKind): TrackKind => (assetKind === 'audio' ? 'audio' : 'video');
@@ -271,4 +271,54 @@ export function editPoints(p: Project, exclude: ReadonlySet<ID> = new Set()): nu
 
 export function cueBoundaries(p: Project): number[] {
   return p.subtitleTracks.flatMap((st) => st.cues.flatMap((c) => [c.start, c.end]));
+}
+
+// ---- text clips & clip properties ---------------------------------------------------------------
+
+export const TEXT_DEFAULT_DURATION = 3;
+
+export function createTextClip(start: number, text: TextProps): Clip {
+  return {
+    id: newId(),
+    start,
+    duration: TEXT_DEFAULT_DURATION,
+    inPoint: 0,
+    speed: 1,
+    transform: { x: 0, y: 0.3, scale: 1, rotation: 0, opacity: 1 },
+    audio: { volume: 1, fadeIn: 0, fadeOut: 0 },
+    text,
+  };
+}
+
+/**
+ * Add a text clip at `time` on the first unlocked text track with room there; otherwise on a new
+ * text track at the top of the stack. Returns the clip id.
+ */
+export function addTextClip(p: Project, time: number, text: TextProps): ID {
+  const clip = createTextClip(Math.max(0, time), text);
+  let track = p.tracks.find((t) => t.kind === 'text' && !t.locked && isFree(t, clip.start, clip.duration));
+  if (!track) {
+    track = { id: newId(), kind: 'text', muted: false, locked: false, clips: [] };
+    p.tracks.push(track);
+  }
+  insertClip(track, clip);
+  return clip.id;
+}
+
+export const SPEED_RANGE: Range = { min: 0.5, max: 2 };
+
+/**
+ * Change playback speed keeping the same source range, so the clip gets shorter/longer on the
+ * timeline. If it would run into the next clip it is shortened to fit. Returns the applied speed.
+ */
+export function setClipSpeed(p: Project, clipId: ID, speed: number): number {
+  const ref = findClip(p, clipId);
+  if (!ref || ref.track.locked || ref.clip.text) return NaN;
+  const { clip, track, clipIndex } = ref;
+  const s = clamp(speed, SPEED_RANGE);
+  const next = track.clips[clipIndex + 1];
+  const wanted = (clip.duration * clip.speed) / s;
+  clip.duration = next ? Math.min(wanted, next.start - clip.start) : wanted;
+  clip.speed = s;
+  return s;
 }

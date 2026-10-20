@@ -91,8 +91,13 @@ export interface TextProps {
   strokeColor?: string;
   strokeWidth?: number;
   bgColor?: string;
+  shadowColor?: string;
+  /** Blur radius in canvas pixels at scale 1. */
+  shadowBlur?: number;
   align: 'left' | 'center' | 'right';
   rtl: boolean;
+  /** Lines wrap at this fraction of the canvas width (default 0.9). */
+  maxWidth?: number;
   fadeIn: number;
   fadeOut: number;
 }

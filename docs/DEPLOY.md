@@ -4,16 +4,33 @@ The editor is a **static site**: no backend, no database. All processing (decodi
 
 ## Docker (Ubuntu server)
 
-The `Dockerfile` builds the app and serves it with nginx using the headers below (`deploy/nginx.conf`). Models are not in the image: they live in a folder on the server that is mounted at `/models`. `deploy/docker-compose.yml` runs the app behind Caddy, which gets a Let's Encrypt certificate for your domain automatically.
+The `Dockerfile` builds the app and serves it with nginx using the headers below (`deploy/nginx.conf`). Models are not in the image: they live in a folder on the server that is mounted at `/models`. `deploy/docker-compose.yml` publishes the app on `127.0.0.1:${APP_PORT}` (default 8080) only; the server's existing web server handles HTTPS for the domain and proxies to it. `.github/workflows/deploy.yml` builds the image on every push to `main` and rolls it out over SSH.
 
-On the server, in `/srv/video-editor`, put `docker-compose.yml`, `Caddyfile`, `scripts/fetch-models.mjs` (as `fetch-models.mjs`) and a `.env` made from `deploy/.env.example`. Then:
+On the server, in `/srv/video-editor`, put `docker-compose.yml`, `scripts/fetch-models.mjs` (as `fetch-models.mjs`) and a `.env` made from `deploy/.env.example`. Then:
 
 ```bash
 docker compose --profile tools run --rm fetch-models   # once: downloads ~1.1 GB into ./models
 docker compose up -d
 ```
 
-Ports 80 and 443 must be open, and the domain's DNS must point at the server.
+Proxy from the host's nginx (`/etc/nginx/sites-available/video-editor`), then add HTTPS with `sudo certbot --nginx -d editor.example.com`:
+
+```nginx
+server {
+    listen 80;
+    server_name editor.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Model files are up to ~700 MB: stream them instead of spooling to disk.
+        proxy_buffering off;
+    }
+}
+```
+
+The app container already sends the COOP/COEP headers and MIME types; the proxy passes them through unchanged.
 
 ## 1. Build
 

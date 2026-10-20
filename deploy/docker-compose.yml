@@ -1,4 +1,6 @@
-# Runs on the server from /srv/video-editor (this file, Caddyfile, .env, fetch-models.mjs, models/).
+# Runs on the server from /srv/video-editor (this file, .env, fetch-models.mjs, models/).
+# The app listens on 127.0.0.1:${APP_PORT} only; the server's existing web server terminates
+# HTTPS for the domain and proxies to it (see docs/DEPLOY.md, "Docker").
 #
 #   docker compose up -d                                  # start / update
 #   docker compose --profile tools run --rm fetch-models  # download Whisper models once
@@ -7,23 +9,10 @@ services:
   app:
     image: ${IMAGE:-ghcr.io/shhojati/videoeditor}:${TAG:-latest}
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:80"
     volumes:
       - ./models:/usr/share/nginx/html/models:ro
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on: [app]
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
 
   fetch-models:
     image: node:22-slim
@@ -35,7 +24,3 @@ services:
       - ./fetch-models.mjs:/app/scripts/fetch-models.mjs:ro
       - ./models:/app/public/models
     command: ["node", "scripts/fetch-models.mjs"]
-
-volumes:
-  caddy_data:
-  caddy_config:

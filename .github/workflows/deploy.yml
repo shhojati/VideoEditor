@@ -73,7 +73,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          source: deploy/docker-compose.yml,deploy/Caddyfile,scripts/fetch-models.mjs
+          source: deploy/docker-compose.yml,scripts/fetch-models.mjs
           target: ${{ env.APP_DIR }}
           strip_components: 1
 
@@ -96,7 +96,7 @@ jobs:
             if grep -q '^TAG=' .env; then sed -i "s/^TAG=.*/TAG=$TAG/" .env; else echo "TAG=$TAG" >> .env; fi
             # The token only lives for this job, so log in, pull, and log out again.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            docker compose pull app caddy
+            docker compose pull app
             docker logout ghcr.io
             docker compose up -d --remove-orphans
             docker image prune -f

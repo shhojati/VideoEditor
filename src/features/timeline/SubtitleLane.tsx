@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { lintCues } from '../../model/subtitles';
 import type { Cue, SubtitleTrack } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
-import { useSubtitlesUi } from '../subtitles/subtitlesUi';
+import { editCueText, useSubtitlesUi } from '../subtitles/subtitlesUi';
 import { beginCueDrag } from './cueInteractions';
 import { HEADER_WIDTH, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
@@ -58,6 +58,7 @@ export const SubtitleLane = memo(function SubtitleLane({
           <CueBlock
             key={cue.id}
             cue={previews?.[cue.id] ? { ...cue, ...previews[cue.id] } : cue}
+            trackId={track.id}
             pps={pps}
             rtl={track.rtl}
             selected={selection.includes(cue.id)}
@@ -71,7 +72,8 @@ export const SubtitleLane = memo(function SubtitleLane({
   );
 });
 
-function CueBlock(props: { cue: Cue; pps: number; rtl: boolean; selected: boolean; ghost: boolean; invalid: boolean; warn: boolean }) {
+function CueBlock(props: { cue: Cue; trackId: string; pps: number; rtl: boolean; selected: boolean; ghost: boolean; invalid: boolean; warn: boolean }) {
+  const { t } = useTranslation();
   const { cue, pps } = props;
   return (
     <div
@@ -83,7 +85,9 @@ function CueBlock(props: { cue: Cue; pps: number; rtl: boolean; selected: boolea
         props.warn ? 'border-amber-400 bg-fuchsia-900/90' : 'border-fuchsia-400 bg-fuchsia-800/90'
       } ${props.selected ? 'ring-2 ring-white' : ''} ${props.ghost ? 'opacity-80' : ''} ${props.invalid ? 'border-red-500!' : ''}`}
       style={{ left: cue.start * pps, width: Math.max(2, (cue.end - cue.start) * pps) }}
+      title={t('subtitles.editHint')}
       onPointerDown={(e) => beginCueDrag(e, cue.id, 'move')}
+      onDoubleClick={() => editCueText(props.trackId, cue.id)}
     >
       <span className="pointer-events-none block truncate" dir={props.rtl ? 'rtl' : 'ltr'}>
         {cue.text || '…'}

@@ -246,6 +246,8 @@
     "deleteCue": "Delete",
     "toggleVisible": "Show in video",
     "styleTitle": "{{lang}} subtitle style",
+    "cueText": "Subtitle text",
+    "editHint": "Double-click a subtitle on the timeline to edit it",
     "presets": "Presets",
     "presetNames": {
       "classic": "Classic",

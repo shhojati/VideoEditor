@@ -74,6 +74,31 @@ test('import SRT, edit cues on the list and timeline, export SRT', async ({ page
   expect(blocks[3]).toBe(`4\r\n00:00:09,000 --> 00:00:10,000\r\n${RLM}نسخه ۲`);
 });
 
+test('edit a cue from the inspector and by double-clicking it on the timeline', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'English' }).click();
+  await page.getByTestId('tab-subtitles').click();
+  const srt = ['1', '00:00:01,000 --> 00:00:03,000', 'first', '', '2', '00:00:04,000 --> 00:00:06,000', 'second', ''].join('\n');
+  await page.getByTestId('subtitle-file-input').setInputFiles({ name: 'a.srt', mimeType: 'application/x-subrip', buffer: Buffer.from(srt) });
+  await expect(page.getByTestId('cue')).toHaveCount(2);
+
+  // Selecting a cue on the timeline shows its text in the inspector.
+  await page.getByTestId('cue').first().click();
+  const field = page.getByTestId('inspector-cue-text');
+  await expect(field).toHaveValue('first');
+  await field.fill('first, fixed');
+  expect((await cues(page))[0].text).toBe('first, fixed');
+  await expect(page.getByTestId('cue').first()).toContainText('first, fixed');
+
+  // Double-clicking a cue opens the Subtitles tab with its text focused (from another tab too).
+  await page.getByTestId('tab-media').click();
+  await page.getByTestId('cue').nth(1).dblclick();
+  const box = page.getByTestId('cue-text').nth(1);
+  await expect(box).toBeFocused();
+  await page.keyboard.type('second, fixed');
+  expect((await cues(page))[1].text).toBe('second, fixed');
+});
+
 // Real speech-to-text with the tiny model on 70 s of Persian speech. Needs the model files in
 // public/models and takes a few minutes, so it only runs with STT_E2E=1.
 test('auto subtitles from Persian speech (STT_E2E=1)', async ({ page }) => {

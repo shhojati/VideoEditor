@@ -11,6 +11,7 @@ import { findTransition } from '../../model/transitions';
 import { parseCutKey } from '../transitions/transitionActions';
 import { TransitionInspector } from './TransitionInspector';
 import { SubtitleStyleInspector } from '../subtitles/SubtitleStyleInspector';
+import { CueTextField } from '../subtitles/CueTextField';
 import { Section, SelectField } from './controls';
 
 const FPS_OPTIONS = [24, 25, 30, 50, 60];
@@ -20,7 +21,8 @@ export function Inspector({ project }: { project: Project }) {
   const { t } = useTranslation();
   const selection = useTimelineUi((s) => s.selection);
   const existing = selection.filter((id) => findClip(project, id));
-  const cueTrack = selection.map((id) => findCue(project, id)?.track).find(Boolean);
+  const cueRef = selection.map((id) => findCue(project, id)).find(Boolean);
+  const cueTrack = cueRef?.track;
   // A selected transition, or a selected cut without one.
   const cut = selection
     .map((id) => {
@@ -34,7 +36,10 @@ export function Inspector({ project }: { project: Project }) {
       {cut && !existing.length ? (
         <TransitionInspector key={cut.fromId + cut.toId} project={project} fromId={cut.fromId} toId={cut.toId} />
       ) : cueTrack && !existing.length ? (
-        <SubtitleStyleInspector key={cueTrack.id} project={project} trackId={cueTrack.id} />
+        <>
+          {cueRef && <CueTextField key={cueRef.cue.id} cueId={cueRef.cue.id} text={cueRef.cue.text} rtl={cueRef.track.rtl} />}
+          <SubtitleStyleInspector key={cueTrack.id} project={project} trackId={cueTrack.id} />
+        </>
       ) : existing.length === 1 ? (
         <ClipInspector key={existing[0]} project={project} clipId={existing[0]} />
       ) : (

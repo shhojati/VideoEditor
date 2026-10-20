@@ -246,6 +246,8 @@
     "deleteCue": "حذف",
     "toggleVisible": "نمایش در ویدیو",
     "styleTitle": "سبک زیرنویس {{lang}}",
+    "cueText": "متن زیرنویس",
+    "editHint": "برای ویرایش، روی زیرنویس در خط زمان دوبار کلیک کنید",
     "presets": "سبک‌های آماده",
     "presetNames": {
       "classic": "کلاسیک",

@@ -120,7 +120,11 @@ function CueList({ track }: { track: SubtitleTrack }) {
   const selection = useTimelineUi((s) => s.selection);
   const time = useTransport((s) => s.time);
   const active = cueAt(track, time)?.id;
-  const shown = onlyIssues ? track.cues.filter((c) => issues.has(c.id)) : track.cues;
+  const focusCueId = useSubtitlesUi((s) => s.focusCueId);
+  // The issues filter never hides the cue being edited.
+  const shown = onlyIssues
+    ? track.cues.filter((c) => issues.has(c.id) || selection.includes(c.id) || c.id === focusCueId)
+    : track.cues;
 
   // Keep the selected cue in view when it is selected on the timeline.
   const listRef = useRef<HTMLOListElement>(null);
@@ -128,6 +132,17 @@ function CueList({ track }: { track: SubtitleTrack }) {
   useEffect(() => {
     if (firstSelected) listRef.current?.querySelector(`[data-cue-row="${firstSelected}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [firstSelected]);
+
+  // Focus the text of a cue double-clicked on the timeline.
+  useEffect(() => {
+    if (!focusCueId) return;
+    const box = listRef.current?.querySelector<HTMLTextAreaElement>(`[data-cue-row="${focusCueId}"] textarea`);
+    if (!box) return;
+    box.scrollIntoView({ block: 'nearest' });
+    box.focus();
+    box.select();
+    useSubtitlesUi.setState({ focusCueId: null });
+  }, [focusCueId]);
 
   return (
     <>

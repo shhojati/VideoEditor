@@ -11,6 +11,7 @@ import { addText, deleteSelection, splitAtPlayhead, zoomBy, zoomToFit } from './
 import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
 import { Ruler } from './Ruler';
+import { SubtitleLane } from './SubtitleLane';
 import { HEADER_WIDTH, RULER_HEIGHT, select, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
 const KINDS: TrackKind[] = ['video', 'audio', 'text'];
@@ -159,6 +160,9 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
           </div>
         </div>
 
+        {project.subtitleTracks.map((st) => (
+          <SubtitleLane key={st.id} track={st} view={view} pps={pps} />
+        ))}
         {tracks.length === 0 && <div className="p-3 text-sm text-neutral-500">{t('track.empty')}</div>}
         {tracks.map((track) => (
           <TrackRow key={track.id} track={track} project={project} view={view} pps={pps} />

@@ -12,6 +12,7 @@ import {
 } from '../../model/timeline';
 import type { ID, Project } from '../../model/types';
 import { detectRtl } from '../../engine/render/textLayout';
+import { deleteCues, findCue, splitCue } from '../../model/subtitles';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clampPps, HEADER_WIDTH, select, useTimelineUi } from './timelineUi';
@@ -49,8 +50,17 @@ export function addText(content: string) {
 export function splitAtPlayhead() {
   const p = project();
   if (!p) return;
-  const sel = editableSelection(p);
   const time = useTransport.getState().time;
+  // Selected subtitle cues under the playhead split instead of clips.
+  const cues = useTimelineUi.getState().selection.filter((id) => {
+    const c = findCue(p, id)?.cue;
+    return c && time > c.start && time < c.end;
+  });
+  if (cues.length) {
+    edit('ops.splitCue', (d) => cues.forEach((id) => splitCue(d, id, time)));
+    return;
+  }
+  const sel = editableSelection(p);
   edit('ops.split', (d) => void splitClips(d, time, sel.size ? sel : undefined));
 }
 
@@ -58,8 +68,12 @@ export function deleteSelection(ripple = false) {
   const p = project();
   if (!p) return;
   const sel = editableSelection(p);
-  if (!sel.size) return;
-  edit(ripple ? 'ops.rippleDelete' : 'ops.deleteClips', (d) => deleteClips(d, sel, ripple));
+  const cues = new Set(useTimelineUi.getState().selection.filter((id) => findCue(p, id)));
+  if (!sel.size && !cues.size) return;
+  edit(ripple ? 'ops.rippleDelete' : 'ops.deleteClips', (d) => {
+    deleteClips(d, sel, ripple);
+    deleteCues(d, cues);
+  });
   select([]);
 }
 

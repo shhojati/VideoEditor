@@ -129,5 +129,37 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 - Text edits multi-selection: inspector shows only "N clips selected".
 - A colour picked with `<input type=color>` has no alpha; translucent boxes need a later alpha slider.
 
-### Next: Phase 6 — Subtitles
-First task (6a): subtitle tracks in the model's `subtitleTracks` shown as a timeline lane with draggable/trimmable cues, plus a cue list panel (inline edit, set start/end to playhead, add/delete/split/merge).
+## Phase 6 — Subtitles ✅ (2026-10-20)
+
+### Done
+- **6a Editing**: subtitle tracks appear as lanes above the video tracks; cues can be dragged (selection moves together) and trimmed, with snapping and one undo step per gesture. The left column has **Media | Subtitles** tabs. The Subtitles tab holds tracks, the cue list with inline text editing, ⇤/⇥ set start/end to the playhead, split at the playhead, merge with the next cue, delete, add at the playhead, an "only issues" filter, and click-to-seek. S splits and Delete removes selected cues on the timeline too.
+- **Validation** (`model/subtitles.ts`): 1–7 s duration, ≤ 42 characters/line, ≤ 2 lines, ≥ 80 ms gap, ≤ 20 chars/s, overlap, empty, review. Shown as badges in the list and amber cues on the timeline. **Fix timing** resolves overlaps and gaps, caps long cues and extends short ones without touching the text.
+- **6b Styling** (`engine/render/subtitles.ts`): drawn inside `renderFrame` (preview = export, with a burn-in switch for Phase 7). Two-line balanced wrapping that never breaks inside a word, per-line rounded boxes with opacity, outline, top/middle/bottom + margin, max width, Persian/Latin digit conversion. Sizes are relative to a 1080-pixel short side, so styles survive aspect changes. Presets: Classic, Boxed, Yellow outline, Social. The style editor opens in the inspector when a cue is selected; language and direction live there too. Tracks can be hidden.
+- **6c SRT/VTT** (`lib/subtitles/formats.ts`): lenient import (BOM, CRLF, missing indices, `.`/`,` millis, mm:ss, `<i>`/`<font>`/`{\an8}` tags, entities, stray RLM/LRM/RLE/PDF dropped, ZWNJ kept, malformed blocks counted and skipped). Export SRT/VTT as UTF-8 **with BOM, CRLF, and an RLM at the start of each RTL line** so players that guess direction from the first strong character (VLC) keep Persian lines RTL even when they start with digits or Latin.
+- **6d Auto subtitles**:
+  - **Audio**: the media worker mixes the timeline's audible clips (or just the selected ones) to 16 kHz mono, respecting placement, in-point, speed and volume.
+  - **Windows**: `planWindows` cuts ≤ 28 s windows in the middle of the quietest moment near each limit and skips silent windows (prevents hallucinated text on silence).
+  - **Whisper**: runs in `workers/stt.worker.ts` from local files only, WebGPU (q4 decoder) with automatic fallback to WASM (q8).
+  - **Post-processing** (`engine/stt/postprocess.ts`): collapses repetition loops, splits long segments to ≤ 84 chars / ≤ 7 s, flags doubtful cues for review, then runs Fix timing.
+  - **UI**: model picker showing which models are installed (HEAD checks against our own server) with a default of **small**; language fa/en/ar/auto; progress, real-time factor, cancel; runs in the background; clear errors for a missing model or no audio.
+- `Cue.flag`, `SubtitleTrack.hidden`, `SubtitleStyle.{fontWeight,bgOpacity,digits}` added to the model (optional fields, no migration needed).
+
+### Verified (DoD)
+- **Persian end to end in the in-app browser**: a 145 s video with real Persian speech (12 Common Voice clips, twice) → auto subtitles with `small` on WebGPU in **3.5 min including model load (≈1.2× real time; the Phase 0 spike measured 2.9×)** → 26 well-timed cues, no repetition loops. Four cues corrected in the list, Boxed preset and Persian digits applied → preview shows `آیا حضرت عالی مرا صدا زدید؟` with correct joining and `؟` placement → SRT exported with BOM, CRLF and per-line RLM. Network: models and WASM from localhost only.
+- 125 unit tests (adds SRT/VTT incl. malformed and RTL-mark cases, cue ops, lint rules, auto-fix, digits, balanced wrapping, 16 kHz mixing, window planning, repetition collapse, segment → cue).
+- E2E `e2e/subtitles.spec.ts`: import SRT (Persian, RLM, `<i>`, a broken block) → edit text → drag a cue → split with S → undo/redo → Persian digits → exported SRT checked byte for byte. An opt-in E2E (`STT_E2E=1`) runs real speech-to-text with `tiny`.
+- ⚠ Not verified in VLC: VLC is not installed here. Please open an exported `.srt` with your video in VLC once.
+
+### Bugs found and fixed
+- Generated cues touched each other (14 of 26 flagged "small gap") → generated tracks now go through Fix timing.
+- Clicking a cue/clip on the timeline left focus in a text field, so `S` typed a letter instead of splitting → timeline gestures now blur text fields.
+- Window cutting landed mid-range when there was no quiet spot → cuts at the limit in that case.
+
+### Deferred / known issues
+- Persian accuracy of stock Whisper `small` is a draft that needs review (as decided after Phase 0). Upgrade paths: `whisper-large-v3-turbo` (WebGPU) or a Persian fine-tuned model converted to ONNX.
+- Karaoke / active-word highlighting: needs word timestamps (cross-attention export); `highlightActiveWord` is in the model but not rendered.
+- Per-cue style overrides, cue copy/paste and multi-track subtitle stacking (two visible tracks at the same position overlap) are not done.
+- Speed ≠ 1 clips are fed to STT at the changed speed (pitch shifted), which may lower accuracy.
+
+### Next: Phase 7 — Export
+First task: export dialog (resolution, fps, quality, burn-in on/off, also export `.srt`) and a worker pipeline that calls `renderFrame` per frame with exact-frame decoding, mixes audio with `OfflineAudioContext`-equivalent logic, and muxes H.264 + AAC with Mediabunny.

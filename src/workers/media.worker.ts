@@ -4,6 +4,7 @@
 import { ALL_FORMATS, AudioSampleSink, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { getMediaFile } from '../lib/opfs';
 import { PeakBuilder } from '../lib/peaks';
+import { BinAccumulator, STT_RATE } from '../engine/stt/audio16k';
 import { exposeRpc } from './rpc';
 
 const JPEG = { type: 'image/jpeg', quality: 0.72 } as const;
@@ -89,6 +90,47 @@ async function waveform({ opfsPath, duration, peaksPerSecond }: WaveformArgs) {
   }
 }
 
-const handlers = { thumbnails, waveform };
+export interface MixItem {
+  opfsPath: string;
+  /** Timeline placement of the clip (s). */
+  start: number;
+  duration: number;
+  inPoint: number;
+  speed: number;
+  gain: number;
+}
+
+/** Mix audible clips onto a 16 kHz mono timeline buffer (input for speech-to-text). */
+async function mixdown16k({ items, duration }: { items: MixItem[]; duration: number }) {
+  const mix = new Float32Array(Math.ceil(duration * STT_RATE));
+  for (const item of items) {
+    const file = await openFile(item.opfsPath);
+    const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+    try {
+      const track = await input.getPrimaryAudioTrack();
+      if (!track) continue;
+      const acc = new BinAccumulator(Math.floor(item.start * STT_RATE), Math.ceil(item.duration * STT_RATE) + 1);
+      let scratch: Float32Array[] = [];
+      const srcEnd = item.inPoint + item.duration * item.speed;
+      for await (const sample of new AudioSampleSink(track).samples(item.inPoint, srcEnd)) {
+        const n = sample.numberOfFrames;
+        if (scratch.length !== sample.numberOfChannels || scratch[0].length !== n)
+          scratch = Array.from({ length: sample.numberOfChannels }, () => new Float32Array(n));
+        for (let c = 0; c < sample.numberOfChannels; c++) sample.copyTo(scratch[c], { planeIndex: c, format: 'f32-planar' });
+        const t0 = sample.timestamp;
+        const rate = sample.sampleRate;
+        // Source time -> timeline time -> 16 kHz output position.
+        acc.push(scratch, (i) => (item.start + (t0 + i / rate - item.inPoint) / item.speed) * STT_RATE);
+        sample.close();
+      }
+      acc.addInto(mix, item.gain);
+    } finally {
+      input.dispose();
+    }
+  }
+  return { result: { pcm: mix }, transfer: [mix.buffer] };
+}
+
+const handlers = { thumbnails, waveform, mixdown16k };
 export type MediaWorkerApi = typeof handlers;
 exposeRpc(handlers);

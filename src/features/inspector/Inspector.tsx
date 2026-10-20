@@ -6,6 +6,8 @@ import type { Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { ClipInspector } from './ClipInspector';
+import { findCue } from '../../model/subtitles';
+import { SubtitleStyleInspector } from '../subtitles/SubtitleStyleInspector';
 import { Section, SelectField } from './controls';
 
 const FPS_OPTIONS = [24, 25, 30, 50, 60];
@@ -15,10 +17,13 @@ export function Inspector({ project }: { project: Project }) {
   const { t } = useTranslation();
   const selection = useTimelineUi((s) => s.selection);
   const existing = selection.filter((id) => findClip(project, id));
+  const cueTrack = selection.map((id) => findCue(project, id)?.track).find(Boolean);
 
   return (
     <Panel title={t('panels.inspector')}>
-      {existing.length === 1 ? (
+      {cueTrack && !existing.length ? (
+        <SubtitleStyleInspector key={cueTrack.id} project={project} trackId={cueTrack.id} />
+      ) : existing.length === 1 ? (
         <ClipInspector key={existing[0]} project={project} clipId={existing[0]} />
       ) : (
         <>

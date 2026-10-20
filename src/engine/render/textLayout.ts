@@ -38,3 +38,27 @@ export function wrapLines(text: string, maxWidth: number, measure: (s: string) =
   }
   return out;
 }
+
+/**
+ * Subtitle line breaking: one line if it fits; otherwise the two-line split with the most even
+ * line lengths (better to read than a greedy break). Falls back to greedy wrapping when even two
+ * lines cannot hold the text. Explicit line breaks are respected as-is.
+ */
+export function balanceLines(text: string, maxWidth: number, measure: (s: string) => number): string[] {
+  if (text.includes('\n')) return wrapLines(text, maxWidth, measure);
+  const words = text.split(/ +/).filter(Boolean);
+  const whole = words.join(' ');
+  if (measure(whole) <= maxWidth || words.length < 2) return [whole];
+  let best: string[] | null = null;
+  let bestWidth = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const a = words.slice(0, i).join(' ');
+    const b = words.slice(i).join(' ');
+    const w = Math.max(measure(a), measure(b));
+    if (w <= maxWidth && w < bestWidth) {
+      best = [a, b];
+      bestWidth = w;
+    }
+  }
+  return best ?? wrapLines(whole, maxWidth, measure);
+}

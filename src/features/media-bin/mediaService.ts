@@ -52,7 +52,7 @@ export function dismissImport(id: string) {
 // ---- worker -------------------------------------------------------------------------------------
 
 let worker: ReturnType<typeof rpcClient<MediaWorkerApi>> | null = null;
-const mediaWorker = () =>
+export const mediaWorker = () =>
   (worker ??= rpcClient<MediaWorkerApi>(
     new Worker(new URL('../../workers/media.worker.ts', import.meta.url), { type: 'module' }),
   ));

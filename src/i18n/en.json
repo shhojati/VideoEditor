@@ -46,13 +46,30 @@
     "paste": "Paste",
     "fit": "Change fit",
     "addText": "Add text",
-    "clipProp": "Change clip property"
+    "clipProp": "Change clip property",
+    "moveCues": "Move subtitles",
+    "trimCue": "Retime subtitle",
+    "splitCue": "Split subtitle",
+    "mergeCues": "Merge subtitles",
+    "deleteCue": "Delete subtitle",
+    "addCue": "Add subtitle",
+    "cueText": "Edit subtitle text",
+    "cueTiming": "Set subtitle time",
+    "addSubtitleTrack": "New subtitle track",
+    "removeSubtitleTrack": "Remove subtitle track",
+    "importSubtitles": "Import subtitles",
+    "fixTiming": "Auto-fix timing",
+    "subtitleStyle": "Subtitle style",
+    "subtitleLanguage": "Subtitle language",
+    "subtitleVisibility": "Show/hide subtitles",
+    "autoSubtitles": "Auto subtitles"
   },
   "panels": {
     "media": "Media",
     "preview": "Preview",
     "inspector": "Properties",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "subtitles": "Subtitles"
   },
   "settings": {
     "title": "Project settings",
@@ -168,7 +185,9 @@
       "300": "Light",
       "400": "Regular",
       "500": "Medium",
+      "600": "Semibold",
       "700": "Bold",
+      "800": "Extra bold",
       "900": "Black"
     },
     "size": "Font size",
@@ -193,5 +212,111 @@
       "slow": "Slow fade",
       "custom": "Custom"
     }
+  },
+  "subtitles": {
+    "lane": "Subtitles {{lang}}",
+    "track": "Subtitle track",
+    "language": "Language",
+    "languages": {
+      "fa": "Persian",
+      "en": "English",
+      "ar": "Arabic"
+    },
+    "newTrack": "New track",
+    "import": "Import SRT/VTT",
+    "imported": "Imported {{cues}} subtitles ({{skipped}} invalid blocks skipped).",
+    "importFailed": "No subtitles found in the file.",
+    "exportSrt": "Export SRT",
+    "exportVtt": "Export VTT",
+    "fixTiming": "Fix timing",
+    "fixed": "Timing fixed for {{count}} subtitles.",
+    "removeTrack": "Remove track",
+    "confirmRemove": "Remove this subtitle track?",
+    "empty": "No subtitles yet. Create a track, import an SRT file, or generate subtitles automatically.",
+    "summary": "{{count}} subtitles · {{issues}} to check",
+    "onlyIssues": "Only issues",
+    "addCue": "Add subtitle at playhead",
+    "seek": "Go to this subtitle",
+    "startHere": "Start = playhead",
+    "endHere": "End = playhead",
+    "split": "Split at playhead",
+    "merge": "Merge with next",
+    "deleteCue": "Delete",
+    "toggleVisible": "Show in video",
+    "styleTitle": "{{lang}} subtitle style",
+    "presets": "Presets",
+    "presetNames": {
+      "classic": "Classic",
+      "boxed": "Boxed",
+      "outline": "Yellow outline",
+      "social": "Social"
+    },
+    "textStyle": "Text",
+    "bgOpacity": "Box opacity",
+    "layout": "Layout",
+    "position": "Position",
+    "positions": {
+      "top": "Top",
+      "middle": "Middle",
+      "bottom": "Bottom"
+    },
+    "margin": "Edge margin",
+    "digits": "Digits",
+    "digitModes": {
+      "keep": "As typed",
+      "persian": "۱۲۳",
+      "latin": "123"
+    },
+    "languageSection": "Language & direction",
+    "issues": {
+      "overlap": "Overlap",
+      "overlapHint": "Overlaps the next subtitle",
+      "short": "Short",
+      "shortHint": "Under 1 second",
+      "long": "Long",
+      "longHint": "Over 7 seconds",
+      "lineLength": "Long line",
+      "lineLengthHint": "More than 42 characters per line",
+      "lines": "Too many lines",
+      "linesHint": "More than 2 lines",
+      "cps": "Fast",
+      "cpsHint": "Too fast to read (over 20 characters per second)",
+      "gap": "Small gap",
+      "gapHint": "Less than 80 ms before the next subtitle",
+      "empty": "Empty",
+      "emptyHint": "No text",
+      "review": "Review",
+      "reviewHint": "Speech recognition was unsure about this one"
+    }
+  },
+  "stt": {
+    "title": "Auto subtitles (speech to text)",
+    "model": "Model",
+    "models": {
+      "tiny": "Fastest (tiny)",
+      "base": "Fast (base)",
+      "small": "More accurate (small)"
+    },
+    "notInstalled": "not installed",
+    "language": "Spoken language",
+    "autoDetect": "Detect automatically",
+    "selectedOnly": "Selected clips only",
+    "start": "Generate subtitles",
+    "cancel": "Cancel",
+    "background": "Runs in the background; keep editing. Audio never leaves this device.",
+    "stage": {
+      "extracting": "Extracting audio…",
+      "loading": "Loading model…",
+      "transcribing": "Transcribing…"
+    },
+    "speed": "{{rtf}}× real time · {{device}}",
+    "done": "Created {{count}} subtitles. Check the ones marked in yellow.",
+    "nothing": "No speech found.",
+    "errors": {
+      "noAudio": "There is no audio on the timeline (or in the selected clips).",
+      "missingModel": "Model files not found. Put them in public/models (see public/models/README.md).",
+      "failed": "Speech recognition failed."
+    },
+    "installHint": "Download missing models with scripts/fetch-models.mjs into public/models."
   }
 }

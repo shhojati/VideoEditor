@@ -118,16 +118,28 @@ export interface Clip {
   text?: TextProps;
 }
 
+/**
+ * Sizes are in pixels of a 1080-pixel short side, so a style looks the same at any resolution or
+ * aspect ratio (it is scaled by min(width, height) / 1080 when drawn).
+ */
 export interface SubtitleStyle {
   fontFamily: string;
   fontSize: number;
+  fontWeight?: number;
   color: string;
+  /** Box behind each line. */
   bgColor?: string;
+  /** 0..1, default 0.6. */
+  bgOpacity?: number;
   strokeColor?: string;
   strokeWidth?: number;
   position: 'bottom' | 'middle' | 'top';
+  /** Distance from the top/bottom edge. */
   marginY: number;
+  /** Line width limit, percent of the frame width. */
   maxWidthPct: number;
+  /** Show digits as Persian (۱۲۳) or Latin (123), or leave them as typed. */
+  digits?: 'keep' | 'persian' | 'latin';
   highlightActiveWord?: boolean;
 }
 
@@ -136,12 +148,16 @@ export interface Cue {
   start: number;
   end: number;
   text: string;
+  /** Set by auto-generation for cues worth a second look; cleared when the text is edited. */
+  flag?: 'review';
 }
 
 export interface SubtitleTrack {
   id: ID;
   language: string;
   rtl: boolean;
+  /** Hidden tracks are neither previewed nor burned into the export. */
+  hidden?: boolean;
   style: SubtitleStyle;
   cues: Cue[];
 }

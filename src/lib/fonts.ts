@@ -11,7 +11,7 @@ export interface FontChoice {
 }
 
 export const FONT_CHOICES: FontChoice[] = [
-  { family: 'Vazirmatn', label: 'وزیرمتن — Vazirmatn', weights: [300, 400, 500, 700, 900], persian: true },
+  { family: 'Vazirmatn', label: 'وزیرمتن — Vazirmatn', weights: [300, 400, 500, 600, 700, 800, 900], persian: true },
   { family: 'Lalezar', label: 'لاله‌زار — Lalezar', weights: [400], persian: true },
   { family: 'Noto Naskh Arabic', label: 'نسخ — Noto Naskh', weights: [400, 700], persian: true },
   { family: 'Markazi Text', label: 'مرکزی — Markazi', weights: [400, 700], persian: true },

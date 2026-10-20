@@ -150,14 +150,16 @@ class PlaybackEngine {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     // Fonts load on first use; draw now with the fallback and again once the real font is in.
-    for (const { clip } of visualClipsAt(project, t)) {
-      const text = clip.text;
-      if (text && !isFontReady(text.fontFamily, text.fontWeight)) {
-        ensureFont(text.fontFamily, text.fontWeight).then(
-          () => this.requestRender(),
-          (e) => console.warn('font failed to load', text.fontFamily, e),
-        );
-      }
+    const fonts = [
+      ...visualClipsAt(project, t).flatMap(({ clip }) => (clip.text ? [[clip.text.fontFamily, clip.text.fontWeight] as const] : [])),
+      ...project.subtitleTracks.map((st) => [st.style.fontFamily, st.style.fontWeight ?? 600] as const),
+    ];
+    for (const [family, weight] of fonts) {
+      if (isFontReady(family, weight)) continue;
+      ensureFont(family, weight).then(
+        () => this.requestRender(),
+        (e) => console.warn('font failed to load', family, e),
+      );
     }
     ctx.setTransform(canvas.width / project.settings.width, 0, 0, canvas.height / project.settings.height, 0, 0);
     renderFrame(project, t, ctx, this.video.lookup);

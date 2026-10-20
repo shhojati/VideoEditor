@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { bootstrap } from '../features/projects/session';
-import { MediaBin } from '../features/media-bin/MediaBin';
+import { LeftPanel } from './LeftPanel';
 import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { playbackEngine } from '../engine/playback/engine';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
@@ -38,7 +38,7 @@ export function App() {
       {project && (
         <>
           <main className="grid min-h-0 flex-1 grid-cols-[minmax(200px,20%)_minmax(0,1fr)_minmax(240px,22%)] gap-px bg-line">
-            <MediaBin />
+            <LeftPanel project={project} />
             <PreviewPanel project={project} />
             <Inspector project={project} />
           </main>

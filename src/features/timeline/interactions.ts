@@ -20,6 +20,7 @@ import {
 } from '../../model/timeline';
 import { createTrack } from '../../model/factories';
 import type { ID, Project } from '../../model/types';
+import { blurTextFields } from '../../lib/focus';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { snapBlock, snapTime } from './snapping';
@@ -50,6 +51,7 @@ const displayOrder = (p: Project) => [...p.tracks].reverse().map((t) => t.id);
 export function beginClipDrag(e: ReactPointerEvent, clipId: ID, mode: 'move' | 'trim-start' | 'trim-end') {
   if (e.button !== 0) return;
   e.preventDefault();
+  blurTextFields();
   const p = project();
   const ref = findClip(p, clipId);
   if (!ref || ref.track.locked) return;

@@ -1,4 +1,5 @@
 import { CURRENT_VERSION } from './migrations';
+import { SUBTITLE_PRESETS } from './subtitlePresets';
 import type { ID, Project, ProjectSettings, SubtitleStyle, SubtitleTrack, Track, TrackKind } from './types';
 
 export const newId = (): ID => crypto.randomUUID();
@@ -23,16 +24,7 @@ export function createTrack(kind: TrackKind): Track {
   return { id: newId(), kind, muted: false, locked: false, clips: [] };
 }
 
-export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
-  fontFamily: 'Vazirmatn',
-  fontSize: 48,
-  color: '#ffffff',
-  strokeColor: '#000000',
-  strokeWidth: 4,
-  position: 'bottom',
-  marginY: 60,
-  maxWidthPct: 80,
-};
+export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = SUBTITLE_PRESETS.classic;
 
 export function createSubtitleTrack(language = 'fa'): SubtitleTrack {
   const rtl = ['fa', 'ar', 'he', 'ur'].includes(language);

@@ -13,6 +13,8 @@ export const SNAP_PX = 8;
 export interface DragPreview {
   /** Overrides for clips being moved/trimmed. */
   clips: Record<ID, { trackId: ID; start: number; duration: number }>;
+  /** Overrides for subtitle cues being moved/trimmed. */
+  cues?: Record<ID, { start: number; end: number }>;
   /** A clip being dropped from the media bin; trackId null = a new track. */
   asset?: { assetId: ID; trackId: ID | null; start: number; duration: number };
   valid: boolean;

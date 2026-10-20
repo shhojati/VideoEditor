@@ -1,6 +1,6 @@
 import { useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Panel } from '../../app/ui';
+import { Button } from '../../app/ui';
 import { ACCEPT_ATTR } from '../../engine/decode/classify';
 import { useProject } from '../../store/projectStore';
 import { AssetCard } from './AssetCard';
@@ -17,7 +17,7 @@ export function MediaBin() {
   const hasFiles = (e: DragEvent) => e.dataTransfer.types.includes('Files');
 
   return (
-    <Panel title={t('panels.media')}>
+    <>
       <div
         className={`flex min-h-full flex-col gap-2 p-2 ${dragging ? 'bg-accent/10 outline-2 -outline-offset-4 outline-accent outline-dashed' : ''}`}
         data-testid="media-bin"
@@ -92,6 +92,6 @@ export function MediaBin() {
         )}
         <p className="mt-auto pt-2 text-[11px] text-neutral-500">{t('media.privacy')}</p>
       </div>
-    </Panel>
+    </>
   );
 }

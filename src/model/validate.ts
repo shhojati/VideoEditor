@@ -69,23 +69,27 @@ const asset = z.object({
 });
 
 const cue = z
-  .object({ id: z.string(), start: nonNeg, end: nonNeg, text: z.string() })
+  .object({ id: z.string(), start: nonNeg, end: nonNeg, text: z.string(), flag: z.literal('review').optional() })
   .refine((c) => c.end > c.start, 'cue end must be after start');
 
 const subtitleTrack = z.object({
   id: z.string(),
   language: z.string(),
   rtl: z.boolean(),
+  hidden: z.boolean().optional(),
   style: z.object({
     fontFamily: z.string(),
     fontSize: num.positive(),
+    fontWeight: num.optional(),
     color: z.string(),
     bgColor: z.string().optional(),
+    bgOpacity: num.min(0).max(1).optional(),
     strokeColor: z.string().optional(),
     strokeWidth: nonNeg.optional(),
     position: z.enum(['bottom', 'middle', 'top']),
     marginY: num,
     maxWidthPct: num.min(10).max(100),
+    digits: z.enum(['keep', 'persian', 'latin']).optional(),
     highlightActiveWord: z.boolean().optional(),
   }),
   cues: z.array(cue),

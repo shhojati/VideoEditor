@@ -1,6 +1,7 @@
 // The one composite function shared by preview and export (plan §4.1): given the project, a time
 // and already-decoded frames, draw the frame. Synchronous and free of hidden state.
 import type { Clip, Project, Track, Transform } from '../../model/types';
+import { drawSubtitles } from './subtitles';
 import { drawTextClip } from './text';
 
 /** Anything with display dimensions that can draw itself (Mediabunny VideoSample fits this). */
@@ -61,8 +62,13 @@ export function placeMedia(srcW: number, srcH: number, canvasW: number, canvasH:
   };
 }
 
+export interface RenderOptions {
+  /** Burn in subtitle tracks (default true; the exporter can turn it off). */
+  subtitles?: boolean;
+}
+
 /** Draw the composite frame at time `t` into a context whose user space is project pixels. */
-export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: FrameLookup) {
+export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: FrameLookup, opts: RenderOptions = {}) {
   const { width, height } = project.settings;
   ctx.save();
   ctx.fillStyle = '#000';
@@ -87,5 +93,6 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
     src.draw(ctx, p.frame.x, p.frame.y, p.frame.w, p.frame.h);
     ctx.restore();
   }
+  if (opts.subtitles !== false) drawSubtitles(ctx, project, t, width, height);
   ctx.restore();
 }

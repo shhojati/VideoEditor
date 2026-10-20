@@ -1,0 +1,14 @@
+.git
+.claude
+node_modules
+dist
+test-results
+playwright-report
+*.log
+.npmrc
+public/models
+public/wasm
+public/fonts
+public/spike-data
+deploy/.env
+deploy/models

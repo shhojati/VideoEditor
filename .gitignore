@@ -9,3 +9,5 @@ public/spike-data
 .npmrc
 test-results
 playwright-report
+deploy/.env
+deploy/models

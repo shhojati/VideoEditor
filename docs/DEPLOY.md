@@ -2,6 +2,19 @@
 
 The editor is a **static site**: no backend, no database. All processing (decoding, speech-to-text, export) runs in the user's browser, and media never leaves the device. Everything it needs (fonts, ONNX Runtime WASM, Whisper models) is served from the same origin. Nothing is fetched from the internet at runtime.
 
+## Docker (Ubuntu server)
+
+The `Dockerfile` builds the app and serves it with nginx using the headers below (`deploy/nginx.conf`). Models are not in the image: they live in a folder on the server that is mounted at `/models`. `deploy/docker-compose.yml` runs the app behind Caddy, which gets a Let's Encrypt certificate for your domain automatically.
+
+On the server, in `/srv/video-editor`, put `docker-compose.yml`, `Caddyfile`, `scripts/fetch-models.mjs` (as `fetch-models.mjs`) and a `.env` made from `deploy/.env.example`. Then:
+
+```bash
+docker compose --profile tools run --rm fetch-models   # once: downloads ~1.1 GB into ./models
+docker compose up -d
+```
+
+Ports 80 and 443 must be open, and the domain's DNS must point at the server.
+
 ## 1. Build
 
 On a machine with Node 20+ and access to the npm mirror:

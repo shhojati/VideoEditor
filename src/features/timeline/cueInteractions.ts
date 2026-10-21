@@ -3,6 +3,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { canShiftCues, cueEdgeLimits, findCue, setCueEdge, shiftCues } from '../../model/subtitles';
 import { editPoints } from '../../model/timeline';
+import { timelineBeats } from '../../model/beats';
 import type { ID, Project } from '../../model/types';
 import { blurTextFields } from '../../lib/focus';
 import { useProjectStore } from '../../store/projectStore';
@@ -14,7 +15,7 @@ const project = () => useProjectStore.getState().history!.present;
 
 function snapPoints(p: Project, excludeCues: ReadonlySet<ID>) {
   const cuePts = p.subtitleTracks.flatMap((st) => st.cues.filter((c) => !excludeCues.has(c.id)).flatMap((c) => [c.start, c.end]));
-  return [...editPoints(p), useTransport.getState().time, ...cuePts];
+  return [...editPoints(p), useTransport.getState().time, ...cuePts, ...(p.markers ?? []).map((m) => m.t), ...timelineBeats(p)];
 }
 
 export function beginCueDrag(e: ReactPointerEvent, cueId: ID, mode: 'move' | 'trim-start' | 'trim-end') {

@@ -20,6 +20,7 @@ import { KeyframesSection } from '../keyframes/KeyframesSection';
 import { setKeepPitch } from '../../model/voiceFx';
 import { VoiceSection } from './VoiceSection';
 import { CleanupSection } from './CleanupSection';
+import { BeatsSection } from './BeatsSection';
 import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 
 /**
@@ -204,6 +205,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
         </Section>
       )}
       {audible && <CleanupSection project={project} clip={clip} set={set} />}
+      {audible && asset && <BeatsSection clip={clip} asset={asset} />}
       {audible && <VoiceSection clip={shown} set={set} />}
     </fieldset>
   );

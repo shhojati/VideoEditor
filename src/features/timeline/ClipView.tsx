@@ -99,6 +99,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       {visTo > visFrom && (kind === 'audio' || kind === 'image') && (
         <ClipPreviewStrip clip={clip} asset={asset!} from={visFrom} to={visTo} pps={pps} />
       )}
+      {asset?.beats && visTo > visFrom && <BeatTicks clip={clip} times={asset.beats.times} from={visFrom} to={visTo} pps={pps} />}
       <span className="pointer-events-none absolute start-1 top-0.5 max-w-full truncate rounded bg-black/50 px-1" dir="auto">
         {clip.adjustment
           ? `◫ ${t('effects.adjustment')}`
@@ -268,4 +269,21 @@ function ClipPreviewStrip({ clip, asset, from, to, pps }: StripProps & { asset: 
     ) : null;
   }
   return <canvas ref={ref} className="pointer-events-none absolute top-0" style={{ left, width, height: h }} />;
+}
+
+/** Detected beats as ticks along the bottom of a music clip (only the visible part). */
+function BeatTicks({ clip, times, from, to, pps }: { clip: Clip; times: number[]; from: number; to: number; pps: number }) {
+  const xs: number[] = [];
+  for (const s of times) {
+    const t = clip.start + (s - clip.inPoint) / clip.speed;
+    if (t >= from && t <= to) xs.push((t - clip.start) * pps);
+  }
+  // Too dense to read when zoomed far out: show every 4th beat.
+  const step = pps * (times.length > 1 ? (times[1] - times[0]) / clip.speed : 1) < 6 ? 4 : 1;
+  const path = xs.filter((_, i) => i % step === 0).map((x) => `M${x.toFixed(1)} 0v6`).join('');
+  return (
+    <svg className="pointer-events-none absolute bottom-0 left-0 h-1.5 w-full" data-testid="beat-ticks" data-count={xs.length}>
+      <path d={path} stroke="#facc15" strokeWidth={1.5} />
+    </svg>
+  );
 }

@@ -174,6 +174,7 @@ const asset = z.object({
   codecs: z.object({ video: z.string().optional(), audio: z.string().optional() }).optional(),
   fileRef: z.object({ opfsPath: z.string().optional(), handleKey: z.string().optional() }),
   library: z.object({ kind: z.enum(['stickers', 'sounds', 'overlays']), path: z.string() }).optional(),
+  beats: z.object({ bpm: nonNeg, times: z.array(nonNeg) }).optional(),
 });
 
 const cueWord = z.object({ text: z.string(), start: nonNeg, end: nonNeg });
@@ -229,6 +230,7 @@ export const projectSchema = z.object({
   assets: z.record(z.string(), asset),
   tracks: z.array(track),
   subtitleTracks: z.array(subtitleTrack),
+  markers: z.array(z.object({ id: z.string(), t: nonNeg, label: z.string().optional(), color: z.string().optional() })).optional(),
 });
 
 export class InvalidProjectError extends Error {}

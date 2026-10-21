@@ -18,6 +18,7 @@ import { spaceDown } from '../features/preview/spaceHand';
 import { useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
 import { useShortcutSheet } from './ShortcutSheet';
+import { toggleMarkerAtPlayhead } from '../features/timeline/beatActions';
 
 type Handler = (e: KeyboardEvent) => void;
 
@@ -38,6 +39,7 @@ const WITH_CTRL: Record<string, Handler> = {
 const PLAIN: Record<string, Handler> = {
   Space: (e) => spaceDown(e) || useTransport.getState().toggle(),
   KeyS: splitAtPlayhead,
+  KeyM: toggleMarkerAtPlayhead,
   Delete: (e) => deleteSelection(e.shiftKey),
   Backspace: (e) => deleteSelection(e.shiftKey),
   ArrowLeft: (e) => stepFrames(e.shiftKey ? -10 : -1),

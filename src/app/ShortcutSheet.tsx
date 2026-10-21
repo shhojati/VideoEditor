@@ -9,6 +9,7 @@ export const useShortcutSheet = create<{ open: boolean }>()(() => ({ open: false
 export const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Space', label: 'playPause' },
   { keys: 'S', label: 'split' },
+  { keys: 'M', label: 'marker' },
   { keys: 'Delete', label: 'delete' },
   { keys: 'Shift + Delete', label: 'rippleDelete' },
   { keys: '← / →', label: 'frame' },

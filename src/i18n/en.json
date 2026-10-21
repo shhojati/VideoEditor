@@ -99,7 +99,10 @@
     "removeKeyframe": "Remove keyframe",
     "moveKeyframe": "Move keyframe",
     "keyframeEase": "Change keyframe ease",
-    "clearKeyframes": "Remove all keyframes"
+    "clearKeyframes": "Remove all keyframes",
+    "detectBeats": "Detect beats",
+    "marker": "Marker",
+    "cutToBeat": "Cut to beat"
   },
   "panels": {
     "media": "Media",
@@ -569,7 +572,8 @@
       "previewAlt": "Preview: resize from the centre / move without snapping",
       "maskPen": "Draw a mask on the selected clip (pen)",
       "keyframe": "Add/remove a keyframe on the selected clip",
-      "keyframeJump": "Previous/next keyframe"
+      "keyframeJump": "Previous/next keyframe",
+      "marker": "Add/remove a marker at the playhead"
     }
   },
   "transitions": {
@@ -1239,5 +1243,24 @@
     "resetGain": "Remove the normalize gain",
     "silent": "The clip is silent; nothing to normalize.",
     "hint": "Noise is learned from the quietest parts of the recording. The first time takes a moment."
+  },
+  "beats": {
+    "title": "Beats",
+    "detect": "Detect beats",
+    "detecting": "Listening…",
+    "info": "{{bpm}} BPM · {{count}} beats",
+    "clear": "Remove the beats",
+    "none": "No steady beat found.",
+    "hint": "Beats show as ticks on the clip; clips and the playhead snap to them.",
+    "cut": "Cut to beat",
+    "cutHint": "Lay the selected clips end to end on the music’s beats (photos stretch, videos are trimmed)",
+    "every": "Beats per clip",
+    "everyN_one": "every beat",
+    "everyN_other": "every {{count}} beats",
+    "errors": {
+      "noClips": "Select video or photo clips on one track first.",
+      "noBeats": "Detect the beats of a music clip first (inspector → Beats).",
+      "blocked": "Not enough room: another clip on the track is in the way."
+    }
   }
 }

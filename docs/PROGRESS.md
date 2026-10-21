@@ -474,3 +474,19 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - The noise profile is per asset (its quietest parts), not per clip; a file whose background changes a lot is cleaned with an average.
 - Preview starts the cleanup fresh at the playhead, so its first ~20 ms can differ from the export.
 - Normalize is measured once (before cleanup); trimming the clip afterwards keeps the gain.
+
+## Post-MVP 13 — Beats, markers, cut to beat ✅ (2026-10-21)
+
+### Done
+- **Detect beats** (inspector → Beats, for clips with sound; media worker, `engine/audio/beats.ts`): onset strength from spectral flux (log magnitude, up to 8 kHz, local mean removed), tempo from its autocorrelation weighted towards ~120 BPM (60–200 BPM, parabolic refinement), beats by dynamic programming (Ellis 2007), which follows small tempo drifts. Up to 10 minutes of audio. The grid is stored on the asset (`Asset.beats`, source seconds), so it travels with project files and every clip of that music shows it; one undo step; ✕ removes it.
+- **On the timeline**: beats are yellow ticks along the clip (every 4th when zoomed far out). Clip and cue drags **snap** to beats (except those of the clips being dragged) and to markers.
+- **Markers** (`Project.markers`): **M** adds one at the playhead or removes the one already there; they are flags on the ruler, scrubbing snaps to them, and double-clicking one removes it. Listed in the shortcut sheet.
+- **Cut to beat** (timeline toolbar, shown once some music has beats; every 1, 2 or 4 beats): the selected clips of one track are laid end to end from the beat nearest the first one. Photos stretch to the beats; a video too short for the chosen count takes fewer beats (or ends off-beat if shorter than one). It refuses, with a message, when there are no beats or no clips, or another clip is in the way. One undo step (`model/beats.ts`).
+
+### Verified
+- Unit tests: click tracks at 120 BPM (beat spacing within 12 ms, every beat within 15 ms of a click) and 90 BPM; silence gives no beats; beats through in-point and speed; muted tracks ignored; cut to beat every 2 and every 4 beats with a short video; the refusals; marker toggling.
+- **E2E `e2e/beats.spec.ts`**: a 120 BPM click WAV and three photos; Detect beats → ~120 BPM, a beat at 1.25 s, ticks on the clip; Cut to beat (every 2) puts the photos on beats 0.25 / 1.25 / 2.25 s for 1 s each; undo restores them; M adds and removes a marker at 4 s; double-clicking it on the ruler removes it. Screenshot checked: ticks sit on the waveform's spikes.
+
+### Known issues / not done
+- Music without a steady pulse (rubato, ambient) can give an unhelpful grid; there is no manual tap-tempo or beat nudge yet.
+- Marker labels, colours and a marker list come with step 13.

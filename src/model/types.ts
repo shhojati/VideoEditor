@@ -29,6 +29,16 @@ export interface Project {
   /** Ordered bottom -> top. */
   tracks: Track[];
   subtitleTracks: SubtitleTrack[];
+  /** Timeline markers (M), ascending. */
+  markers?: Marker[];
+}
+
+export interface Marker {
+  id: ID;
+  /** Timeline seconds. */
+  t: number;
+  label?: string;
+  color?: string;
 }
 
 export type AssetKind = 'video' | 'audio' | 'image';
@@ -55,6 +65,8 @@ export interface Asset {
   fileRef: { opfsPath?: string; handleKey?: string };
   /** Set when the file came from the server's library (Stickers / Sound effects / Overlays panes). */
   library?: { kind: LibraryKind; path: string };
+  /** Detected tempo and beats (music), see engine/audio/beats.ts. */
+  beats?: { bpm: number; times: number[] };
 }
 
 /** 'text' tracks hold overlays: text and shape clips (shown as "Overlay" in the UI). */

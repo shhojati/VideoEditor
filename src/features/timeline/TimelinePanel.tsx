@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { createTrack } from '../../model/factories';
@@ -8,6 +8,7 @@ import { formatDuration } from '../../lib/time';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { addText, deleteSelection, splitAtPlayhead, zoomBy, zoomToFit } from './actions';
+import { cutSelectionToBeat } from './beatActions';
 import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
 import { Ruler } from './Ruler';
@@ -63,6 +64,7 @@ export function TimelinePanel({ project }: { project: Project }) {
         <Button className="text-xs" disabled={!hasSelection} onClick={() => deleteSelection()} title={`${t('timeline.delete')} (Del)`}>
           🗑 {t('timeline.delete')}
         </Button>
+        <CutToBeat project={project} enabled={hasSelection} />
         <Button
           className={`text-xs ${snapping ? 'bg-accent/40!' : ''}`}
           aria-pressed={snapping}
@@ -363,5 +365,33 @@ function Playhead({ pps }: { pps: number }) {
     >
       <div className="absolute -left-1.5 top-0 h-3 w-3 rotate-45 bg-red-500" />
     </div>
+  );
+}
+
+/** Re-time the selected clips to the music's beats, every 1, 2 or 4 beats. */
+function CutToBeat({ project, enabled }: { project: Project; enabled: boolean }) {
+  const { t } = useTranslation();
+  const [every, setEvery] = useState(2);
+  const hasBeats = Object.values(project.assets).some((a) => a.beats?.times.length);
+  if (!hasBeats) return null;
+  return (
+    <span className="flex items-center gap-0.5">
+      <Button className="text-xs" disabled={!enabled} onClick={() => cutSelectionToBeat(every)} title={t('beats.cutHint')} data-testid="cut-to-beat">
+        ♪ {t('beats.cut')}
+      </Button>
+      <select
+        className="rounded bg-surface-3 px-1 py-1 text-xs"
+        value={every}
+        aria-label={t('beats.every')}
+        data-testid="cut-every"
+        onChange={(e) => setEvery(Number(e.target.value))}
+      >
+        {[1, 2, 4].map((n) => (
+          <option key={n} value={n}>
+            {t('beats.everyN', { count: n })}
+          </option>
+        ))}
+      </select>
+    </span>
   );
 }

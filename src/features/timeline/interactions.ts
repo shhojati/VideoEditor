@@ -24,13 +24,21 @@ import { blurTextFields } from '../../lib/focus';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { snapBlock, snapTime } from './snapping';
+import { timelineBeats } from '../../model/beats';
 import { assetDrag, select, SNAP_PX, useTimelineUi, type DragPreview } from './timelineUi';
 
 const DRAG_THRESHOLD_PX = 3;
 const project = () => useProjectStore.getState().history!.present;
 
 function snapPoints(p: Project, exclude: ReadonlySet<ID>) {
-  return [...editPoints(p, exclude), useTransport.getState().time, ...cueBoundaries(p)];
+  // Beats of the clips being dragged move with them, so they are not targets.
+  return [
+    ...editPoints(p, exclude),
+    useTransport.getState().time,
+    ...cueBoundaries(p),
+    ...(p.markers ?? []).map((m) => m.t),
+    ...timelineBeats(p, exclude),
+  ];
 }
 
 const snapThreshold = (altKey: boolean) => {

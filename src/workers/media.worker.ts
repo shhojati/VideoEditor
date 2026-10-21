@@ -6,6 +6,7 @@ import { getMediaFile } from '../lib/opfs';
 import { PeakBuilder } from '../lib/peaks';
 import { BinAccumulator, STT_RATE } from '../engine/stt/audio16k';
 import { LoudnessMeter, measureNoiseProfile } from '../engine/audio/cleanDsp';
+import { detectBeats } from '../engine/audio/beats';
 import { exposeRpc } from './rpc';
 
 const JPEG = { type: 'image/jpeg', quality: 0.72 } as const;
@@ -191,6 +192,45 @@ async function loudness({ opfsPath, from, to }: { opfsPath: string; from: number
   }
 }
 
-const handlers = { thumbnails, waveform, mixdown16k, noiseProfile, loudness };
+/** Longest stretch of music analysed for beats (s). */
+const BEATS_SECONDS = 600;
+
+/** Tempo and beat times (source seconds) of an asset's audio, mixed to mono. */
+async function beats({ opfsPath }: { opfsPath: string }) {
+  const file = await openFile(opfsPath);
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const track = await input.getPrimaryAudioTrack();
+    if (!track) throw new Error('no audio track');
+    const parts: Float32Array[] = [];
+    let rate = 48_000;
+    let total = 0;
+    let scratch = new Float32Array(0);
+    for await (const sample of new AudioSampleSink(track).samples(0, BEATS_SECONDS)) {
+      const n = sample.numberOfFrames;
+      const mono = new Float32Array(n);
+      if (scratch.length !== n) scratch = new Float32Array(n);
+      for (let c = 0; c < sample.numberOfChannels; c++) {
+        sample.copyTo(scratch, { planeIndex: c, format: 'f32-planar' });
+        for (let i = 0; i < n; i++) mono[i] += scratch[i] / sample.numberOfChannels;
+      }
+      rate = sample.sampleRate;
+      parts.push(mono);
+      total += n;
+      sample.close();
+    }
+    const mono = new Float32Array(total);
+    let o = 0;
+    for (const p of parts) {
+      mono.set(p, o);
+      o += p.length;
+    }
+    return { result: detectBeats(mono, rate) };
+  } finally {
+    input.dispose();
+  }
+}
+
+const handlers = { thumbnails, waveform, mixdown16k, noiseProfile, loudness, beats };
 export type MediaWorkerApi = typeof handlers;
 exposeRpc(handlers);

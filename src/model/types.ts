@@ -476,7 +476,23 @@ export interface SubtitleStyle {
   maxWidthPct: number;
   /** Show digits as Persian (۱۲۳) or Latin (123), or leave them as typed. */
   digits?: 'keep' | 'persian' | 'latin';
-  highlightActiveWord?: boolean;
+  /** Word-by-word animation (uses Cue.words, or timing estimated from text length). */
+  animation?: SubtitleAnimation;
+  /** Colour of the spoken word (karaoke, pop, single). */
+  highlightColor?: string;
+  /** Box behind the spoken word (karaoke). */
+  highlightBg?: string;
+  /** Size of the spoken word relative to the others, 1..2 (pop, single). */
+  activeScale?: number;
+}
+
+export type SubtitleAnimation = 'none' | 'karaoke' | 'pop' | 'single' | 'typewriter';
+
+/** One spoken word, in timeline seconds (the same clock as its cue). */
+export interface CueWord {
+  text: string;
+  start: number;
+  end: number;
 }
 
 export interface Cue {
@@ -486,6 +502,8 @@ export interface Cue {
   text: string;
   /** Set by auto-generation for cues worth a second look; cleared when the text is edited. */
   flag?: 'review';
+  /** Word timings from speech-to-text. Kept in step with the text by model/subtitles.ts. */
+  words?: CueWord[];
 }
 
 export interface SubtitleTrack {

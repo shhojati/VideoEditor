@@ -6,6 +6,7 @@ import {
   canShiftCues,
   convertDigits,
   cueEdgeLimits,
+  cueWords,
   findCue,
   lintCues,
   mergeWithNext,
@@ -113,4 +114,46 @@ it('converts digits both ways', () => {
   expect(convertDigits('ساعت 10:30 و ٤', 'persian')).toBe('ساعت ۱۰:۳۰ و ۴');
   expect(convertDigits('۱۴۰۳ و ٢', 'latin')).toBe('1403 و 2');
   expect(convertDigits('123', 'keep')).toBe('123');
+});
+
+describe('word timings', () => {
+  const timed = (): Cue => ({
+    id: 'a',
+    start: 1,
+    end: 4,
+    text: 'one two three',
+    words: [
+      { text: 'one', start: 1, end: 1.4 },
+      { text: 'two', start: 2.5, end: 2.9 },
+      { text: 'three', start: 3, end: 3.8 },
+    ],
+  });
+
+  it('estimates timings from word length when there are none', () => {
+    const words = cueWords(cue('x', 0, 4, 'ab cdef'));
+    expect(words.map((x) => [x.text, x.start, x.end])).toEqual([['ab', 0, 1.5], ['cdef', 1.5, 4]]);
+  });
+
+  it('keeps timings through a typo fix and drops them when the word count changes', () => {
+    const { p } = setup([timed()]);
+    setCueText(p, 'a', 'one too three');
+    expect(cueWords(findCue(p, 'a')!.cue)[1]).toEqual({ text: 'too', start: 2.5, end: 2.9 });
+    setCueText(p, 'a', 'one two');
+    expect(findCue(p, 'a')!.cue.words).toBeUndefined();
+  });
+
+  it('splits by spoken time and merges back', () => {
+    const { p, track } = setup([timed()]);
+    const right = splitCue(p, 'a', 2.2)!;
+    expect(track.cues.map((c) => c.text)).toEqual(['one', 'two three']);
+    expect(findCue(p, right)!.cue.words!.map((x) => x.start)).toEqual([2.5, 3]);
+    mergeWithNext(p, 'a');
+    expect(track.cues[0].words!.map((x) => x.start)).toEqual([1, 2.5, 3]);
+  });
+
+  it('moves words with their cue', () => {
+    const { p } = setup([timed()]);
+    shiftCues(p, new Set(['a']), 2);
+    expect(findCue(p, 'a')!.cue.words!.map((x) => x.start)).toEqual([3, 4.5, 5]);
+  });
 });

@@ -1,6 +1,6 @@
 import type { SubtitleStyle } from './types';
 
-export type SubtitlePresetId = 'classic' | 'boxed' | 'outline' | 'social';
+export type SubtitlePresetId = 'classic' | 'boxed' | 'outline' | 'social' | 'karaoke' | 'popWords' | 'oneWord';
 
 /** Style presets (plan §6b). Sizes are for a 1080-pixel short side. */
 export const SUBTITLE_PRESETS: Record<SubtitlePresetId, SubtitleStyle> = {
@@ -52,6 +52,53 @@ export const SUBTITLE_PRESETS: Record<SubtitlePresetId, SubtitleStyle> = {
     marginY: 0,
     maxWidthPct: 85,
     digits: 'keep',
+  },
+  // Animated, word by word (need word timings from auto subtitles, or estimate them).
+  karaoke: {
+    fontFamily: 'Vazirmatn',
+    fontSize: 60,
+    fontWeight: 800,
+    color: '#ffffff',
+    strokeColor: '#000000',
+    strokeWidth: 6,
+    position: 'bottom',
+    marginY: 160,
+    maxWidthPct: 85,
+    digits: 'keep',
+    animation: 'karaoke',
+    highlightColor: '#ffffff',
+    highlightBg: '#7c3aed',
+    activeScale: 1.08,
+  },
+  popWords: {
+    fontFamily: 'Lalezar',
+    fontSize: 76,
+    fontWeight: 400,
+    color: '#ffffff',
+    strokeColor: '#000000',
+    strokeWidth: 10,
+    position: 'middle',
+    marginY: 0,
+    maxWidthPct: 85,
+    digits: 'keep',
+    animation: 'pop',
+    highlightColor: '#ffe14d',
+    activeScale: 1.15,
+  },
+  oneWord: {
+    fontFamily: 'Lalezar',
+    fontSize: 96,
+    fontWeight: 400,
+    color: '#ffffff',
+    strokeColor: '#000000',
+    strokeWidth: 12,
+    position: 'middle',
+    marginY: 0,
+    maxWidthPct: 90,
+    digits: 'keep',
+    animation: 'single',
+    highlightColor: '#4dff88',
+    activeScale: 1.3,
   },
 };
 

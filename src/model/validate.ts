@@ -173,8 +173,17 @@ const asset = z.object({
   library: z.object({ kind: z.enum(['stickers', 'sounds', 'overlays']), path: z.string() }).optional(),
 });
 
+const cueWord = z.object({ text: z.string(), start: nonNeg, end: nonNeg });
+
 const cue = z
-  .object({ id: z.string(), start: nonNeg, end: nonNeg, text: z.string(), flag: z.literal('review').optional() })
+  .object({
+    id: z.string(),
+    start: nonNeg,
+    end: nonNeg,
+    text: z.string(),
+    flag: z.literal('review').optional(),
+    words: z.array(cueWord).optional(),
+  })
   .refine((c) => c.end > c.start, 'cue end must be after start');
 
 const subtitleTrack = z.object({
@@ -195,7 +204,10 @@ const subtitleTrack = z.object({
     marginY: num,
     maxWidthPct: num.min(10).max(100),
     digits: z.enum(['keep', 'persian', 'latin']).optional(),
-    highlightActiveWord: z.boolean().optional(),
+    animation: z.enum(['none', 'karaoke', 'pop', 'single', 'typewriter']).optional(),
+    highlightColor: z.string().optional(),
+    highlightBg: z.string().optional(),
+    activeScale: num.min(1).max(2).optional(),
   }),
   cues: z.array(cue),
 });

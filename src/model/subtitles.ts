@@ -1,7 +1,7 @@
 // Subtitle cue operations and quality rules (plan §6). Like timeline.ts these mutate the project and
 // are meant to run inside edit(). Invariant: cues on a track are sorted and never overlap.
 import { newId } from './factories';
-import type { Cue, ID, Project, SubtitleTrack } from './types';
+import type { Cue, CueWord, ID, Project, SubtitleTrack } from './types';
 
 export const RULES = {
   minDuration: 1,
@@ -56,16 +56,48 @@ export function deleteCues(p: Project, ids: ReadonlySet<ID>) {
   for (const track of p.subtitleTracks) track.cues = track.cues.filter((c) => !ids.has(c.id));
 }
 
-/** Split at `time`; words are divided in proportion to the time on each side. Returns the new id. */
+const textWords = (text: string) => text.split(/\s+/).filter(Boolean);
+
+/**
+ * Timing of each word of a cue, in timeline seconds and inside the cue. Uses the speech-to-text
+ * timings while they still match the text word for word (a typo fix keeps them); otherwise time
+ * is shared out in proportion to word length.
+ */
+export function cueWords(cue: Cue): CueWord[] {
+  const words = textWords(cue.text);
+  const clampT = (t: number) => Math.min(cue.end, Math.max(cue.start, t));
+  if (cue.words?.length === words.length) {
+    return words.map((text, i) => ({ text, start: clampT(cue.words![i].start), end: clampT(cue.words![i].end) }));
+  }
+  const weights = words.map((w) => w.length + 1);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let t = cue.start;
+  return words.map((text, i) => {
+    const start = t;
+    t += ((cue.end - cue.start) * weights[i]) / total;
+    return { text, start, end: i === words.length - 1 ? cue.end : t };
+  });
+}
+
+/**
+ * Split at `time`. With word timings the words spoken before `time` go left; otherwise words are
+ * divided in proportion to the time on each side. Returns the new id.
+ */
 export function splitCue(p: Project, cueId: ID, time: number): ID | null {
   const ref = findCue(p, cueId);
   if (!ref) return null;
   const { cue, track } = ref;
   if (time - cue.start < MIN_CUE || cue.end - time < MIN_CUE) return null;
-  const words = cue.text.split(/\s+/).filter(Boolean);
+  const words = textWords(cue.text);
+  const timed = cue.words ? cueWords(cue) : undefined;
   const ratio = (time - cue.start) / (cue.end - cue.start);
-  const cut = words.length < 2 ? words.length : Math.min(words.length - 1, Math.max(1, Math.round(words.length * ratio)));
+  const wanted = timed ? timed.filter((w) => (w.start + w.end) / 2 < time).length : Math.round(words.length * ratio);
+  const cut = words.length < 2 ? words.length : Math.min(words.length - 1, Math.max(1, wanted));
   const right: Cue = { id: newId(), start: time, end: cue.end, text: words.slice(cut).join(' ') };
+  if (timed) {
+    right.words = timed.slice(cut);
+    cue.words = timed.slice(0, cut);
+  }
   cue.end = time;
   cue.text = words.slice(0, cut).join(' ');
   track.cues.splice(ref.index + 1, 0, right);
@@ -77,6 +109,7 @@ export function mergeWithNext(p: Project, cueId: ID): boolean {
   const ref = findCue(p, cueId);
   const next = ref?.track.cues[ref.index + 1];
   if (!ref || !next) return false;
+  if (ref.cue.words || next.words) ref.cue.words = [...cueWords(ref.cue), ...cueWords(next)];
   ref.cue.end = next.end;
   ref.cue.text = [ref.cue.text, next.text].filter(Boolean).join(' ');
   delete ref.cue.flag;
@@ -124,6 +157,10 @@ export function shiftCues(p: Project, ids: ReadonlySet<ID>, delta: number): bool
       if (!ids.has(c.id)) continue;
       c.start = Math.max(0, c.start + delta);
       c.end = c.end + delta;
+      for (const w of c.words ?? []) {
+        w.start = Math.max(0, w.start + delta);
+        w.end = Math.max(0, w.end + delta);
+      }
     }
     sortCues(t);
   }
@@ -133,6 +170,8 @@ export function shiftCues(p: Project, ids: ReadonlySet<ID>, delta: number): bool
 export function setCueText(p: Project, cueId: ID, text: string) {
   const ref = findCue(p, cueId);
   if (!ref) return;
+  // Same number of words: a correction, the timings still hold. Otherwise they are estimated.
+  if (ref.cue.words && ref.cue.words.length !== textWords(text).length) delete ref.cue.words;
   ref.cue.text = text;
   delete ref.cue.flag; // a human looked at it
 }

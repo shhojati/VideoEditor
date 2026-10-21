@@ -84,3 +84,23 @@ describe('segmentsToCues', () => {
     expect(cues[0].end).toBe(1.9);
   });
 });
+
+describe('segmentsToCues with word timings', () => {
+  const w = (text: string, start: number, end: number) => ({ text, start, end });
+
+  it('breaks at pauses and sentence ends and keeps each cue its words', () => {
+    const words = [w('سلام', 0, 0.4), w('دوستان.', 0.5, 1), w('امروز', 1.1, 1.5), w('درباره', 1.6, 2), w('فیلم', 3.2, 3.6), w('حرف', 3.7, 4), w('می‌زنیم', 4.1, 4.6)];
+    const cues = segmentsToCues([{ start: 0, end: 5, text: '', words }]);
+    expect(cues.map((c) => c.text)).toEqual(['سلام دوستان.', 'امروز درباره', 'فیلم حرف می‌زنیم']);
+    expect(cues.map((c) => [c.start, c.end])).toEqual([[0, 1], [1.1, 2], [3.2, 4.6]]);
+    expect(cues[2].words).toEqual(words.slice(4));
+  });
+
+  it('collapses repeated words and drops empty ones', () => {
+    const words = ['از', 'از', 'از', 'از', 'از', ' ', 'خانه'].map((t, i) => w(t, i * 0.2, i * 0.2 + 0.18));
+    const [cue] = segmentsToCues([{ start: 0, end: 3, text: '', words }]);
+    expect(cue.text).toBe('از از از خانه');
+    expect(cue.words!.map((x) => x.text)).toEqual(['از', 'از', 'از', 'خانه']);
+    expect(cue.review).toBe(true);
+  });
+});

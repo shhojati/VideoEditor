@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const RLM = String.fromCharCode(0x200f);
 
-type CueState = { start: number; end: number; text: string; flag?: string };
+type CueState = { start: number; end: number; text: string; flag?: string; words?: { text: string; start: number; end: number }[] };
 const cues = (page: Page) =>
   page.evaluate(() => {
     type P = { subtitleTracks: { cues: CueState[] }[] };
@@ -137,4 +137,12 @@ test('auto subtitles from Persian speech (STT_E2E=1)', async ({ page }) => {
   expect(c.every((x) => x.end > x.start)).toBe(true);
   // Mostly Persian script.
   expect(c.filter((x) => /[؀-ۿ]/.test(x.text)).length).toBeGreaterThan(c.length * 0.8);
+  // Word timings from the "_timestamped" model, in order and inside their cue.
+  const timed = c.filter((x) => x.words?.length);
+  console.log('[stt] cues with word timings:', timed.length, '/', c.length, JSON.stringify(timed[0]));
+  expect(timed.length).toBeGreaterThan(c.length * 0.8);
+  for (const x of timed) {
+    expect(x.words!.map((w) => w.text).join(' ')).toBe(x.text);
+    x.words!.forEach((w, i) => expect(w.start).toBeGreaterThanOrEqual(i ? x.words![i - 1].start : 0));
+  }
 });

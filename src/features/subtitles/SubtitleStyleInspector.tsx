@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
 import { presetOf, SUBTITLE_PRESETS, type SubtitlePresetId } from '../../model/subtitlePresets';
-import type { ID, Project, SubtitleStyle } from '../../model/types';
+import type { ID, Project, SubtitleAnimation, SubtitleStyle } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { ColorField, NumberField, Section, Segmented, SelectField } from '../inspector/controls';
 import { RTL_LANGUAGES, SUBTITLE_LANGUAGES } from './subtitleActions';
+
+const ANIMATIONS: SubtitleAnimation[] = ['none', 'karaoke', 'pop', 'single', 'typewriter'];
 
 /** Style of a whole subtitle track (shown in the inspector when one of its cues is selected). */
 export function SubtitleStyleInspector({ project, trackId }: { project: Project; trackId: ID }) {
@@ -24,6 +26,7 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
   const setKey = <K extends keyof SubtitleStyle>(k: K, v: SubtitleStyle[K]) => set(k, (s) => void (s[k] = v));
   const font = FONT_CHOICES.find((f) => f.family === style.fontFamily) ?? FONT_CHOICES[0];
   const preset = presetOf(style);
+  const animation = style.animation ?? 'none';
 
   return (
     <div data-testid="subtitle-style">
@@ -66,6 +69,29 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
         <NumberField label={t('subtitles.margin')} value={style.marginY} min={0} max={400} step={1} unit="px" onChange={(v) => setKey('marginY', v)} />
         <NumberField label={t('inspector.maxWidth')} value={style.maxWidthPct} min={30} max={100} step={1} unit="%" onChange={(v) => setKey('maxWidthPct', v)} />
         <Segmented label={t('subtitles.digits')} value={style.digits ?? 'keep'} options={(['keep', 'persian', 'latin'] as const).map((d) => ({ value: d, label: t(`subtitles.digitModes.${d}`) }))} onChange={(v) => setKey('digits', v)} />
+      </Section>
+      <Section title={t('subtitles.animationSection')}>
+        <SelectField
+          label={t('subtitles.animation')}
+          value={animation}
+          options={ANIMATIONS.map((a) => ({ value: a, label: t(`subtitles.animations.${a}`) }))}
+          onChange={(v) => set('animation', (s) => {
+            s.animation = v;
+            if (v !== 'none' && !s.highlightColor) s.highlightColor = '#ffe14d';
+          })}
+        />
+        {animation !== 'none' && animation !== 'typewriter' && (
+          <>
+            <ColorField label={t('subtitles.highlightColor')} value={style.highlightColor ?? '#ffe14d'} onChange={(v) => setKey('highlightColor', v ?? '#ffe14d')} />
+            {animation === 'karaoke' && (
+              <ColorField label={t('subtitles.highlightBg')} optional fallback="#7c3aed" value={style.highlightBg} onChange={(v) => setKey('highlightBg', v)} />
+            )}
+            <NumberField label={t('subtitles.activeScale')} value={style.activeScale ?? 1} min={1} max={2} factor={100} unit="%" onChange={(v) => setKey('activeScale', v)} />
+          </>
+        )}
+        {animation !== 'none' && !track.cues.some((c) => c.words?.length) && (
+          <p className="text-[11px] text-neutral-400">{t('subtitles.estimatedTiming')}</p>
+        )}
       </Section>
       <Section title={t('subtitles.languageSection')}>
         <SelectField

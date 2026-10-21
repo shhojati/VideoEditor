@@ -36,26 +36,37 @@ interface SttState {
   /** Cues created by the last run. */
   created?: number;
   models: Partial<Record<WhisperSize, boolean>>;
+  /** Installed models that give word timings ("_timestamped"); others give segment times only. */
+  wordModels: Partial<Record<WhisperSize, boolean>>;
 }
 
-export const useStt = create<SttState>()(() => ({ stage: 'idle', progress: 0, models: {} }));
+export const useStt = create<SttState>()(() => ({ stage: 'idle', progress: 0, models: {}, wordModels: {} }));
 
 /** Which models are installed for this browser's device (HEAD requests to our own server). */
 export async function checkModels() {
   const device = preferredDevice();
+  const installed = async (size: WhisperSize, words: boolean) => {
+    const ok = await Promise.all(
+      requiredFiles(size, device, words).map((f) =>
+        fetch(f, { method: 'HEAD' })
+          .then((r) => r.ok && !(r.headers.get('content-type') ?? '').includes('text/html'))
+          .catch(() => false),
+      ),
+    );
+    return ok.every(Boolean);
+  };
   const entries = await Promise.all(
     WHISPER_SIZES.map(async (size) => {
-      const ok = await Promise.all(
-        requiredFiles(size, device).map((f) =>
-          fetch(f, { method: 'HEAD' })
-            .then((r) => r.ok && !(r.headers.get('content-type') ?? '').includes('text/html'))
-            .catch(() => false),
-        ),
-      );
-      return [size, ok.every(Boolean)] as const;
+      // Older installs only have the plain models: still usable, without word timings.
+      const words = await installed(size, true);
+      return [size, words || (await installed(size, false)), words] as const;
     }),
   );
-  useStt.setState({ models: Object.fromEntries(entries), device });
+  useStt.setState({
+    models: Object.fromEntries(entries.map(([s, ok]) => [s, ok])),
+    wordModels: Object.fromEntries(entries.map(([s, , words]) => [s, words])),
+    device,
+  });
 }
 
 let worker: Worker | null = null;
@@ -112,7 +123,9 @@ export async function startAutoSubtitles(opts: { model: WhisperSize; language: s
     useStt.setState({ stage: 'error', error: 'noAudio' });
     return;
   }
-  await transcribe({ pcm, windows, model: opts.model, language: opts.language, device: preferredDevice() }, true);
+  // Not checked yet (the panel was never opened): try the word model; a missing one is reported.
+  const words = useStt.getState().wordModels[opts.model] ?? true;
+  await transcribe({ pcm, windows, model: opts.model, language: opts.language, device: preferredDevice(), words }, true);
 }
 
 function transcribe(req: SttRequest, allowFallback: boolean): Promise<void> {
@@ -172,6 +185,7 @@ function finish(segments: Segment[], language: string | null) {
     end: d.end,
     text: d.text,
     ...(d.review ? { flag: 'review' as const } : {}),
+    ...(d.words?.length ? { words: d.words } : {}),
   }));
   // Whisper segments touch each other; leave the minimum gap and sane durations from the start.
   autoFixTiming(track);

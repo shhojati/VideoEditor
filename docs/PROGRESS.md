@@ -408,3 +408,20 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - The granular shifter is tuned for fun voices: large shifts (±12 st, or keep-pitch at 0.5×/2×) sound slightly grainy; no formant preservation.
 - Echo/reverb Size is not animatable (Amount is).
 - Preview starts the effect fresh at the playhead, so an echo from before the playhead is not heard when starting mid-clip (export renders it).
+
+## Post-MVP 9 — Animated word captions ✅ (2026-10-21)
+
+### Done
+- **Word timings from Whisper**: the models are now the `whisper-{tiny,base,small}_timestamped` exports (same sizes; they also output cross-attentions), and the STT worker asks for `return_timestamps: 'word'`. Post-processing (`engine/stt/postprocess.ts`) groups words into cues at pauses (≥ 0.8 s) and sentence ends, then by length and duration, and collapses repeat loops on the word list. A server that still has only the old `whisper-<size>` folders keeps working with segment timings; the Auto subtitles panel says so.
+- **Model**: `Cue.words` (timeline seconds) and `SubtitleStyle.animation` / `highlightColor` / `highlightBg` / `activeScale` (the unused `highlightActiveWord` is gone). `cueWords()` (`model/subtitles.ts`) returns the timings while they match the text word for word (a typo fix keeps them) and otherwise estimates them from word length, so imported SRT and typed cues animate too. Split (by spoken time), merge and move keep the words; changing the word count drops them.
+- **Styles** (`engine/render/subtitles.ts`, inspector "Word animation"): Karaoke highlight (spoken word in colour, optional box, optional size), Word pop (words pop in as spoken), One word at a time (big, centred), Typewriter (words fade in as spoken). Three presets: Karaoke, Word pop, One word. Words are measured and drawn whole, never letter by letter, so Persian joining is kept; RTL lines run right to left. Preview and export share the code.
+
+### Verified
+- 300 unit tests (adds word grouping and repeat collapse, word placement LTR/RTL, active word, estimated timings, split/merge/move/typo keep words).
+- **E2E `e2e/captions.spec.ts`**: the One-word style picked in the inspector; with the first word at 1 s, the frame centre is the red clip at 0.5 s and the word box at 1.5 s and 2.5 s; **preview = export** (255,1,0 / 0,255,0 vs 0,255,1).
+- Opt-in `STT_E2E=1` run with the tiny timestamped model on 72 s of Persian speech: 12/12 cues have word timings, in order, matching the cue text (1.4 min).
+- In the browser: a Persian karaoke cue at 1.2 s lights «امروز», the third word from the right, with letters joined.
+
+### Known issues / not done
+- A line that mixes RTL and LTR words is laid out in logical order, so the highlighted word can be misplaced; single-direction lines are exact.
+- Explicit line breaks inside a cue are ignored by the animated styles (lines are re-balanced).

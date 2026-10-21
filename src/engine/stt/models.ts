@@ -12,11 +12,16 @@ const DECODER_FILE: Record<SttDevice, string> = {
   wasm: 'decoder_model_merged_quantized.onnx',
 };
 
-export const modelDir = (size: WhisperSize) => `/models/onnx-community/whisper-${size}`;
+/**
+ * Model repo name. The "_timestamped" exports also output cross-attentions, which word-level
+ * timestamps need; the plain ones (older installs) give segment times only.
+ */
+export const modelName = (size: WhisperSize, words: boolean) => `whisper-${size}${words ? '_timestamped' : ''}`;
+export const modelDir = (size: WhisperSize, words = true) => `/models/onnx-community/${modelName(size, words)}`;
 
 /** Files a model needs on this device, relative to the site root. */
-export function requiredFiles(size: WhisperSize, device: SttDevice): string[] {
-  const dir = modelDir(size);
+export function requiredFiles(size: WhisperSize, device: SttDevice, words = true): string[] {
+  const dir = modelDir(size, words);
   return [
     `${dir}/config.json`,
     `${dir}/tokenizer.json`,

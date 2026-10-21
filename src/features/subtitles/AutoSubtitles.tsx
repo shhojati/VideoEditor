@@ -104,6 +104,9 @@ export function AutoSubtitles({ project }: { project: Project }) {
               {stt.detail && <span className="block text-[10px] text-neutral-400" dir="ltr">{stt.detail}</span>}
             </p>
           )}
+          {stt.models[model] && stt.wordModels[model] === false && (
+            <p className="text-[11px] text-amber-300" data-testid="stt-no-words">{t('stt.noWordTimings')}</p>
+          )}
           {Object.values(stt.models).some((v) => v === false) && <p className="text-[11px] text-neutral-400">{t('stt.installHint')}</p>}
         </div>
       )}

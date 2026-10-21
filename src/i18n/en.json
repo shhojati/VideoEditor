@@ -357,7 +357,10 @@
       "classic": "Classic",
       "boxed": "Boxed",
       "outline": "Yellow outline",
-      "social": "Social"
+      "social": "Social",
+      "karaoke": "Karaoke",
+      "popWords": "Word pop",
+      "oneWord": "One word"
     },
     "textStyle": "Text",
     "bgOpacity": "Box opacity",
@@ -395,7 +398,20 @@
       "emptyHint": "No text",
       "review": "Review",
       "reviewHint": "Speech recognition was unsure about this one"
-    }
+    },
+    "animationSection": "Word animation",
+    "animation": "Animation",
+    "animations": {
+      "none": "None",
+      "karaoke": "Karaoke highlight",
+      "pop": "Word pop",
+      "single": "One word at a time",
+      "typewriter": "Typewriter"
+    },
+    "highlightColor": "Spoken word",
+    "highlightBg": "Word box",
+    "activeScale": "Spoken word size",
+    "estimatedTiming": "These subtitles have no word timings; word times are estimated from text length. Auto subtitles give exact timings."
   },
   "stt": {
     "title": "Auto subtitles (speech to text)",
@@ -425,7 +441,8 @@
       "missingModel": "Model files not found. Put them in public/models (see public/models/README.md).",
       "failed": "Speech recognition failed."
     },
-    "installHint": "Download missing models with scripts/fetch-models.mjs into public/models."
+    "installHint": "Download missing models with scripts/fetch-models.mjs into public/models.",
+    "noWordTimings": "This model is an older version without word timings. Animated captions will use estimated timing. Download the new models with scripts/fetch-models.mjs."
   },
   "export": {
     "open": "Export",

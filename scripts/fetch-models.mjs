@@ -22,7 +22,8 @@ const META = [
 const WEIGHTS = ['onnx/encoder_model.onnx', 'onnx/decoder_model_merged_quantized.onnx', 'onnx/decoder_model_merged_q4.onnx'];
 
 for (const size of sizes) {
-  const repo = `onnx-community/whisper-${size}`;
+  // The "_timestamped" exports also output cross-attentions, which word-level timestamps need.
+  const repo = `onnx-community/whisper-${size}_timestamped`;
   for (const file of [...META, ...WEIGHTS]) {
     const dest = join(root, 'public/models', repo, file);
     if (existsSync(dest) && statSync(dest).size > 0) { console.log('skip', repo, file); continue; }

@@ -94,6 +94,7 @@ const clip = z.object({
   speedPreset: z.enum(['montage', 'hero', 'bullet', 'flashIn', 'flashOut', 'jumpCut', 'custom']).optional(),
   freeze: z.literal(true).optional(),
   transcript: z.object({ language: z.string(), rtl: z.boolean(), words: z.array(z.object({ text: z.string(), s: nonNeg, e: nonNeg })) }).optional(),
+  sequenceId: z.string().optional(),
   transform: z.object({
     x: num,
     y: num,
@@ -247,6 +248,7 @@ export const projectSchema = z.object({
   }),
   assets: z.record(z.string(), asset),
   tracks: z.array(track),
+  sequences: z.record(z.string(), z.object({ id: z.string(), name: z.string(), tracks: z.array(track) })).optional(),
   subtitleTracks: z.array(subtitleTrack),
   luts: z.record(z.string(), z.object({ name: z.string(), size: num.int().min(2).max(65), data: z.string() })).optional(),
   markers: z.array(z.object({ id: z.string(), t: nonNeg, label: z.string().optional(), color: z.string().optional() })).optional(),

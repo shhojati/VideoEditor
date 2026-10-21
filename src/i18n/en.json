@@ -110,7 +110,10 @@
     "removePauses": "Remove pauses and fillers",
     "transcribe": "Transcribe",
     "translate": "Translate subtitles",
-    "addTemplate": "Add template"
+    "addTemplate": "Add template",
+    "makeCompound": "Make compound clip",
+    "breakApart": "Break apart compound clip",
+    "renameCompound": "Rename compound clip"
   },
   "panels": {
     "media": "Media",
@@ -1427,5 +1430,26 @@
       "outro": "Outros"
     },
     "invalid": "Not valid templates (check the format): {{files}}"
+  },
+  "compound": {
+    "name": "Compound {{n}}",
+    "title": "Compound clip",
+    "nameLabel": "Name",
+    "contains_one": "{{count}} clip inside",
+    "contains_other": "{{count}} clips inside",
+    "open": "Open",
+    "break": "Break apart",
+    "make": "Compound",
+    "makeHint": "Make one compound clip from the selected clips (double-click it to edit its insides)",
+    "main": "Main timeline",
+    "path": "Opened compound clips",
+    "inside": "Editing inside a compound clip: changes show wherever it plays."
+  },
+  "markers": {
+    "hint": "Markers (M adds one at the playhead)",
+    "jump": "Go to this marker",
+    "label": "Name",
+    "color": "Colour",
+    "remove": "Remove marker"
   }
 }

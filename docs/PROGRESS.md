@@ -611,3 +611,24 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - "Save my selection as a template" was not part of this step (built-in + server folder, as chosen).
 - Templates with media (e.g. a background video) are not supported yet: text, shapes and effects only.
+
+## Post-MVP 21 — Markers editing and nested compound clips ✅ (2026-10-21)
+
+### Done
+- **Markers** (🚩 N in the timeline toolbar, once there are markers): name, colour (five), jump to and remove each one; names show next to the flag on the ruler. (Adding with M and snapping came with step 13.)
+- **Compound clips** (`model/sequences.ts`; `Project.sequences`, `Clip.sequenceId`; schema version 4):
+  - **Make**: select clips (on any tracks) → ▣ Compound. Each involved track becomes a track inside it (order kept, transitions between two selected clips go along); the compound goes on the lowest involved visual track if there is room, otherwise on a new track. One undo step.
+  - **As a whole**: the compound is a clip like any other — move, trim (limited by what is inside), split, copy/paste, transform, opacity, blend, effects, keyframes, volume. Its insides are drawn into their own layer at the resolution they end up on screen, then placed, blended and given effects (`renderFrame` → `drawTracks`, through the frame lookup). Past the end of what is inside it shows nothing.
+  - **Open** (double-click, or Open in the inspector): the timeline and preview show its insides, with a breadcrumb (Main timeline › Compound 1 › …) to go back out to any level, at the playhead you left. **Every editing tool works inside** unchanged: the store's `edit()` swaps the sequence in as the project's tracks for the change (no subtitles or markers inside) and back, so undo is one history and nothing else needed to know about compounds. Undoing a compound away closes it.
+  - **Own copy**: each compound owns its sequence; split, paste and duplicate give each part its own copy (new ids), so a clip inside exists only once. Nesting is limited to 4 levels; unused sequences are cleaned up after every edit.
+  - **Sound and decoding**: audio (preview, export, speech-to-text, ducking, noise profiles) and video decoding use the timeline with compounds expanded into plain clips (placed and cut as they play; the compound's volume multiplies theirs; a muted track mutes what it holds), so those paths needed no changes. Export always takes the whole document, also while a compound is open.
+  - **Break apart** puts the clips back on new tracks at the same times.
+
+### Verified
+- Unit tests: make (layers, times, the compound's place), break apart, a trimmed compound expands to the right parts with exact in-points, trim limited by the sequence, split/paste copy the sequence with new ids, editing inside through the store changes only the sequence, undo/redo reopen/close the path.
+- **E2E `e2e/compound.spec.ts`**: red + blue → Compound 1; opacity 50 % on the compound halves the red; open it, delete blue, back out → black after 2 s; a marker named "Intro" in red; **preview = export** (128,0,0 vs 127,0,0; black). A tone inside a compound exports at full volume (0.211 RMS) and at exactly half (0.106) with the compound at 50 %.
+
+### Known issues / not done
+- A compound has no speed change, reverse or freeze of its own (its clips inside can), and no masks or tracking on the compound as a whole.
+- Compound clips show a teal bar with their name on the timeline, not thumbnails of their insides.
+- Inside a compound there are no subtitles or markers (they belong to the main timeline).

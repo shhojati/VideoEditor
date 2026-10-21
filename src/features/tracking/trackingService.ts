@@ -9,7 +9,7 @@ import { newId } from '../../model/factories';
 import { addAdjustmentClipAbove, findClip } from '../../model/timeline';
 import type { Clip, ID, MotionLink, Project, Tracker, TrackSample } from '../../model/types';
 import type { TrackMessage, TrackRequest } from '../../workers/track.worker';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select } from '../timeline/timelineUi';
 import { mediaTimeAt, sourceLength, timelineTimeAt } from '../../model/remap';
@@ -34,7 +34,7 @@ interface TrackingState {
 
 export const useTracking = create<TrackingState>()(() => ({ active: null, job: null }));
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 const srcTime = mediaTimeAt;
 const timelineTime = timelineTimeAt;
 /** Source range the clip shows. */

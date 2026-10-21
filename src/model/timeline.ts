@@ -5,6 +5,7 @@ import { newId } from './factories';
 import { isOverlay } from './overlays';
 import type { Asset, AssetKind, Clip, Effect, ID, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
 import { handles, isLinear, retime, sourceLength, SPEED_RANGE } from './remap';
+import { cloneSequence, sequenceDuration } from './sequences';
 
 /** Shortest clip a trim or split may leave behind (s). */
 export const MIN_CLIP_DURATION = 0.1;
@@ -107,6 +108,8 @@ export function splitClips(p: Project, time: number, clipIds?: ReadonlySet<ID>):
       const offset = time - clip.start;
       if (offset < MIN_CLIP_DURATION - EPS || clip.duration - offset < MIN_CLIP_DURATION - EPS) continue;
       const right: Clip = { ...cloneClip(clip), id: newId() };
+      // Each part of a compound clip gets its own copy of the sequence.
+      if (right.sequenceId) right.sequenceId = cloneSequence(p, right.sequenceId);
       // Each half keeps showing exactly what it showed (speed curves and reverse included).
       const leftTiming = retime(clip, clip.start, time);
       const rightTiming = retime(clip, time, clip.start + clip.duration);
@@ -142,15 +145,17 @@ export function trimLimits(p: Project, clipId: ID, edge: 'start' | 'end'): Range
   if (!ref) return { min: 0, max: 0 };
   const { track, clip, clipIndex } = ref;
   const asset = clip.assetId ? p.assets[clip.assetId] : undefined;
-  const limited = sourceLimited(asset);
+  // A compound clip is limited by its sequence, like media by its file.
+  const mediaDuration = clip.sequenceId ? sequenceDuration(p, clip.sequenceId) : asset?.duration;
+  const limited = !!clip.sequenceId || sourceLimited(asset);
   const end = clipEnd(clip);
   if (edge === 'start') {
     const prevEnd = clipIndex > 0 ? clipEnd(track.clips[clipIndex - 1]) : 0;
-    const sourceMin = limited ? clip.start - handles(clip, asset!.duration).before : -Infinity;
+    const sourceMin = limited ? clip.start - handles(clip, mediaDuration).before : -Infinity;
     return { min: Math.max(prevEnd, sourceMin, 0), max: end - MIN_CLIP_DURATION };
   }
   const nextStart = clipIndex < track.clips.length - 1 ? track.clips[clipIndex + 1].start : Infinity;
-  const sourceMax = !limited ? Infinity : isLinear(clip) ? clip.start + (asset!.duration! - clip.inPoint) / clip.speed : end + handles(clip, asset!.duration).after;
+  const sourceMax = !limited ? Infinity : isLinear(clip) ? clip.start + (mediaDuration! - clip.inPoint) / clip.speed : end + handles(clip, mediaDuration).after;
   return { min: clip.start + MIN_CLIP_DURATION, max: Math.min(nextStart, sourceMax) };
 }
 
@@ -266,6 +271,12 @@ export function pasteClips(p: Project, items: ClipboardItem[], time: number): ID
     }
     if (!track) continue;
     const clip: Clip = { ...cloneClip(item.clip), id: newId() };
+    if (clip.sequenceId) {
+      // A pasted compound gets its own copy of the sequence (dropped if it is not in this project).
+      const copy = cloneSequence(p, clip.sequenceId);
+      if (!copy) continue;
+      clip.sequenceId = copy;
+    }
     clip.start = nearestFreeStart(track, time + item.offset, clip.duration);
     insertClip(track, clip);
     ids.push(clip.id);

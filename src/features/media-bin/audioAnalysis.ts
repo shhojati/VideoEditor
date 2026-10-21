@@ -1,6 +1,7 @@
 // On-demand audio analysis for cleanup: an asset's noise profile (cached in memory and IndexedDB)
 // and a clip's loudness for Normalize. Both run in the media worker.
 import { hasCleanStage, type NoiseProfile } from '../../engine/audio/cleanDsp';
+import { flattenForMedia } from '../../model/sequences';
 import type { Clip, ID, Project } from '../../model/types';
 import { getDerived, putDerived } from '../../store/persistence';
 import { mediaWorker } from './mediaService';
@@ -48,7 +49,7 @@ export function ensureNoiseProfile(project: Project, assetId: ID): Promise<Noise
 
 function cleanedAssets(project: Project): Set<ID> {
   const ids = new Set<ID>();
-  for (const track of project.tracks)
+  for (const track of flattenForMedia(project).tracks)
     for (const clip of track.clips) if (clip.assetId && hasCleanStage(clip)) ids.add(clip.assetId);
   return ids;
 }

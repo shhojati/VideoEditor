@@ -11,9 +11,10 @@ import { createSubtitleTrack, newId } from '../../model/factories';
 import { peakVolume } from '../../model/keyframes';
 import { autoFixTiming, cueWords } from '../../model/subtitles';
 import { mediaTimeAt } from '../../model/remap';
+import { flattenForMedia } from '../../model/sequences';
 import { findClip } from '../../model/timeline';
 import type { ID, Project } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import type { SttMessage, SttRequest } from '../../workers/stt.worker';
 import type { MixItem } from '../../workers/media.worker';
 import { mediaWorker } from '../media-bin/mediaService';
@@ -110,7 +111,7 @@ export async function startAutoSubtitles(opts: { model: WhisperSize; language: s
   if (!project) return;
   cancelAutoSubtitles();
   const selection = useTimelineUi.getState().selection;
-  const items = mixItems(project, opts.selectedOnly && selection.some((id) => findClip(project, id)) ? new Set(selection) : undefined);
+  const items = mixItems(flattenForMedia(project), opts.selectedOnly && selection.some((id) => findClip(project, id)) ? new Set(selection) : undefined);
   if (!items.length) {
     useStt.setState({ stage: 'error', error: 'noAudio' });
     return;
@@ -145,7 +146,7 @@ export async function transcribeClips(clipIds: readonly ID[], opts: { model: Whi
   cancelAutoSubtitles();
   let done = 0;
   for (const clipId of clipIds) {
-    const project = useProjectStore.getState().history?.present;
+    const project = currentProject();
     const clip = project && findClip(project, clipId)?.clip;
     if (!project || !clip) continue;
     const items = mixItems(project, new Set([clipId]));

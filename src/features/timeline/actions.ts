@@ -16,11 +16,11 @@ import type { ID, Project, ShapeKind } from '../../model/types';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
 import { findTransition, removeTransitions } from '../../model/transitions';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clampPps, select, useTimelineUi } from './timelineUi';
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 const edit = (...args: Parameters<ReturnType<typeof useProjectStore.getState>['edit']>) =>
   useProjectStore.getState().edit(...args);
 

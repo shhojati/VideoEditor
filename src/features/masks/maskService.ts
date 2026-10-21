@@ -21,7 +21,7 @@ import { newId } from '../../model/factories';
 import { isOverlay } from '../../model/overlays';
 import { findClip } from '../../model/timeline';
 import type { Animated, Clip, ID, MaskTrack, MaskVertex, Project, RotoMask, Tracker } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clipBox } from '../preview/canvasGeometry';
 import { setActiveTracker, startTracking } from '../tracking/trackingService';
@@ -41,7 +41,7 @@ export const useMasks = create<MaskUiState>()(() => ({ active: null, pen: null, 
 export type MaskValueKey = 'feather' | 'expansion' | 'opacity';
 export type MaskAnimKey = MaskValueKey | 'path';
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 const srcTime = keyTimeAt;
 const lerpOf = (key: MaskAnimKey) => (key === 'path' ? lerpPath : lerpNumber) as Lerp<unknown>;
 const tolerance = (p: Project, c: Clip) => keyTolerance(p.settings.fps, keyRate(c));

@@ -60,6 +60,7 @@ import { ZipWriter } from '../lib/zip';
 import { timelineDuration } from '../model/timeline';
 import type { ID, Project } from '../model/types';
 import type { AudioAux } from '../engine/audio/audioAux';
+import { allClips, flattenForMedia } from '../model/sequences';
 import { sourceRangeFor } from '../model/remap';
 
 export type ExportRequest =
@@ -274,7 +275,8 @@ class FrameRenderer {
 
   async draw(t: number) {
     const { project, streams, images, held } = this;
-    const active = visualClipsAt(project, t).filter(({ clip }) => !isOverlay(clip));
+    // Compound clips draw their insides: decode the clips inside them too.
+    const active = visualClipsAt(flattenForMedia(project), t).filter(({ clip }) => !isOverlay(clip));
     const activeIds = new Set(active.map(({ clip }) => clip.id));
     // Close sources of clips that have ended.
     for (const [id, s] of streams) {
@@ -637,8 +639,7 @@ async function run(
 
   // Fonts used by text and burned-in subtitles must be loaded in this worker before drawing.
   const fonts = new Set<string>();
-  for (const t of project.tracks)
-    for (const c of t.clips) if (c.text) fonts.add(`${c.text.fontFamily}|${c.text.fontWeight}`);
+  for (const c of allClips(project)) if (c.text) fonts.add(`${c.text.fontFamily}|${c.text.fontWeight}`);
   if (settings.burnSubtitles)
     for (const st of project.subtitleTracks)
       if (!st.hidden) fonts.add(`${st.style.fontFamily}|${st.style.fontWeight ?? 600}`);
@@ -646,7 +647,7 @@ async function run(
   if (settings.format !== 'mp3')
     await Promise.all([...fonts].map((f) => ensureFont(f.split('|')[0], Number(f.split('|')[1]))));
 
-  const audio = hasAudio(settings) ? await mixAudio(project, duration, aux) : null;
+  const audio = hasAudio(settings) ? await mixAudio(flattenForMedia(project), duration, aux) : null;
   checkCancel();
 
   const writable = file ? await file.createWritable() : null;

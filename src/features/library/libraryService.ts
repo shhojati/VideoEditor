@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { fetchLibraryFile, LibraryUnavailable, listLibrary, type LibraryItem } from '../../lib/library';
 import type { ID, LibraryKind } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject } from '../../store/projectStore';
 import { importFileAs } from '../media-bin/mediaService';
 import { addAssetAtPlayhead, placeAssetAt } from '../timeline/interactions';
 import { assetDrag } from '../timeline/timelineUi';
@@ -38,7 +38,7 @@ export async function loadLibrary(kind: LibraryKind, force = false) {
 const inFlight = new Map<string, Promise<ID | null>>();
 
 const findAsset = (item: LibraryItem) => {
-  const p = useProjectStore.getState().history?.present;
+  const p = currentProject();
   return p && Object.values(p.assets).find((a) => a.library?.kind === item.kind && a.library.path === item.path)?.id;
 };
 

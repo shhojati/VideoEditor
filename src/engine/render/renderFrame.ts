@@ -14,6 +14,7 @@ import { drawSubtitles } from './subtitles';
 import { drawTextClip } from './text';
 import { drawTransition } from './transitions';
 import { mediaTimeAt } from '../../model/remap';
+import { MAX_NEST, sequenceDuration, sequenceView } from '../../model/sequences';
 
 /** Anything with display dimensions that can draw itself (Mediabunny VideoSample fits this). */
 export interface Drawable {
@@ -180,6 +181,53 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
   ctx.save();
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, width, height);
+  drawTracks(project, t, ctx, lookup, 0);
+  if (opts.subtitles !== false) drawSubtitles(ctx, project, t, width, height);
+  ctx.restore();
+}
+
+/** Offscreen layers compound clips draw their insides into, one per nesting level. */
+const layers: OffscreenCanvas[] = [];
+
+/**
+ * A compound clip as a picture: its sequence drawn (transparent where empty) at the sequence time
+ * the clip shows, at the resolution it ends up on screen. Then it is placed, masked, blended and
+ * given effects like any media.
+ */
+function compoundDrawable(project: Project, clip: Clip, t: number, lookup: FrameLookup, depth: number): Drawable | undefined {
+  const seqId = clip.sequenceId!;
+  if (depth >= MAX_NEST || !project.sequences?.[seqId]) return undefined;
+  const { width: W, height: H } = project.settings;
+  // Past the end of what is inside (e.g. after deleting clips in it) the compound shows nothing.
+  const at = Math.max(0, mediaTimeAt(clip, t));
+  if (at >= sequenceDuration(project, seqId)) return undefined;
+  return {
+    displayWidth: W,
+    displayHeight: H,
+    draw(ctx, dx, dy, dw, dh) {
+      const m = ctx.getTransform();
+      const k = Math.min(1, Math.max(0.05, (Math.hypot(m.a, m.b) * dw) / W));
+      const w = Math.max(1, Math.round(W * k));
+      const h = Math.max(1, Math.round(H * k));
+      const layer = (layers[depth] ??= new OffscreenCanvas(w, h));
+      if (layer.width !== w || layer.height !== h) {
+        layer.width = w;
+        layer.height = h;
+      }
+      const c = layer.getContext('2d')!;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, w, h);
+      c.setTransform(k, 0, 0, k, 0, 0);
+      drawTracks(sequenceView(project, seqId), at, c, lookup, depth + 1);
+      ctx.drawImage(layer, dx, dy, dw, dh);
+    },
+  };
+}
+
+/** Every visual track of a timeline at time t, bottom to top (compound clips draw their insides). */
+function drawTracks(project: Project, t: number, ctx: Ctx2D, base: FrameLookup, depth: number) {
+  const { width, height } = project.settings;
+  const lookup: FrameLookup = (clip, tt) => (clip.sequenceId ? compoundDrawable(project, clip, tt, base, depth) : base(clip, tt));
   // Keyframes first, then clips linked to a tracker are drawn where the tracked object takes them;
   // masks move with them.
   const draw = (clip: Clip) => {
@@ -195,8 +243,6 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
         () => draw(item.to),
       );
   }
-  if (opts.subtitles !== false) drawSubtitles(ctx, project, t, width, height);
-  ctx.restore();
 }
 
 /**

@@ -1,7 +1,8 @@
 // Ties the transport (UI intent), the audio master clock, the video frame source and renderFrame
 // together, and draws into the preview canvas.
 import type { Project } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore, viewOf } from '../../store/projectStore';
+import { flattenForMedia } from '../../model/sequences';
 import { useTransport } from '../../store/transport';
 import { AudioEngine } from '../audio/audioEngine';
 import type { AudioAux } from '../audio/audioAux';
@@ -30,8 +31,9 @@ class PlaybackEngine {
   /** Duck plan and noise profiles for a project (set by the app: they come from the media cache). */
   audioAux: (project: Project) => AudioAux = () => ({});
 
+  /** What the preview shows: the main timeline, or the opened compound clip's sequence. */
   private get project(): Project | undefined {
-    return useProjectStore.getState().history?.present;
+    return currentProject() ?? undefined;
   }
 
   init(): () => void {
@@ -48,8 +50,8 @@ class PlaybackEngine {
       }
     });
     const offProject = useProjectStore.subscribe((s, prev) => {
-      const next = s.history?.present;
-      const before = prev.history?.present;
+      const next = viewOf(s.history?.present, s.editPath);
+      const before = viewOf(prev.history?.present, prev.editPath);
       if (next === before) return;
       if (next?.id !== before?.id) {
         this.writeTransport({ playing: false, time: 0 });
@@ -105,9 +107,11 @@ class PlaybackEngine {
     cancelAnimationFrame(this.raf);
     const t0 = from >= duration - 1e-3 ? 0 : from;
     this.writeTransport({ time: t0, playing: true });
-    await this.audio.start(project, t0, volume, this.audioAux(project));
+    // Compound clips play their insides: audio and decoding use the expanded timeline.
+    const media = flattenForMedia(project);
+    await this.audio.start(media, t0, volume, this.audioAux(project));
     if (token !== this.playToken) return;
-    this.video.startStreams(project, t0);
+    this.video.startStreams(media, t0);
     const tick = () => {
       if (token !== this.playToken) return;
       const { duration: end, loop } = useTransport.getState();
@@ -142,7 +146,7 @@ class PlaybackEngine {
   private refreshPaused() {
     const project = this.project;
     if (!project || useTransport.getState().playing) return;
-    this.video.seek(project, useTransport.getState().time);
+    this.video.seek(flattenForMedia(project), useTransport.getState().time);
     this.requestRender();
   }
 
@@ -163,7 +167,7 @@ class PlaybackEngine {
     if (!ctx) return;
     // Fonts load on first use; draw now with the fallback and again once the real font is in.
     const fonts = [
-      ...visualClipsAt(project, t).flatMap(({ clip }) => (clip.text ? [[clip.text.fontFamily, clip.text.fontWeight] as const] : [])),
+      ...visualClipsAt(flattenForMedia(project), t).flatMap(({ clip }) => (clip.text ? [[clip.text.fontFamily, clip.text.fontWeight] as const] : [])),
       ...project.subtitleTracks.map((st) => [st.style.fontFamily, st.style.fontWeight ?? 600] as const),
     ];
     for (const [family, weight] of fonts) {

@@ -4,12 +4,12 @@ import i18n from '../../i18n';
 import { cutToBeat, toggleMarker } from '../../model/beats';
 import { findClip } from '../../model/timeline';
 import type { ID } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { mediaWorker } from '../media-bin/mediaService';
 import { useTimelineUi } from './timelineUi';
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 
 /** Detect tempo and beats of a clip's asset (stored on the asset, one undo step). */
 export async function detectClipBeats(clipId: ID): Promise<boolean> {

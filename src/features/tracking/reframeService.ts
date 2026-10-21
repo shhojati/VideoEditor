@@ -7,7 +7,7 @@ import { cameraPath, type Detection } from '../../model/reframe';
 import { sourceLength } from '../../model/remap';
 import { findClip } from '../../model/timeline';
 import type { ID } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import type { DetectMessage, DetectRequest } from '../../workers/detect.worker';
 import { requireAi } from '../account/aiGate';
 
@@ -28,7 +28,7 @@ interface ReframeState {
 export const useReframe = create<ReframeState>()(() => ({ clipId: null, progress: 0, queue: [] }));
 
 let worker: Worker | null = null;
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 
 async function modelInstalled() {
   const r = await fetch(MODEL_FILE, { method: 'HEAD' }).catch(() => null);

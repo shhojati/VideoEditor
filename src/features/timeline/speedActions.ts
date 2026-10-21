@@ -4,7 +4,7 @@ import { sourceLength } from '../../model/remap';
 import { flipToMedia, freezeFrame, MAX_REVERSE_SECONDS } from '../../model/speed';
 import { findClip } from '../../model/timeline';
 import type { ID } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { importFileAs, mediaWorker } from '../media-bin/mediaService';
 import { select } from './timelineUi';
@@ -13,7 +13,7 @@ export type ReverseError = 'tooLong' | 'missing' | 'failed';
 
 export const useSpeedUi = create<{ reversing: ID | null; error?: { clipId: ID; reason: ReverseError } }>()(() => ({ reversing: null }));
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 /** Extra source kept on each side of a reversed range, for later trims and transitions (s). */
 const HANDLE = 2;
 

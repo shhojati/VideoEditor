@@ -1,5 +1,6 @@
 // Speech activity per asset, for auto ducking, from the waveform peaks the timeline already has.
 import { activityFromPeaks, duckPlan, type DuckPlan, type Interval } from '../../engine/audio/ducking';
+import { flattenForMedia } from '../../model/sequences';
 import type { Project } from '../../model/types';
 import { useMedia } from './mediaService';
 
@@ -17,4 +18,4 @@ export function speechActivity(assetId: string): Interval[] | undefined {
   return a;
 }
 
-export const projectDuckPlan = (project: Project): DuckPlan => duckPlan(project, speechActivity);
+export const projectDuckPlan = (project: Project): DuckPlan => duckPlan(flattenForMedia(project), speechActivity);

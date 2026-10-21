@@ -13,7 +13,7 @@ import { bootstrap } from '../features/projects/session';
 import { TimelinePanel } from '../features/timeline/TimelinePanel';
 import { HEADER_WIDTH, HEADER_WIDTH_COMPACT, useTimelineUi } from '../features/timeline/timelineUi';
 import { startAutosave } from '../store/autosave';
-import { useProject } from '../store/projectStore';
+import { useProject, useRootProject } from '../store/projectStore';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useColumnShare, useIsMobile, useTimelineShare } from './layout';
 import { LeftPanel } from './LeftPanel';
@@ -42,6 +42,8 @@ export function App() {
 function Editor() {
   const { t } = useTranslation();
   const project = useProject();
+  // Export always takes the whole document, also while a compound clip is open.
+  const root = useRootProject();
   const mobile = useIsMobile();
   const timelineShare = useTimelineShare((s) => s.desktop);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -74,7 +76,7 @@ function Editor() {
         <>
           <MobileLayout project={project} />
           <ErrorBoundary area={t('export.title')}>
-            <ExportDialog project={project} />
+            {root && <ExportDialog project={root} />}
           </ErrorBoundary>
           <ErrorBoundary area={t('record.title')}>
             <RecordDialog />
@@ -102,7 +104,7 @@ function Editor() {
             </ErrorBoundary>
           </main>
           <ErrorBoundary area={t('export.title')}>
-            <ExportDialog project={project} />
+            {root && <ExportDialog project={root} />}
           </ErrorBoundary>
           <ErrorBoundary area={t('record.title')}>
             <RecordDialog />

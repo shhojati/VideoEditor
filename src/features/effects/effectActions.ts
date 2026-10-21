@@ -4,7 +4,7 @@ import { acceptsEffects, createEffect, EFFECT_DEFS, setFilter } from '../../mode
 import { builtinLut, builtinLutKey, type BuiltinLutId } from '../../model/luts';
 import { addAdjustmentClip, findClip } from '../../model/timeline';
 import type { Clip, EffectKind, ID, Project } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from '../timeline/timelineUi';
 
@@ -21,7 +21,7 @@ const applyTo = (p: Project, clip: Clip, item: FxItem) => {
   } else (clip.effects ??= []).push(createEffect(item.kind));
 };
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 
 /** Selected clips (unlocked) that can carry effects. */
 function targets(p: Project, ids: readonly ID[]): ID[] {

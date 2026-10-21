@@ -6,8 +6,9 @@ import { SHAPE_ICONS } from '../shapes/shapesUi';
 import { clipKeyTimes } from '../../model/masks';
 import { KeyDiamonds, VolumeLine } from '../keyframes/KeyDiamonds';
 import { applyFx, canDropFx, fxDrag } from '../effects/effectActions';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject } from '../../store/projectStore';
 import { beginClipDrag } from './interactions';
+import { enterCompound } from './compoundActions';
 import { TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 import { keyToTimeline, meanSpeed, mediaTimeAt, sourceRangeFor, timelineTimeAt } from '../../model/remap';
 
@@ -18,6 +19,7 @@ const COLORS = {
   text: 'bg-amber-800/90 border-amber-500',
   shape: 'bg-fuchsia-800/90 border-fuchsia-500',
   adjustment: 'bg-slate-600/80 border-slate-300 border-dashed',
+  compound: 'bg-teal-800/90 border-teal-400',
 };
 
 interface Props {
@@ -55,7 +57,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
   const left = clip.start * pps;
   const width = Math.max(2, clip.duration * pps);
   const { t } = useTranslation();
-  const kind = clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : (asset?.kind ?? 'video');
+  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : (asset?.kind ?? 'video');
   const [fxHover, setFxHover] = useState(false);
   const live = clip.effects?.filter((e) => e.enabled) ?? [];
   // Only the on-screen part of the clip gets thumbnails / waveform.
@@ -77,9 +79,11 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       }`}
       style={{ left, width, height: TRACK_HEIGHT - 8 }}
       onPointerDown={(e) => !track.locked && beginClipDrag(e, original.id, 'move')}
+      // Double-click opens a compound clip.
+      onDoubleClick={() => original.sequenceId && enterCompound(original.id)}
       // Effects and filters dragged from their panes drop onto a clip.
       onDragOver={(e) => {
-        const p = useProjectStore.getState().history?.present;
+        const p = currentProject();
         if (!p || !canDropFx(p, original.id)) return;
         e.preventDefault();
         e.stopPropagation();
@@ -102,7 +106,9 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       )}
       {asset?.beats && visTo > visFrom && <BeatTicks clip={clip} times={asset.beats.times} from={visFrom} to={visTo} pps={pps} />}
       <span className="pointer-events-none absolute start-1 top-0.5 max-w-full truncate rounded bg-black/50 px-1" dir="auto">
-        {clip.adjustment
+        {clip.sequenceId
+          ? `▣ ${currentProject()?.sequences?.[clip.sequenceId]?.name ?? ''}`
+          : clip.adjustment
           ? `◫ ${t('effects.adjustment')}`
           : clip.shape
             ? `${SHAPE_ICONS[clip.shape.kind]} ${t(`shapes.${clip.shape.kind}`)}`

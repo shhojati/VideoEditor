@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { formatDuration } from '../../lib/time';
-import { useProjectStore } from '../../store/projectStore';
+import { useProject } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { removeMarker } from './beatActions';
 import { RULER_HEIGHT, useTimelineUi } from './timelineUi';
 
 /** Pointer distance (px) at which the ruler snaps to, or picks, a marker. */
 const MARKER_PX = 6;
-const NO_MARKERS: { id: string; t: number; color?: string }[] = [];
+const NO_MARKERS: { id: string; t: number; label?: string; color?: string }[] = [];
 
 /** Tick spacing that keeps labels at least ~70px apart. */
 const STEPS = [1 / 30, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
@@ -15,7 +15,7 @@ const STEPS = [1 / 30, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1
 /** Canvas ruler covering only the visible window; dragging on it scrubs the playhead. Markers sit on it. */
 export function Ruler() {
   const ref = useRef<HTMLCanvasElement>(null);
-  const markers = useProjectStore((s) => s.history?.present.markers ?? NO_MARKERS);
+  const markers = useProject()?.markers ?? NO_MARKERS;
   const pps = useTimelineUi((s) => s.pps);
   const scrollX = useTimelineUi((s) => s.scrollX);
   const width = useTimelineUi((s) => s.viewportWidth - s.headerWidth);
@@ -53,6 +53,7 @@ export function Ruler() {
       ctx.lineTo(x + 5, RULER_HEIGHT - 10);
       ctx.lineTo(x, RULER_HEIGHT);
       ctx.fill();
+      if (m.label) ctx.fillText(m.label.slice(0, 24), x + 7, RULER_HEIGHT - 12);
     }
   }, [pps, scrollX, width, markers]);
 

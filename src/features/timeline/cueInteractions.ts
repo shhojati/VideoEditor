@@ -6,12 +6,12 @@ import { editPoints } from '../../model/timeline';
 import { timelineBeats } from '../../model/beats';
 import type { ID, Project } from '../../model/types';
 import { blurTextFields } from '../../lib/focus';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { snapBlock, snapTime } from './snapping';
 import { select, SNAP_PX, useTimelineUi, type DragPreview } from './timelineUi';
 
-const project = () => useProjectStore.getState().history!.present;
+const project = () => currentProject()!;
 
 function snapPoints(p: Project, excludeCues: ReadonlySet<ID>) {
   const cuePts = p.subtitleTracks.flatMap((st) => st.cues.filter((c) => !excludeCues.has(c.id)).flatMap((c) => [c.start, c.end]));

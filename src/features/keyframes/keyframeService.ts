@@ -6,12 +6,12 @@ import { addKeyAt, clearKeys, editAt, keyIndexAt, keyTolerance, moveKey, removeK
 import { blurTextFields } from '../../lib/focus';
 import { findClip } from '../../model/timeline';
 import type { Clip, ID, KeyEase, Project } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from '../timeline/timelineUi';
 import { keyRate } from '../../model/remap';
 
-const project = () => useProjectStore.getState().history?.present;
+const project = () => currentProject() ?? undefined;
 
 export const isInside = (clip: Clip, t: number) => t >= clip.start && t < clip.start + clip.duration;
 

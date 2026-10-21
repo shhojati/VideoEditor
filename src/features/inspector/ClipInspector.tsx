@@ -6,7 +6,7 @@ import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
 import { findClip, moveClips, trimClip } from '../../model/timeline';
 import type { BlendMode, Clip, ID, Project, TextAnimKind, TextProps, Transform } from '../../model/types';
 import { DEFAULT_ANIM_DURATION, TEXT_ANIMS } from '../../model/textAnim';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
 import { ShapeSection } from './ShapeSection';
 import { EffectsSection } from './EffectsSection';
@@ -22,6 +22,7 @@ import { VoiceSection } from './VoiceSection';
 import { CleanupSection } from './CleanupSection';
 import { BeatsSection } from './BeatsSection';
 import { SpeedSection } from './SpeedSection';
+import { CompoundSection } from './CompoundSection';
 import { ReframeSection } from '../tracking/ReframeSection';
 import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 
@@ -33,7 +34,7 @@ import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 function useClipEditor(clipId: ID) {
   const edit = useProjectStore((s) => s.edit);
   return (prop: string, recipe: (clip: Clip, p: Project) => void) => {
-    const now = useProjectStore.getState().history?.present;
+    const now = currentProject();
     const clip = now && findClip(now, clipId)?.clip;
     const at = clip?.keyframes?.length ? `@${playheadIn(clip).toFixed(3)}` : '';
     edit(
@@ -65,7 +66,8 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   // Values as they are at the playhead (keyframes applied).
   const shown = keyedClip(clip, playheadIn(clip, time));
   const isText = !!clip.text;
-  const visual = isOverlay(clip) || asset?.kind === 'video' || asset?.kind === 'image';
+  const compound = !!clip.sequenceId;
+  const visual = isOverlay(clip) || compound || asset?.kind === 'video' || asset?.kind === 'image';
   const timed = asset?.kind === 'video' || asset?.kind === 'audio';
   const audible = asset?.kind === 'audio' || (asset?.kind === 'video' && asset.hasAudio);
   const setTransform = <K extends keyof Transform>(key: K, v: Transform[K]) =>
@@ -74,10 +76,11 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   return (
     <fieldset disabled={track.locked} className="min-w-0 disabled:opacity-60" data-testid="clip-inspector">
       <div className="truncate border-b border-line px-3 py-2 text-sm font-medium text-white" dir="auto">
-        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : asset?.name}
+        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
         {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
       </div>
 
+      {compound && <CompoundSection project={project} clip={clip} />}
       {(visual || audible) && <KeyframesSection project={project} clip={clip} time={time} />}
 
       <Section title={t('inspector.timing')}>
@@ -139,14 +142,14 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
         </Section>
       )}
 
-      {visual && <MasksSection project={project} clip={clip} />}
+      {visual && !compound && <MasksSection project={project} clip={clip} />}
       {visual && <MotionSection project={project} clip={clip} />}
       {asset?.kind === 'video' && <ReframeSection project={project} clip={clip} />}
       {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
       {visual && <BlendSection clip={clip} set={set} />}
       {visual && <EffectsSection clip={shown} asset={asset} set={set} />}
 
-      {audible && (
+      {(audible || compound) && (
         <Section title={t('inspector.audio')}>
           <NumberField label={t('inspector.volume')} value={shown.audio.volume} min={0} max={2} factor={100} unit="%" onChange={(v) => set('volume', (c) => void (c.audio.volume = v))} />
           <NumberField label={t('inspector.fadeIn')} value={clip.audio.fadeIn} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeIn', (c) => void (c.audio.fadeIn = v))} />

@@ -21,14 +21,14 @@ import {
 import { createTrack } from '../../model/factories';
 import type { ID, Project } from '../../model/types';
 import { blurTextFields } from '../../lib/focus';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { snapBlock, snapTime } from './snapping';
 import { timelineBeats } from '../../model/beats';
 import { assetDrag, select, SNAP_PX, useTimelineUi, type DragPreview } from './timelineUi';
 
 const DRAG_THRESHOLD_PX = 3;
-const project = () => useProjectStore.getState().history!.present;
+const project = () => currentProject()!;
 
 function snapPoints(p: Project, exclude: ReadonlySet<ID>) {
   // Beats of the clips being dragged move with them, so they are not targets.

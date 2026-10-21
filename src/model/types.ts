@@ -33,6 +33,16 @@ export interface Project {
   markers?: Marker[];
   /** Colour lookup tables used by LUT effects: imported .cube files and built-ins (model/luts.ts). */
   luts?: Record<ID, ProjectLut>;
+  /** The insides of compound clips (model/sequences.ts), by id. */
+  sequences?: Record<ID, Sequence>;
+}
+
+/** A nested timeline: what a compound clip shows. Same frame size and rate as the project. */
+export interface Sequence {
+  id: ID;
+  name: string;
+  /** Ordered bottom -> top, like Project.tracks. */
+  tracks: Track[];
 }
 
 export interface ProjectLut {
@@ -324,6 +334,8 @@ export interface Clip {
   freeze?: true;
   /** Spoken words (source time), for text-based editing; see model/transcript.ts. */
   transcript?: ClipTranscript;
+  /** A compound clip: plays this sequence (Project.sequences) instead of a media file. */
+  sequenceId?: ID;
   transform: Transform;
   audio: ClipAudio;
   text?: TextProps;

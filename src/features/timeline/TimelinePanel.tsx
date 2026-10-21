@@ -9,6 +9,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { addText, deleteSelection, splitAtPlayhead, zoomBy, zoomToFit } from './actions';
 import { cutSelectionToBeat } from './beatActions';
+import { Breadcrumb, MakeCompoundButton, MarkersMenu } from './CompoundBar';
 import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
 import { Ruler } from './Ruler';
@@ -39,6 +40,7 @@ export function TimelinePanel({ project }: { project: Project }) {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col border-t border-line bg-surface-1" aria-label={t('panels.timeline')}>
+      <Breadcrumb />
       <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
         {KINDS.map((kind) => (
           <Button
@@ -64,7 +66,9 @@ export function TimelinePanel({ project }: { project: Project }) {
         <Button className="text-xs" disabled={!hasSelection} onClick={() => deleteSelection()} title={`${t('timeline.delete')} (Del)`}>
           🗑 {t('timeline.delete')}
         </Button>
+        <MakeCompoundButton />
         <CutToBeat project={project} enabled={hasSelection} />
+        <MarkersMenu project={project} />
         <Button
           className={`text-xs ${snapping ? 'bg-accent/40!' : ''}`}
           aria-pressed={snapping}

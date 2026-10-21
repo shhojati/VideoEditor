@@ -3,6 +3,9 @@ import { FORMATS, outputMime, outputName, type ExportSettings } from '../../engi
 import type { Project } from '../../model/types';
 import type { ExportMessage, ExportRequest } from '../../workers/export.worker';
 import { exportSubtitleFile } from '../subtitles/subtitleActions';
+import type { WatermarkSpec } from '../../engine/render/watermark';
+import { loadWatermark, watermarkImageUrl } from '../../lib/appConfig';
+import type { ExportPolicy } from '../account/policy';
 
 export type ExportStage = 'idle' | 'audio' | 'video' | 'encode' | 'done' | 'cancelled' | 'error';
 
@@ -38,12 +41,27 @@ type SavePicker = (o: {
 
 export const safeFileName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'video';
 
+/** The owner's watermark (public/config/watermark.json), with its image decoded if it has one. */
+async function freeWatermark(): Promise<WatermarkSpec> {
+  const config = await loadWatermark();
+  const url = watermarkImageUrl(config);
+  if (!url) return { config };
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(String(r.status));
+    return { config, image: await createImageBitmap(await r.blob()) };
+  } catch {
+    return { config }; // image missing: fall back to the text
+  }
+}
+
 /**
  * Must be called from the click handler: the save picker needs the user gesture, so it is asked
  * for before any other awaiting. Without File System Access the result is kept in memory and
- * offered as a download.
+ * offered as a download. `policy` comes from exportPolicy (features/account/policy.ts).
  */
-export async function startExport(project: Project, settings: ExportSettings) {
+export async function startExport(project: Project, settings: ExportSettings, policy: ExportPolicy) {
+  if (policy.kind !== 'ok') return;
   const name = outputName(safeFileName(project.name), settings);
   const ext = name.slice(name.lastIndexOf('.'));
   fileHandle = null;
@@ -59,6 +77,7 @@ export async function startExport(project: Project, settings: ExportSettings) {
       fileHandle = null; // picker unavailable here (e.g. automation): fall back to download
     }
   }
+  const watermark = policy.watermark ? await freeWatermark() : undefined;
   cleanupResult();
   const startedAt = performance.now();
   useExport.setState({ stage: 'audio', progress: 0, startedAt, eta: undefined, error: undefined });
@@ -104,7 +123,7 @@ export async function startExport(project: Project, settings: ExportSettings) {
       useExport.setState({ stage: 'error', error: data.message });
     }
   };
-  w.postMessage({ type: 'start', project, settings, file: fileHandle ?? undefined } satisfies ExportRequest);
+  w.postMessage({ type: 'start', project, settings, file: fileHandle ?? undefined, watermark } satisfies ExportRequest);
 }
 
 export function cancelExport() {

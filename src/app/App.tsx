@@ -19,6 +19,7 @@ import { ColumnSplitter, TimelineSplitter } from './Splitter';
 import { Onboarding } from './Onboarding';
 import { useGlobalShortcuts } from './shortcuts';
 import { ShortcutSheet } from './ShortcutSheet';
+import { AccountDialogs } from '../features/account/AccountDialogs';
 import { StartupCheck } from './StartupCheck';
 import { Toasts } from './toasts';
 import { TopBar } from './TopBar';
@@ -107,6 +108,7 @@ function Editor() {
       )}
       <NewProjectDialog />
       <ShortcutSheet />
+      <AccountDialogs />
     </>
   );
 }

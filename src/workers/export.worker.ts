@@ -51,6 +51,7 @@ import {
   visualClipsAt,
   type Drawable,
 } from '../engine/render/renderFrame';
+import { drawWatermark, type WatermarkSpec } from '../engine/render/watermark';
 import { clipVisibleRange } from '../model/transitions';
 import { isOverlay } from '../model/overlays';
 import { ensureFont } from '../lib/fonts';
@@ -60,7 +61,14 @@ import { timelineDuration } from '../model/timeline';
 import type { ID, Project } from '../model/types';
 
 export type ExportRequest =
-  | { type: 'start'; project: Project; settings: ExportSettings; file?: FileSystemFileHandle }
+  | {
+      type: 'start';
+      project: Project;
+      settings: ExportSettings;
+      file?: FileSystemFileHandle;
+      /** Free plan (features/account/policy.ts). */
+      watermark?: WatermarkSpec;
+    }
   | { type: 'cancel' };
 
 export type ExportMessage =
@@ -257,6 +265,7 @@ class FrameRenderer {
     private readonly width: number,
     private readonly height: number,
     private readonly subtitles: boolean,
+    private readonly watermark?: WatermarkSpec,
   ) {}
 
   async draw(t: number) {
@@ -296,6 +305,7 @@ class FrameRenderer {
       0,
     );
     renderFrame(project, t, this.ctx, (clip) => held.get(clip.id), { subtitles: this.subtitles });
+    if (this.watermark) drawWatermark(this.ctx, this.watermark, this.width, this.height);
   }
 
   close() {
@@ -311,6 +321,7 @@ interface Job {
   width: number;
   height: number;
   sink: Sink;
+  watermark?: WatermarkSpec;
 }
 
 interface Encoded {
@@ -424,7 +435,7 @@ async function encodeWithMediabunny(
   await output.start();
   const feed = audioFeeder(audio, audioSource);
 
-  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles);
+  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles, job.watermark);
   try {
     if (video) {
       const v = video;
@@ -530,7 +541,7 @@ async function encodeAvi(job: Job, audio: [Float32Array, Float32Array] | null): 
     },
   });
   encoder.configure(config);
-  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles);
+  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles, job.watermark);
   try {
     await renderAll(job, renderer, async (t, i) => {
       if (failure) throw failure;
@@ -562,7 +573,7 @@ async function encodeGif(job: Job) {
   const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true })!;
   const gif = new GifWriter((b) => job.sink.write(b), width, height);
   await gif.start();
-  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles);
+  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles, job.watermark);
   try {
     await renderAll(job, renderer, async (_t, i) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -581,7 +592,7 @@ async function encodeImages(job: Job) {
   const ctx = canvas.getContext('2d', { alpha: false })!;
   const type = FORMATS[settings.format].mime;
   const image = () => canvas.convertToBlob(type === 'image/jpeg' ? { type, quality: 0.92 } : { type });
-  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles);
+  const renderer = new FrameRenderer(job.project, ctx, width, height, settings.burnSubtitles, job.watermark);
   try {
     if (settings.imageMode === 'frame') {
       // The last frame starts one frame before the end.
@@ -607,7 +618,12 @@ async function encodeImages(job: Job) {
 
 // ---- main ----
 
-async function run(project: Project, input: ExportSettings, file?: FileSystemFileHandle) {
+async function run(
+  project: Project,
+  input: ExportSettings,
+  file?: FileSystemFileHandle,
+  watermark?: WatermarkSpec,
+) {
   const t0 = performance.now();
   const settings = fitToFormat(input);
   const duration = timelineDuration(project);
@@ -621,6 +637,7 @@ async function run(project: Project, input: ExportSettings, file?: FileSystemFil
   if (settings.burnSubtitles)
     for (const st of project.subtitleTracks)
       if (!st.hidden) fonts.add(`${st.style.fontFamily}|${st.style.fontWeight ?? 600}`);
+  if (watermark && !watermark.image) fonts.add(`${watermark.config.fontFamily}|${watermark.config.fontWeight}`);
   if (settings.format !== 'mp3')
     await Promise.all([...fonts].map((f) => ensureFont(f.split('|')[0], Number(f.split('|')[1]))));
 
@@ -629,7 +646,7 @@ async function run(project: Project, input: ExportSettings, file?: FileSystemFil
 
   const writable = file ? await file.createWritable() : null;
   const sink = new Sink(writable, outputMime(settings));
-  const job: Job = { project, settings, duration, width, height, sink };
+  const job: Job = { project, settings, duration, width, height, sink, watermark };
   // Mediabunny writes a chosen file through its own StreamTarget, which closes the stream.
   const viaMediabunny =
     settings.format !== 'avi' &&
@@ -656,7 +673,7 @@ self.onmessage = async (e: MessageEvent<ExportRequest>) => {
   }
   cancelled = false;
   try {
-    await run(e.data.project, e.data.settings, e.data.file);
+    await run(e.data.project, e.data.settings, e.data.file, e.data.watermark);
   } catch (err) {
     if (err instanceof Cancelled) post({ type: 'cancelled' });
     else post({ type: 'error', message: err instanceof Error ? err.message : String(err) });

@@ -1,9 +1,10 @@
-# Runs on the server from /srv/video-editor (this file, .env, fetch-models.mjs, models/, library/).
-# The app listens on 127.0.0.1:${APP_PORT} only; the server's existing web server terminates
-# HTTPS for the domain and proxies to it (see docs/DEPLOY.md, "Docker").
+# Runs on the server from /srv/video-editor (this file, .env, fetch-models.mjs, models/, library/,
+# config/, data/). The app listens on 127.0.0.1:${APP_PORT} only; the server's existing web server
+# terminates HTTPS for the domain and proxies to it (see docs/DEPLOY.md, "Docker").
 #
 #   docker compose up -d                                  # start / update
 #   docker compose --profile tools run --rm fetch-models  # download Whisper models once
+#   docker compose exec api node src/cli.ts make-admin you@example.com
 
 services:
   app:
@@ -16,6 +17,18 @@ services:
       # Stickers (png/gif), sound effects (ogg/mp3) and overlays (short videos): drop files into
       # library/stickers, library/sounds, library/overlays (subfolders = categories).
       - ./library:/usr/share/nginx/html/library:ro
+      # Owner settings: watermark.json (+ image) and pricing.json, see public/config/README.md.
+      - ./config:/usr/share/nginx/html/config:ro
+    depends_on:
+      - api
+
+  # Accounts and Pro passes (server/). Not published: nginx in `app` proxies /api to it.
+  api:
+    image: ${API_IMAGE:-ghcr.io/shhojati/videoeditor-api}:${TAG:-latest}
+    restart: unless-stopped
+    volumes:
+      # SQLite database (app.db). Back this folder up.
+      - ./data:/data
 
   fetch-models:
     image: node:22-slim

@@ -1,6 +1,6 @@
 # Deploying on the internal network
 
-The editor is a **static site**: no backend, no database. All processing (decoding, speech-to-text, export) runs in the user's browser, and media never leaves the device. Everything it needs (fonts, ONNX Runtime WASM, Whisper models) is served from the same origin. Nothing is fetched from the internet at runtime.
+The editor is a **static site** plus a small **account API** (`server/`: email + password accounts and Pro passes, stored in SQLite). All processing (decoding, speech-to-text, export) runs in the user's browser, and media never leaves the device. Everything it needs (fonts, ONNX Runtime WASM, Whisper models) is served from the same origin. Nothing is fetched from the internet at runtime. Without the API the editor still opens and edits; only export (which needs an account) is unavailable.
 
 ## Docker (Ubuntu server)
 
@@ -40,6 +40,32 @@ docker compose up -d   # once, after the volume was added to docker-compose.yml
 ```
 
 Files must be readable by the container (`chmod -R a+rX library`). Names may contain spaces and Persian letters. Users see new files after reopening the pane (⟳). A file is downloaded into the user's browser the first time it is used in a project.
+
+### Accounts, Free and Pro
+
+- Anyone can open the editor, edit and preview without an account. **Exporting needs an account.**
+- **Free** accounts export videos up to `freeMaxSeconds` (60 s) and every export carries the watermark.
+- **Pro** (prepaid passes of 1/3/12 months, no auto-renew): any length, no watermark. Pro ends by itself when the pass runs out.
+- Payment is manual: the account dialog shows the user's account code (`U-1042`), the prices and a "Message on Telegram" button. After they pay, activate Pro on the admin page.
+
+The `api` service (`server/Dockerfile`, image `ghcr.io/shhojati/videoeditor-api`) is not published; nginx in the `app` container proxies `/api/` to it, so it is same-origin with the editor. Its database is `/srv/video-editor/data/app.db`.
+
+First time, on the server:
+
+```bash
+cd /srv/video-editor
+docker compose up -d
+# Register your own account in the editor (Log in → Create account), then make it an admin:
+docker compose exec api node src/cli.ts make-admin you@example.com
+```
+
+Admin page: `https://editor.example.com/admin` — search accounts by email or code, **Activate Pro** (months, amount paid, note: the amount is kept for your records), **End Pro now**, **Reset password** (gives a temporary password to send the user; there is no email reset).
+
+**Owner settings** live in `/srv/video-editor/config/` (mounted at `/config/`; the deploy copies defaults in once and never overwrites them): `watermark.json` (text or image, position, size, opacity…) and `pricing.json` (Telegram username, Free length limit, passes and prices). Every key is described in `public/config/README.md`. Edits apply on the next page load, no restart. For an image watermark, put e.g. `watermark.png` in that folder and set `"image": "watermark.png"`.
+
+**Back up** `data/app.db` (e.g. a nightly `sqlite3 data/app.db ".backup /backups/app-$(date +%F).db"` or simply copying `data/` while the API is stopped). Losing it loses every account and Pro pass.
+
+The free-plan limits are applied in the user's browser, so a technical user could patch them out; the API is the source of truth for who is Pro.
 
 ## 1. Build
 

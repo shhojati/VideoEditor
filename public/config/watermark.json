@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "text": "editor.shahabdev.ir",
+  "image": "",
+  "position": "bottom-right",
+  "opacity": 0.7,
+  "size": 0.045,
+  "margin": 0.03,
+  "fontFamily": "Vazirmatn",
+  "fontWeight": 700,
+  "color": "#ffffff",
+  "shadow": true
+}

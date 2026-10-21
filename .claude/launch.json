@@ -23,6 +23,26 @@
         "--strictPort"
       ],
       "port": 4173
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "server/src/index.ts",
+        "--dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "dev-5175",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

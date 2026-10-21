@@ -15,6 +15,7 @@ import {
 import { Button } from './ui';
 import { useExport } from '../features/export/exportService';
 import { useShortcutSheet } from './ShortcutSheet';
+import { AccountButton } from '../features/account/AccountDialogs';
 
 export function TopBar() {
   const { t, i18n } = useTranslation();
@@ -71,6 +72,7 @@ export function TopBar() {
       </span>
       {project && <LengthWarning project={project} />}
       <div className="ms-auto flex shrink-0 gap-2 max-md:gap-1">
+        <AccountButton />
         <Button className="bg-accent! text-white" disabled={!project} onClick={() => useExport.setState({ open: true })} data-testid="open-export" aria-label={t('export.open')}>
           ⤓<span className="max-md:hidden"> {t('export.open')}</span>
         </Button>

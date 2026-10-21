@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { spawn, type ChildProcess } from 'node:child_process';
 import { readdirSync, rmSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
@@ -62,10 +63,42 @@ function dropDevOnlyPublicFiles(): Plugin {
   };
 }
 
+// The account API (server/); nginx proxies /api the same way in production.
+const API_PORT = Number(process.env.API_PORT ?? 3000);
+const proxy = { '/api': `http://127.0.0.1:${API_PORT}` };
+
+/**
+ * Dev and preview: start the account API (server/data/dev.db) alongside Vite, unless one already
+ * answers on the port (another dev server started it, `npm run dev:api`, or the E2E API).
+ */
+function accountApi(): Plugin {
+  let child: ChildProcess | null = null;
+  const running = () =>
+    fetch(`http://127.0.0.1:${API_PORT}/api/health`, { signal: AbortSignal.timeout(1000) }).then(
+      (r) => r.ok,
+      () => false,
+    );
+  const start = async () => {
+    if (child || (await running())) return;
+    // --watch: restarts on edits to server/.
+    child = spawn(process.execPath, ['--watch', 'server/src/index.ts', '--dev'], {
+      stdio: 'inherit',
+      env: { ...process.env, PORT: String(API_PORT), NODE_NO_WARNINGS: '1' },
+    });
+    child.on('exit', () => (child = null));
+    process.once('exit', () => child?.kill());
+  };
+  return {
+    name: 'account-api',
+    configureServer: start,
+    configurePreviewServer: start,
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), libraryListing(), dropDevOnlyPublicFiles()],
-  server: { headers: isolation },
-  preview: { headers: isolation },
+  plugins: [react(), tailwindcss(), libraryListing(), dropDevOnlyPublicFiles(), accountApi()],
+  server: { headers: isolation, proxy },
+  preview: { headers: isolation, proxy },
   worker: { format: 'es' },
   optimizeDeps: {
     exclude: ['@huggingface/transformers'],
@@ -74,7 +107,11 @@ export default defineConfig({
     include: ['@mediabunny/aac-encoder', '@mediabunny/mp3-encoder'],
   },
   // The app is one ~900 kB (≈260 kB gzip) chunk; fine for an internal tool loaded once.
-  build: { chunkSizeWarningLimit: 1200 },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    // The editor, and the owner's admin page (accounts and Pro passes).
+    rolldownOptions: { input: { main: resolve('index.html'), admin: resolve('admin.html') } },
+  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],

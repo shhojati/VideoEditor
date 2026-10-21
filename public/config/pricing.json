@@ -1,0 +1,9 @@
+{
+  "telegram": "your_telegram_username",
+  "freeMaxSeconds": 60,
+  "passes": [
+    { "months": 1, "priceToman": 150000 },
+    { "months": 3, "priceToman": 390000 },
+    { "months": 12, "priceToman": 1200000 }
+  ]
+}

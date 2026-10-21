@@ -12,3 +12,4 @@ public/fonts
 public/spike-data
 deploy/.env
 deploy/models
+server/data

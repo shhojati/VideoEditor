@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import {
@@ -24,6 +24,9 @@ import { friendlyError } from '../../app/toasts';
 import { useTransport } from '../../store/transport';
 import { Segmented, SelectField } from '../inspector/controls';
 import { cancelExport, closeExportDialog, startExport, useExport } from './exportService';
+import { loadAccount, refreshAccount, useAccount } from '../../store/account';
+import { openAccount, openAuth, usePricing } from '../account/AccountDialogs';
+import { exportPolicy, type ExportPolicy } from '../account/policy';
 
 const kbps = (bps: number) => Math.round(bps / 1000);
 // Left-to-right isolate: keeps "7465 kbps" in order inside a Persian sentence.
@@ -51,6 +54,13 @@ export function ExportDialog({ project }: { project: Project }) {
       srt: false,
     }),
   );
+  const me = useAccount((s) => s.me);
+  const accountStatus = useAccount((s) => s.status);
+  const pricing = usePricing();
+  // Pick up a Pro activation made while the page was open.
+  useEffect(() => {
+    if (state.open) refreshAccount(true);
+  }, [state.open]);
   if (!state.open) return null;
   const set = (patch: Partial<ExportSettings>) => setSettings((s) => fitToFormat({ ...s, ...patch }));
   const format = FORMATS[settings.format];
@@ -62,6 +72,8 @@ export function ExportDialog({ project }: { project: Project }) {
   const isVideo = format.kind === 'video';
   const singleFrame = format.kind === 'image' && settings.imageMode === 'frame';
   const frameTime = Math.min(playhead, duration);
+  const policy = exportPolicy(me, pricing?.freeMaxSeconds ?? 60, singleFrame ? 0 : duration);
+  const offline = policy.kind === 'login' && accountStatus === 'offline';
   const videoBps = effectiveVideoBitrate(settings, size.width, size.height);
   const audioBps = effectiveAudioBitrate(settings);
   const bytes = estimateBytes(settings, duration, size.width, size.height);
@@ -215,6 +227,7 @@ export function ExportDialog({ project }: { project: Project }) {
                 {lengthWarningText(project, t)} {t('length.exportHint')}
               </p>
             )}
+            <ExportGate policy={policy} offline={offline} duration={duration} />
           </>
         )}
 
@@ -277,21 +290,64 @@ export function ExportDialog({ project }: { project: Project }) {
           ) : (
             <>
               <Button onClick={closeExportDialog}>{t('export.close')}</Button>
-              {state.stage !== 'done' && (
-                <Button
-                  className="bg-accent! text-white"
-                  disabled={duration <= 0}
-                  onClick={() => void startExport(project, { ...settings, frameTime })}
-                  data-testid="export-start"
-                >
-                  {tooLong ? t('length.exportAnyway') : t('export.start')}
-                </Button>
-              )}
+              {state.stage !== 'done' &&
+                (policy.kind === 'login' && !offline ? (
+                  <Button className="bg-accent! text-white" onClick={openAuth} data-testid="export-login">
+                    {t('exportGate.loginButton')}
+                  </Button>
+                ) : (
+                  <Button
+                    className="bg-accent! text-white"
+                    disabled={duration <= 0 || policy.kind !== 'ok'}
+                    onClick={() => void startExport(project, { ...settings, frameTime }, policy)}
+                    data-testid="export-start"
+                  >
+                    {tooLong ? t('length.exportAnyway') : t('export.start')}
+                  </Button>
+                ))}
             </>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+/** Plan notes: log in, Free length limit, Free watermark. */
+function ExportGate({ policy, offline, duration }: { policy: ExportPolicy; offline: boolean; duration: number }) {
+  const { t } = useTranslation();
+  if (policy.kind === 'login')
+    return offline ? (
+      <p className="rounded border border-red-800 bg-red-900/30 p-2 text-xs text-red-200" role="alert" data-testid="export-gate" data-gate="offline">
+        {t('exportGate.offline')}{' '}
+        <button type="button" className="underline" onClick={() => void loadAccount()}>
+          {t('exportGate.retry')}
+        </button>
+      </p>
+    ) : (
+      <p className="rounded border border-line bg-surface-2 p-2 text-xs text-neutral-200" data-testid="export-gate" data-gate="login">
+        {t('exportGate.login')}
+      </p>
+    );
+  if (policy.kind === 'tooLong')
+    return (
+      <div className="space-y-2 rounded border border-amber-700 bg-amber-900/40 p-2 text-xs text-amber-100" role="alert" data-testid="export-gate" data-gate="tooLong">
+        <p>
+          {t('exportGate.tooLong', { max: formatDuration(policy.maxSeconds), duration: formatDuration(duration) })}
+        </p>
+        <Button className="bg-accent! text-white" onClick={openAccount} data-testid="export-upgrade">
+          {t('exportGate.upgrade')}
+        </Button>
+      </div>
+    );
+  if (!policy.watermark) return null;
+  return (
+    <p className="text-xs text-neutral-400" data-testid="export-gate" data-gate="watermark">
+      {t('exportGate.watermark')}{' '}
+      <button type="button" className="text-accent hover:underline" onClick={openAccount}>
+        {t('exportGate.removeWatermark')}
+      </button>
+    </p>
   );
 }
 

@@ -5,6 +5,7 @@
 // A tracker's samples live in source time and source fractions. A pose maps the object's own
 // frame to the canvas: centre, angle (radians, clockwise) and scale (canvas px per source px at
 // the tracker's scale 1).
+import { keyedTransform } from '../../model/keyframes';
 import type { Clip, MotionLink, Project, Tracker, TrackSample, Transform } from '../../model/types';
 import { placeMedia } from './placement';
 
@@ -147,12 +148,13 @@ function motionDelta(project: Project, clip: Clip, t: number, depth: number): De
     const k = link.scale ? then[4] / now[4] : 1;
     const P = { x: now[1] * size.sw, y: now[2] * size.sh };
     const anchor = link.position ? { x: then[1] * size.sw, y: then[2] * size.sh } : P;
-    const crop = clip.transform.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+    const base = keyedTransform(clip, t);
+    const crop = base.crop ?? { x: 0, y: 0, width: 1, height: 1 };
     const Q = { x: (crop.x + crop.width / 2) * size.sw, y: (crop.y + crop.height / 2) * size.sh };
     const g = rotate({ x: Q.x - P.x, y: Q.y - P.y }, da, k);
     // The visible centre lands at the base placement of G(Q); that only depends on the base centre
     // additively, so the offset is measured once with the base placed at the frame centre.
-    const centred = { ...clip.transform, x: 0, y: 0 };
+    const centred = { ...base, x: 0, y: 0 };
     const c = mediaMap(size.sw, size.sh, W, H, centred).toCanvas(anchor.x + g.x, anchor.y + g.y);
     const off = { x: c.x - W / 2, y: c.y - H / 2 };
     return { da, k, move: (p) => ({ x: p.x + off.x, y: p.y + off.y }), unmove: (p) => ({ x: p.x - off.x, y: p.y - off.y }) };
@@ -179,12 +181,12 @@ function motionDelta(project: Project, clip: Clip, t: number, depth: number): De
   };
 }
 
-/** The transform a clip is drawn with at timeline time t: its own, moved by its motion link. */
+/** The transform a clip is drawn with at timeline time t: its own (keyframes applied), moved by its motion link. */
 export function motionTransform(project: Project, clip: Clip, t: number, depth = 0): Transform {
   const d = motionDelta(project, clip, t, depth);
-  if (!d) return clip.transform;
+  const tr = keyedTransform(clip, t);
+  if (!d) return tr;
   const { width: W, height: H } = project.settings;
-  const tr = clip.transform;
   const c = d.move({ x: W / 2 + tr.x * W, y: H / 2 + tr.y * H });
   return { ...tr, x: (c.x - W / 2) / W, y: (c.y - H / 2) / H, rotation: tr.rotation + d.da / RAD, scale: tr.scale * d.k };
 }
@@ -207,7 +209,7 @@ export function baseFromDrawn(project: Project, clip: Clip, t: number, drawn: Tr
     // The offset depends on the base rotation and scale but adds to the base position: measure it
     // with the new rotation/scale at position 0.
     const probe = { ...drawn, x: 0, y: 0, rotation, scale };
-    const at = motionTransform(project, { ...clip, transform: probe }, t);
+    const at = motionTransform(project, { ...clip, keyframes: undefined, transform: probe }, t);
     return { ...probe, x: drawn.x - at.x, y: drawn.y - at.y };
   }
   const c = d.unmove({ x: W / 2 + drawn.x * W, y: H / 2 + drawn.y * H });

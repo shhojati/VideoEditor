@@ -94,7 +94,12 @@
     "maskPath": "Edit mask path",
     "maskKey": "Mask keyframe",
     "maskTrack": "Mask tracking",
-    "trackMask": "Track mask"
+    "trackMask": "Track mask",
+    "addKeyframe": "Add keyframe",
+    "removeKeyframe": "Remove keyframe",
+    "moveKeyframe": "Move keyframe",
+    "keyframeEase": "Change keyframe ease",
+    "clearKeyframes": "Remove all keyframes"
   },
   "panels": {
     "media": "Media",
@@ -481,7 +486,9 @@
       "previewPan": "Pan the zoomed preview",
       "previewShift": "Preview: move on one axis, keep proportions, rotate in 15° steps",
       "previewAlt": "Preview: resize from the centre / move without snapping",
-      "maskPen": "Draw a mask on the selected clip (pen)"
+      "maskPen": "Draw a mask on the selected clip (pen)",
+      "keyframe": "Add/remove a keyframe on the selected clip",
+      "keyframeJump": "Previous/next keyframe"
     }
   },
   "transitions": {
@@ -1009,5 +1016,28 @@
     "trackBack": "◀ Track mask",
     "trackForward": "Track mask ▶",
     "trackHint": "Tracking moves the mask with the object; fix shape changes with path keyframes. Works best on one solid object."
+  },
+  "keyframes": {
+    "title": "Keyframes",
+    "short": "Keyframe",
+    "add": "Add keyframe",
+    "remove": "Remove keyframe",
+    "prev": "Previous keyframe",
+    "next": "Next keyframe",
+    "pick": "Select a clip and put the playhead on it to add a keyframe",
+    "intro": "Add a keyframe, move the playhead and change position, size, rotation, opacity, volume or effect settings: a new keyframe is added there automatically.",
+    "outside": "Move the playhead onto this clip to add or edit keyframes.",
+    "count_one": "{{count}} keyframe. Changes at the playhead add or update one.",
+    "count_other": "{{count}} keyframes. Changes at the playhead add or update one.",
+    "ease": "Ease to the next keyframe",
+    "eases": {
+      "linear": "Linear",
+      "easeIn": "Ease in",
+      "easeOut": "Ease out",
+      "easeInOut": "Ease in-out",
+      "hold": "Hold"
+    },
+    "clear": "Remove all keyframes",
+    "diamond": "Keyframe: click to go to it, drag to move it"
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { applyAffine, composeAffine, invertAffine, layerAffine, mapPath, type Affine } from '../../engine/render/masks';
 import { withMotion } from '../../engine/render/motion';
+import { keyedClip } from '../../model/keyframes';
 import { isActiveAt } from '../../engine/render/renderFrame';
 import { closestOnPath, insertVertex, removeVertices, toggleSmooth, type Pt } from '../../model/masks';
 import { findClip } from '../../model/timeline';
@@ -60,7 +61,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
   const clipId = pen?.clipId ?? (active && selection.includes(active.clipId) ? active.clipId : undefined);
   const ref = clipId && time >= 0 ? findClip(project, clipId) : undefined;
   const clip = ref && isActiveAt(ref.clip, time) ? ref.clip : undefined;
-  const layer = clip && layerAffine(project, withMotion(project, clip, time));
+  const layer = clip && layerAffine(project, withMotion(project, keyedClip(clip, time), time));
   const S: Affine | undefined = layer && composeAffine([view.k, 0, 0, view.k, view.ox, view.oy], layer);
   const mask = !pen && clip && active ? clip.masks?.find((m) => m.id === active.maskId) : undefined;
   const editable = !!ref && !ref.track.locked;

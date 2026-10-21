@@ -1,3 +1,4 @@
+import { volumeAt, volumeRamp } from '../model/keyframes';
 import { transitionsOfClip } from '../model/transitions';
 import type { Clip, Track, Transition } from '../model/types';
 
@@ -10,9 +11,9 @@ export function fadeAlpha(clip: Pick<Clip, 'start' | 'duration'>, fadeIn: number
   return Math.max(0, Math.min(1, a));
 }
 
-/** Audio gain of a clip at time t: volume × fades (no transitions). */
+/** Audio gain of a clip at time t: volume (keyframes applied) × fades (no transitions). */
 export const clipGainAt = (clip: Clip, t: number) =>
-  clip.audio.volume * fadeAlpha(clip, clip.audio.fadeIn, clip.audio.fadeOut, t);
+  volumeAt(clip, t) * fadeAlpha(clip, clip.audio.fadeIn, clip.audio.fadeOut, t);
 
 export interface AudioEnvelope {
   /** Interval in which the clip is audible (extended by transition crossfades). */
@@ -56,14 +57,13 @@ export function audioEnvelope(clip: Clip, track?: Track, mediaDuration: MediaDur
   const outWin = tr.out ? audioCrossfadeWindow(track!, tr.out, mediaDuration) : null;
   const start = inWin ? inWin[0] : s;
   const end = outWin ? outWin[1] : e;
-  const vol = clip.audio.volume;
   const usable = (w: [number, number] | null) => !!w && w[1] - w[0] > 1e-3;
   const inRamp: [number, number] | null = usable(inWin) ? inWin : !tr.in && clip.audio.fadeIn > 0 ? [s, s + clip.audio.fadeIn] : null;
   const outRamp: [number, number] | null = usable(outWin) ? outWin : !tr.out && clip.audio.fadeOut > 0 ? [e - clip.audio.fadeOut, e] : null;
 
   const gainAt = (t: number) => {
     if (t < start || t > end) return 0;
-    let g = vol;
+    let g = volumeAt(clip, t);
     if (usable(inWin)) {
       if (t < inWin![1]) g *= Math.sin(((t - inWin![0]) / (inWin![1] - inWin![0])) * (Math.PI / 2));
     } else if (!tr.in && clip.audio.fadeIn > 0) g *= Math.max(0, Math.min(1, (t - s) / clip.audio.fadeIn));
@@ -74,7 +74,9 @@ export function audioEnvelope(clip: Clip, track?: Track, mediaDuration: MediaDur
   };
 
   const ramps: [number, number][] = [];
-  for (const r of [inRamp, outRamp]) {
+  const keyed = volumeRamp(clip);
+  const volRamp: [number, number] | null = keyed ? [Math.max(start, keyed[0]), Math.min(end, keyed[1])] : null;
+  for (const r of [inRamp, volRamp, outRamp].sort((a, b) => (a?.[0] ?? 0) - (b?.[0] ?? 0))) {
     if (!r || r[1] - r[0] <= 0) continue;
     const last = ramps.at(-1);
     if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);

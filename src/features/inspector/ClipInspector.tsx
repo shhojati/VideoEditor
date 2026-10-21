@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { detectRtl } from '../../engine/render/textLayout';
 import { DEFAULT_TEXT_MAX_WIDTH } from '../../engine/render/text';
@@ -12,22 +13,39 @@ import { isPixelBlend } from '../../engine/render/blend';
 import { BLEND_GROUPS, isOverlay } from '../../model/overlays';
 import { MotionSection, TrackingSection } from '../tracking/TrackingSection';
 import { MasksSection } from '../masks/MasksSection';
+import { keyedClip } from '../../model/keyframes';
+import { useTransport } from '../../store/transport';
+import { keyedEdit, playheadIn } from '../keyframes/keyframeService';
+import { KeyframesSection } from '../keyframes/KeyframesSection';
 
 /**
- * Edit one property of one clip. Continuous changes of the same property (slider drags, typing)
- * collapse into a single undo step via mergeKey.
+ * Edit one property of one clip, as it looks at the playhead (on an animated clip the change lands
+ * in a keyframe there). Continuous changes of the same property (slider drags, typing) collapse
+ * into a single undo step via mergeKey; on an animated clip, one per keyframe time.
  */
 function useClipEditor(clipId: ID) {
   const edit = useProjectStore((s) => s.edit);
-  return (prop: string, recipe: (clip: Clip, p: Project) => void) =>
+  return (prop: string, recipe: (clip: Clip, p: Project) => void) => {
+    const now = useProjectStore.getState().history?.present;
+    const clip = now && findClip(now, clipId)?.clip;
+    const at = clip?.keyframes?.length ? `@${playheadIn(clip).toFixed(3)}` : '';
     edit(
       'ops.clipProp',
       (p) => {
         const ref = findClip(p, clipId);
-        if (ref && !ref.track.locked) recipe(ref.clip, p);
+        if (ref && !ref.track.locked) keyedEdit(p, ref.clip, (c) => recipe(c, p));
       },
-      { mergeKey: `${clipId}:${prop}` },
+      { mergeKey: `${clipId}:${prop}${at}` },
     );
+  };
+}
+
+/** The playhead for the inspector; while playing it keeps the last paused time instead of re-rendering on every tick. */
+function useInspectorTime() {
+  const time = useTransport((s) => (s.playing ? null : s.time));
+  const [last, setLast] = useState(0);
+  if (time !== null && time !== last) setLast(time);
+  return time ?? last;
 }
 
 export function ClipInspector({ project, clipId }: { project: Project; clipId: ID }) {
@@ -36,6 +54,9 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   const { clip, track } = ref;
   const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
   const set = useClipEditor(clipId);
+  const time = useInspectorTime();
+  // Values as they are at the playhead (keyframes applied).
+  const shown = keyedClip(clip, playheadIn(clip, time));
   const isText = !!clip.text;
   const visual = isOverlay(clip) || asset?.kind === 'video' || asset?.kind === 'image';
   const timed = asset?.kind === 'video' || asset?.kind === 'audio';
@@ -49,6 +70,8 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
         {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : asset?.name}
         {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
       </div>
+
+      {(visual || audible) && <KeyframesSection project={project} clip={clip} time={time} />}
 
       <Section title={t('inspector.timing')}>
         <NumberField
@@ -94,21 +117,21 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       </Section>
 
       {isText && <TextSection text={clip.text!} set={set} />}
-      {clip.shape && <ShapeSection shape={clip.shape} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
+      {clip.shape && <ShapeSection shape={shown.shape!} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
 
       {clip.adjustment && !clip.masks?.length && (
         <Section title={t('inspector.transform')}>
-          <NumberField label={t('inspector.opacity')} value={clip.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
+          <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
         </Section>
       )}
 
       {visual && (!clip.adjustment || !!clip.masks?.length) && (
         <Section title={t('inspector.transform')}>
-          <NumberField label={t('inspector.x')} value={clip.transform.x} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('x', v)} />
-          <NumberField label={t('inspector.y')} value={clip.transform.y} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('y', v)} />
-          <NumberField label={t('inspector.scale')} value={clip.transform.scale} min={0.1} max={4} factor={100} unit="%" onChange={(v) => setTransform('scale', v)} />
-          <NumberField label={t('inspector.rotation')} value={clip.transform.rotation} min={-180} max={180} step={1} unit="°" onChange={(v) => setTransform('rotation', v)} />
-          <NumberField label={t('inspector.opacity')} value={clip.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
+          <NumberField label={t('inspector.x')} value={shown.transform.x} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('x', v)} />
+          <NumberField label={t('inspector.y')} value={shown.transform.y} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('y', v)} />
+          <NumberField label={t('inspector.scale')} value={shown.transform.scale} min={0.1} max={4} factor={100} unit="%" onChange={(v) => setTransform('scale', v)} />
+          <NumberField label={t('inspector.rotation')} value={shown.transform.rotation} min={-180} max={180} step={1} unit="°" onChange={(v) => setTransform('rotation', v)} />
+          <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
           {!isOverlay(clip) && (
             <>
               <Segmented
@@ -130,11 +153,11 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {visual && <MotionSection project={project} clip={clip} />}
       {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
       {visual && <BlendSection clip={clip} set={set} />}
-      {visual && <EffectsSection clip={clip} set={set} />}
+      {visual && <EffectsSection clip={shown} set={set} />}
 
       {audible && (
         <Section title={t('inspector.audio')}>
-          <NumberField label={t('inspector.volume')} value={clip.audio.volume} min={0} max={2} factor={100} unit="%" onChange={(v) => set('volume', (c) => void (c.audio.volume = v))} />
+          <NumberField label={t('inspector.volume')} value={shown.audio.volume} min={0} max={2} factor={100} unit="%" onChange={(v) => set('volume', (c) => void (c.audio.volume = v))} />
           <NumberField label={t('inspector.fadeIn')} value={clip.audio.fadeIn} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeIn', (c) => void (c.audio.fadeIn = v))} />
           <NumberField label={t('inspector.fadeOut')} value={clip.audio.fadeOut} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeOut', (c) => void (c.audio.fadeOut = v))} />
         </Section>

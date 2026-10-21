@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { migrate } from './migrations';
 import { EFFECT_KINDS } from './effects';
+import { KEY_EASES } from './keyframes';
 import { BLEND_MODES, SHAPE_KINDS } from './overlays';
 import type { Project } from './types';
 
@@ -121,6 +122,10 @@ const clip = z.object({
       scale: z.boolean(),
       ref: num,
     })
+    .optional(),
+  keyframes: z
+    .array(z.object({ t: num, ease: z.enum(KEY_EASES).optional(), v: z.record(z.string(), num) }))
+    .transform((keys) => [...keys].sort((a, b) => a.t - b.t))
     .optional(),
 });
 

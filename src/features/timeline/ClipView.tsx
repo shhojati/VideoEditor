@@ -4,6 +4,7 @@ import type { Asset, Clip, Track } from '../../model/types';
 import { useMedia } from '../media-bin/mediaService';
 import { SHAPE_ICONS } from '../shapes/shapesUi';
 import { clipKeyTimes } from '../../model/masks';
+import { KeyDiamonds, VolumeLine } from '../keyframes/KeyDiamonds';
 import { applyFx, canDropFx, fxDrag } from '../effects/effectActions';
 import { useProjectStore } from '../../store/projectStore';
 import { beginClipDrag } from './interactions';
@@ -145,6 +146,8 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
           />
         );
       })}
+      {!!clip.keyframes?.length && (kind === 'audio' || (kind === 'video' && asset?.hasAudio)) && <VolumeLine clip={clip} width={width} pps={pps} />}
+      {!!clip.keyframes?.length && <KeyDiamonds clip={clip} original={original} pps={pps} width={width} />}
       {clip.blend && clip.blend !== 'normal' && (
         <span
           data-testid="blend-badge"

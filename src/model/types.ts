@@ -248,6 +248,24 @@ export interface Clip {
   trackers?: Tracker[];
   /** Move with a tracked object (or, on the tracked clip itself, against it: stabilize). */
   motion?: MotionLink;
+  /** InShot-style animation: sorted by time (see model/keyframes.ts). */
+  keyframes?: ClipKeyframe[];
+}
+
+/** How values travel from a keyframe to the next one. */
+export type KeyEase = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'hold';
+
+/**
+ * A snapshot of a clip's animatable values at source time `t` (like tracker samples, so trims and
+ * splits keep it). Values by property: x, y, scale, rotation, opacity, volume, shape.width,
+ * shape.height and fx.<effectId>.<param> for numeric effect settings. A property missing from a
+ * keyframe is interpolated from the keyframes that have it.
+ */
+export interface ClipKeyframe {
+  t: number;
+  /** Default 'easeInOut'. */
+  ease?: KeyEase;
+  v: Record<string, number>;
 }
 
 /** A keyframe: source time of the clip (s), like tracker samples, so trims and splits keep it. */

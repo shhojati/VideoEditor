@@ -14,6 +14,7 @@ import { Ruler } from './Ruler';
 import { SubtitleLane } from './SubtitleLane';
 import { CutMarkers } from './CutMarkers';
 import { ShapeMenu } from '../shapes/ShapeMenu';
+import { KeyframeButton } from '../keyframes/KeyframeButton';
 import { onTransitionDragOver, onTransitionDrop } from '../transitions/transitionActions';
 import { HEADER_WIDTH, RULER_HEIGHT, select, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
@@ -58,6 +59,7 @@ export function TimelinePanel({ project }: { project: Project }) {
         <Button className="text-xs" onClick={splitAtPlayhead} title={`${t('timeline.split')} (S)`} data-testid="btn-split">
           ✂ {t('timeline.split')}
         </Button>
+        <KeyframeButton project={project} />
         <Button className="text-xs" disabled={!hasSelection} onClick={() => deleteSelection()} title={`${t('timeline.delete')} (Del)`}>
           🗑 {t('timeline.delete')}
         </Button>

@@ -13,6 +13,7 @@ import {
 } from '../features/timeline/actions';
 import { select, useTimelineUi } from '../features/timeline/timelineUi';
 import { startPen } from '../features/masks/maskService';
+import { jumpSelectedKeyframe, toggleSelectedKeyframe } from '../features/keyframes/keyframeService';
 import { spaceDown } from '../features/preview/spaceHand';
 import { useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
@@ -51,6 +52,10 @@ const PLAIN: Record<string, Handler> = {
     const sel = useTimelineUi.getState().selection;
     if (sel.length === 1) startPen(sel[0]);
   },
+  // Keyframes on the selected clip at the playhead (InShot's ◆ button), previous / next keyframe.
+  KeyK: toggleSelectedKeyframe,
+  BracketLeft: () => jumpSelectedKeyframe(-1),
+  BracketRight: () => jumpSelectedKeyframe(1),
   // '?' (Shift + /); the same physical key gives '؟' on a Persian layout.
   Slash: (e) => e.shiftKey && useShortcutSheet.setState({ open: true }),
 };

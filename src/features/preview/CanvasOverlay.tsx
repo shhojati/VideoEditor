@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { findClip } from '../../model/timeline';
 import type { Clip, ID, Project } from '../../model/types';
 import { baseFromDrawn, motionTransform, withMotion } from '../../engine/render/motion';
+import { keyedClip } from '../../model/keyframes';
+import { keyedEdit } from '../keyframes/keyframeService';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from '../timeline/timelineUi';
@@ -86,8 +88,8 @@ export function CanvasOverlay({ project }: { project: Project }) {
   const boxes = useMemo(() => {
     const m = new Map<ID, { clip: Clip; box: Box }>();
     for (const { clip } of active) {
-      // Where it is drawn now: clips following a tracker move with it.
-      const moved = withMotion(project, clip, time);
+      // Where it is drawn now: keyframes applied, clips following a tracker moved with it.
+      const moved = withMotion(project, keyedClip(clip, time), time);
       const box = clipBox(project, moved, measure(), time);
       if (box) m.set(clip.id, { clip: moved, box });
     }
@@ -228,14 +230,17 @@ export function CanvasOverlay({ project }: { project: Project }) {
           const ref = findClip(d, it.id);
           const box = next.get(it.id);
           if (!ref || !box || ref.track.locked) continue;
-          if (!ref.clip.motion) {
-            applyBox(ref.clip, it.box, box, W, H, it.scale);
-            continue;
-          }
-          // A linked clip: edit where it is drawn, then store the base that draws it there.
-          const drawn = { ...ref.clip, transform: { ...motionTransform(d, ref.clip, now) } };
-          applyBox(drawn, it.box, box, W, H, it.scale);
-          ref.clip.transform = baseFromDrawn(d, ref.clip, now, drawn.transform);
+          // On an animated clip the change lands in a keyframe at the playhead.
+          keyedEdit(d, ref.clip, (c) => {
+            if (!c.motion) {
+              applyBox(c, it.box, box, W, H, it.scale);
+              return;
+            }
+            // A linked clip: edit where it is drawn, then store the base that draws it there.
+            const drawn = { ...c, transform: { ...motionTransform(d, c, now) } };
+            applyBox(drawn, it.box, box, W, H, it.scale);
+            c.transform = baseFromDrawn(d, c, now, drawn.transform);
+          }, now);
         }
       },
       { mergeKey: g.key, gesture: true },

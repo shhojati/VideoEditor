@@ -1,6 +1,7 @@
 // Offline audio mix for export (workers have no Web Audio): each audible clip's decoded source audio
 // is resampled to the output rate with linear interpolation, following the clip's speed, multiplied
 // by the same volume/fade curve the player uses, and summed into stereo output buffers.
+import { peakVolume } from '../../model/keyframes';
 import type { Clip, Project, Track } from '../../model/types';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
 
@@ -50,7 +51,7 @@ export function audibleClips(project: Project, only?: ReadonlySet<string>): { cl
     for (const clip of track.clips) {
       if (only && !only.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
-      if (!asset?.fileRef.opfsPath || clip.audio.volume <= 0) continue;
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0) continue;
       if (asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio)) out.push({ clip, track, opfsPath: asset.fileRef.opfsPath });
     }
   }

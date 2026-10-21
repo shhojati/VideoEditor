@@ -368,3 +368,25 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - Linear keyframes only (no easing, no hold); no motion blur on the mask edge; no per-point feather.
 - Mask points are edited one keyframe at a time; there is no box-select or free-transform (scale/rotate) of a whole mask yet.
 - Tracking a mask uses the same box tracker as Motion tracking: good for a solid object, not for shapes that change (add path keyframes there).
+
+## Post-MVP 7 — Keyframes (InShot style) ✅ (2026-10-21)
+
+### Done
+- **One keyframe button, like InShot** (`Clip.keyframes`, `model/keyframes.ts`): **◆+ Keyframe** in the timeline toolbar, in the inspector's Keyframes section, or **K** records the selected clip's whole state at the playhead. Once a clip has keyframes, any change at the playhead — dragging/resizing/rotating on the canvas or a slider in the inspector — goes into a keyframe there, added automatically when there is none. **◆−** (or K on a keyframe) removes it; the last one removed keeps the clip as it was. ◀ ▶ / **[ ]** jump between keyframes; "Remove all keyframes" keeps the clip as it looks at the playhead.
+- **What animates**: position, scale, rotation, opacity, volume, shape width/height and every numeric effect / filter setting (filter intensity, blur amount, colour values, points…; whole-number settings stay whole). Colours, on/off switches and choices are not animated (an edit to them applies to the whole clip). Mask keyframes keep their own stopwatches (Post-MVP 6).
+- **Clips**: every visual clip (video, photo, text, sticker, shape, overlay, adjustment layer) and audio clips (volume).
+- **Easing** per keyframe, to the next one: Linear, Ease in, Ease out, **Ease in-out (default)**, Hold.
+- **Timeline**: white ◆ diamonds on the clip (the one under the playhead in blue); press one to put the playhead on it, drag it to retime (whole frames, inside the clip, never onto another; one undo step, Esc cancels). Audio and video-with-sound clips with keyframes show their volume as a yellow line.
+- Keyframes are in source time (like tracker samples and mask keys), so trims, splits and speed changes keep them on the same picture. A keyframe stores every value; a value missing from older keyframes (an effect added later) is filled in from its value at their time when first keyed, so only the edited moment changes. Removed effects leave the keyframes.
+- One resolver (`keyedClip`) feeds preview, export, canvas handles, mask layers and tracking: keyframes apply first, then a motion link moves the result, and a tracked clip's own keyframes move what follows it. Volume keyframes shape the same gain envelope as fades and crossfades (Web Audio value curves in the player, the export mix and the STT mix).
+
+### Verified
+- 253 unit tests (adds: ease shapes; ◆ snapshot and automatic second keyframe; ease in-out/linear/hold; edits at a keyframe update only it; back-filling a newly keyed value; a keyframe between two keeps the motion; effect settings animated, whole numbers kept, removed effects pruned; removing the last / clearing keeps values; retiming refused onto another key; split keeps the motion on both halves; motion transform resolves keys; save/load validation and sorting; volume gain, ramps merged with fades, peak volume).
+- **E2E `e2e/keyframes.spec.ts`**: ◆ at 0 s on a quarter-size red clip, a canvas drag 600 px right at 2 s adds the second keyframe by itself; opacity 50 % lands in that keyframe; the first diamond puts the playhead on 0 s; with Linear the box is halfway at 1 s at 75 % opacity. **Preview = export** at 1 s: (191,1,0)/(190,1,0), (0,0,0)/(0,0,0), (0,0,0)/(0,0,0). Dragging the second diamond half a second retimes it and undoes in one step; K adds and removes a keyframe at the playhead.
+- In the browser: a text clip keyed at 0 s and dragged up at 2 s sits halfway (eased) at 1 s; no console errors.
+
+### Known issues / not done
+- No per-segment curve editor (CapCut-style graphs); presets only.
+- Keyframes are edited one moment at a time: no copy/paste of keyframes, no multi-select of diamonds.
+- Detaching a clip from a tracker keeps it where it is drawn only when it has no keyframes; with keyframes it falls back to its own animation.
+- Rotation values stay within −180…180° (canvas handle and inspector), so two keyframes turn a clip at most one full circle; multi-turn spins are not possible yet.

@@ -27,6 +27,8 @@ export const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Shift (drag in preview)', label: 'previewShift' },
   { keys: 'Alt (resize in preview)', label: 'previewAlt' },
   { keys: 'G', label: 'maskPen' },
+  { keys: 'K', label: 'keyframe' },
+  { keys: '[ / ]', label: 'keyframeJump' },
   { keys: 'Esc', label: 'deselect' },
   { keys: '?', label: 'help' },
 ];

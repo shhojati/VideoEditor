@@ -8,6 +8,7 @@ import { preferredDevice, requiredFiles, WHISPER_SIZES, type SttDevice, type Whi
 import { segmentsToCues, type Segment } from '../../engine/stt/postprocess';
 import { planWindows } from '../../engine/stt/windows';
 import { createSubtitleTrack, newId } from '../../model/factories';
+import { peakVolume } from '../../model/keyframes';
 import { autoFixTiming } from '../../model/subtitles';
 import { findClip } from '../../model/timeline';
 import type { Project } from '../../model/types';
@@ -73,7 +74,7 @@ function mixItems(project: Project, selectedOnly: boolean): MixItem[] {
     for (const clip of track.clips) {
       if (selectedOnly && !selected.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
-      if (!asset?.fileRef.opfsPath || clip.audio.volume <= 0) continue;
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0) continue;
       if (!(asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio))) continue;
       items.push({
         opfsPath: asset.fileRef.opfsPath,
@@ -81,7 +82,7 @@ function mixItems(project: Project, selectedOnly: boolean): MixItem[] {
         duration: clip.duration,
         inPoint: clip.inPoint,
         speed: clip.speed,
-        gain: clip.audio.volume,
+        gain: peakVolume(clip),
       });
     }
   }

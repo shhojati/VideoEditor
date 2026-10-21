@@ -2,6 +2,7 @@
 // AudioBufferSink) and schedules AudioBufferSourceNodes a couple of seconds ahead on the context
 // clock, through a per-clip gain (volume + fades) into the master gain. The context's output clock
 // is the master clock for the whole player (plan §4.4).
+import { peakVolume } from '../../model/keyframes';
 import type { Clip, Project } from '../../model/types';
 import { readers } from '../decode/mediaReader';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
@@ -50,7 +51,7 @@ export class AudioEngine {
       if (track.muted || track.kind === 'text') continue;
       for (const clip of track.clips) {
         const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined));
-        if (env.end <= t0 || clip.audio.volume <= 0) continue;
+        if (env.end <= t0 || peakVolume(clip) <= 0) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;
         void this.playClip(clip, env, asset, gen);

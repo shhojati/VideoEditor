@@ -2,6 +2,7 @@
 // and already-decoded frames, draw the frame. Synchronous and free of hidden state.
 import { clipVisibleRange, cutTime } from '../../model/transitions';
 import type { Clip, Project, Track, Transition } from '../../model/types';
+import { keyedClip } from '../../model/keyframes';
 import { isOverlay } from '../../model/overlays';
 import { applyEffects, hasLiveEffects, type FxEnv } from '../effects/applyEffects';
 import { drawBlended, seedOf } from './blend';
@@ -169,10 +170,12 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
   ctx.save();
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, width, height);
-  // Clips linked to a tracker are drawn where the tracked object takes them; masks move with them.
+  // Keyframes first, then clips linked to a tracker are drawn where the tracked object takes them;
+  // masks move with them.
   const draw = (clip: Clip) => {
-    const moved = withMotion(project, clip, t);
-    drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, clip, t, moved));
+    const keyed = keyedClip(clip, t);
+    const moved = withMotion(project, keyed, t);
+    drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, keyed, t, moved));
   };
   for (const item of drawPlanAt(project, t)) {
     if (item.kind === 'clip') draw(item.clip);

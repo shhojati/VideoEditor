@@ -9,9 +9,10 @@ import { segmentsToCues, type Segment } from '../../engine/stt/postprocess';
 import { planWindows } from '../../engine/stt/windows';
 import { createSubtitleTrack, newId } from '../../model/factories';
 import { peakVolume } from '../../model/keyframes';
-import { autoFixTiming } from '../../model/subtitles';
+import { autoFixTiming, cueWords } from '../../model/subtitles';
+import { mediaTimeAt } from '../../model/remap';
 import { findClip } from '../../model/timeline';
-import type { Project } from '../../model/types';
+import type { ID, Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import type { SttMessage, SttRequest } from '../../workers/stt.worker';
 import type { MixItem } from '../../workers/media.worker';
@@ -38,6 +39,8 @@ interface SttState {
   models: Partial<Record<WhisperSize, boolean>>;
   /** Installed models that give word timings ("_timestamped"); others give segment times only. */
   wordModels: Partial<Record<WhisperSize, boolean>>;
+  /** What the current run is for: a subtitle track, or transcripts for text-based editing. */
+  target?: 'subtitles' | 'transcript';
 }
 
 export const useStt = create<SttState>()(() => ({ stage: 'idle', progress: 0, models: {}, wordModels: {} }));
@@ -77,13 +80,13 @@ export function cancelAutoSubtitles() {
   useStt.setState({ stage: 'idle', progress: 0, loading: undefined });
 }
 
-function mixItems(project: Project, selectedOnly: boolean): MixItem[] {
-  const selected = new Set(useTimelineUi.getState().selection);
+/** Audible clips to transcribe: all of them, or only those in `only`. */
+function mixItems(project: Project, only?: ReadonlySet<ID>): MixItem[] {
   const items: MixItem[] = [];
   for (const track of project.tracks) {
     if (track.muted || track.kind === 'text') continue;
     for (const clip of track.clips) {
-      if (selectedOnly && !selected.has(clip.id)) continue;
+      if (only && !only.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
       // Reversed speech cannot be transcribed; a freeze frame is silent.
       if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || asset.reverseOf || clip.freeze) continue;
@@ -106,12 +109,13 @@ export async function startAutoSubtitles(opts: { model: WhisperSize; language: s
   const project = useProjectStore.getState().history?.present;
   if (!project) return;
   cancelAutoSubtitles();
-  const items = mixItems(project, opts.selectedOnly && useTimelineUi.getState().selection.some((id) => findClip(project, id)));
+  const selection = useTimelineUi.getState().selection;
+  const items = mixItems(project, opts.selectedOnly && selection.some((id) => findClip(project, id)) ? new Set(selection) : undefined);
   if (!items.length) {
     useStt.setState({ stage: 'error', error: 'noAudio' });
     return;
   }
-  useStt.setState({ stage: 'extracting', progress: 0, error: undefined, detail: undefined, created: undefined, rtf: undefined });
+  useStt.setState({ stage: 'extracting', progress: 0, error: undefined, detail: undefined, created: undefined, rtf: undefined, target: 'subtitles' });
   const duration = Math.max(...items.map((i) => i.start + i.duration));
   let pcm: Float32Array;
   try {
@@ -127,10 +131,55 @@ export async function startAutoSubtitles(opts: { model: WhisperSize; language: s
   }
   // Not checked yet (the panel was never opened): try the word model; a missing one is reported.
   const words = useStt.getState().wordModels[opts.model] ?? true;
-  await transcribe({ pcm, windows, model: opts.model, language: opts.language, device: preferredDevice(), words }, true);
+  await transcribe({ pcm, windows, model: opts.model, language: opts.language, device: preferredDevice(), words }, true, (segments) =>
+    finish(segments, opts.language),
+  );
 }
 
-function transcribe(req: SttRequest, allowFallback: boolean): Promise<void> {
+/**
+ * Transcribe clips for text-based editing: each clip on its own, its words stored on it in source
+ * time (`Clip.transcript`), so trims and splits keep them. Without word timings (older models)
+ * the words are estimated from text length.
+ */
+export async function transcribeClips(clipIds: readonly ID[], opts: { model: WhisperSize; language: string | null }) {
+  cancelAutoSubtitles();
+  let done = 0;
+  for (const clipId of clipIds) {
+    const project = useProjectStore.getState().history?.present;
+    const clip = project && findClip(project, clipId)?.clip;
+    if (!project || !clip) continue;
+    const items = mixItems(project, new Set([clipId]));
+    if (!items.length) continue;
+    useStt.setState({ stage: 'extracting', progress: 0, error: undefined, detail: undefined, created: undefined, rtf: undefined, target: 'transcript' });
+    let pcm: Float32Array;
+    try {
+      ({ pcm } = await mediaWorker().mixdown16k({ items, duration: clip.start + clip.duration }));
+    } catch (e) {
+      useStt.setState({ stage: 'error', error: 'failed', detail: String(e) });
+      return;
+    }
+    const windows = planWindows(pcm, STT_RATE);
+    if (!windows.length) continue;
+    const words = useStt.getState().wordModels[opts.model] ?? true;
+    const segments = await new Promise<Segment[] | null>((resolve) =>
+      void transcribe({ pcm, windows, model: opts.model, language: opts.language, device: preferredDevice(), words }, true, resolve).then(() => resolve(null)),
+    );
+    if (!segments) return; // failed or cancelled
+    const cues = segmentsToCues(segments).map((d, i) => ({ id: String(i), start: d.start, end: d.end, text: d.text, ...(d.words?.length && { words: d.words }) }));
+    const timed = cues.flatMap((c) => cueWords(c));
+    const lang = opts.language ?? (cues.slice(0, 10).some((c) => detectRtl(c.text)) ? 'fa' : 'en');
+    useProjectStore.getState().edit('ops.transcribe', (d) => {
+      const c = findClip(d, clipId)?.clip;
+      if (!c) return;
+      const inside = timed.filter((w) => w.end > c.start && w.start < c.start + c.duration);
+      c.transcript = { language: lang, rtl: RTL_LANGUAGES.includes(lang), words: inside.map((w) => ({ text: w.text, s: mediaTimeAt(c, w.start), e: mediaTimeAt(c, w.end) })) };
+    });
+    done++;
+  }
+  useStt.setState({ stage: 'done', created: done, progress: 1 });
+}
+
+function transcribe(req: SttRequest, allowFallback: boolean, onDone: (segments: Segment[]) => void): Promise<void> {
   return new Promise((resolve) => {
     const segments: Segment[] = [];
     const w = new Worker(new URL('../../workers/stt.worker.ts', import.meta.url), { type: 'module' });
@@ -151,7 +200,7 @@ function transcribe(req: SttRequest, allowFallback: boolean): Promise<void> {
         case 'done':
           w.terminate();
           worker = null;
-          finish(segments, req.language);
+          onDone(segments);
           resolve();
           break;
         case 'error': {
@@ -160,7 +209,7 @@ function transcribe(req: SttRequest, allowFallback: boolean): Promise<void> {
           const missing = /not found|404|Could not locate file|Unauthorized access/i.test(data.message);
           if (req.device === 'webgpu' && allowFallback && !missing) {
             // Some GPUs/drivers fail in WebGPU; the WASM backend is slower but works everywhere.
-            void transcribe({ ...req, device: 'wasm' }, false).then(resolve);
+            void transcribe({ ...req, device: 'wasm' }, false, onDone).then(resolve);
             return;
           }
           useStt.setState({ stage: 'error', error: missing ? 'missingModel' : 'failed', detail: data.message });

@@ -12,7 +12,9 @@ const MODEL_SIZE_MB: Record<WhisperSize, number> = { tiny: 150, base: 250, small
 
 export function AutoSubtitles({ project }: { project: Project }) {
   const { t } = useTranslation();
-  const stt = useStt();
+  const all = useStt();
+  // Transcripts for text-based editing share the speech-to-text worker; their progress shows there.
+  const stt = all.target === 'transcript' ? { ...all, stage: 'idle' as const } : all;
   const [open, setOpen] = useState(false);
   // small is the recommended default for Persian (see docs/SPIKES.md).
   const [picked, setModel] = useState<WhisperSize>('small');

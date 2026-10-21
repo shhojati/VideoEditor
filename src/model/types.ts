@@ -318,6 +318,8 @@ export interface Clip {
   speedPreset?: SpeedPreset;
   /** Holds the frame at inPoint (a freeze frame clip; silent). */
   freeze?: true;
+  /** Spoken words (source time), for text-based editing; see model/transcript.ts. */
+  transcript?: ClipTranscript;
   transform: Transform;
   audio: ClipAudio;
   text?: TextProps;
@@ -575,5 +577,12 @@ export interface SubtitleTrack {
 
 /** [u, speed]: normalized clip time 0..1 and the speed there (0.1..10). */
 export type SpeedPoint = [number, number];
+
+export interface ClipTranscript {
+  language: string;
+  rtl: boolean;
+  /** Source seconds. */
+  words: { text: string; s: number; e: number }[];
+}
 
 export type SpeedPreset = 'montage' | 'hero' | 'bullet' | 'flashIn' | 'flashOut' | 'jumpCut' | 'custom';

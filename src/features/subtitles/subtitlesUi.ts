@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useMobileUi } from '../../app/layout';
 import type { ID } from '../../model/types';
 
-export type PanelTab = 'media' | 'subtitles' | 'stickers' | 'sounds' | 'overlays' | 'transitions' | 'effects' | 'filters';
+export type PanelTab = 'media' | 'subtitles' | 'transcript' | 'stickers' | 'sounds' | 'overlays' | 'transitions' | 'effects' | 'filters';
 
 /** UI state for the left panel tabs and the subtitle editor. */
 export const useSubtitlesUi = create<{

@@ -561,3 +561,22 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Detection speed depends on the device (~0.4 s per frame on WASM here): a minute of footage takes under a minute.
 - With several people, the biggest/most confident one is followed; there is no "pick this person".
+
+## Post-MVP 18 — Text-based editing (Pro) ✅ (2026-10-21)
+
+### Done
+- **Text** tab (📝, next to Subtitles; on phones in the Subtitles group): select clips with speech and **Transcribe**. Each clip is transcribed on its own with the Whisper word timings and its words are stored on the clip in **source time** (`Clip.transcript`), so trims, splits, moves and speed changes keep them right (only the words a clip plays are shown). Without the word-timing models, word times are estimated from text length.
+- **Edit like a document**: the words are text you can click (seek) and select; **Delete / Backspace** or **Cut selected words** removes them. The cut runs from the first word to the next word (the pause after them goes too; a long pause keeps all but 0.1 s).
+- **Ripple cut across all tracks** (`model/cut.ts`, `rippleDeleteRange`): every unlocked track loses the range and everything after moves up, so picture, music, titles, subtitles (cues inside go, cues across an edge shrink, word timings follow) and markers stay in sync. Clips across an edge are trimmed, clips across the whole range split, with exact re-timing (speed ramps included). Locked tracks are left alone. Several ranges at once are merged and cut from the last.
+- **Pauses and fillers**: pauses from N s (default 0.6) are shown as ⏸ chips; filler words (en: um, uh, er, erm, hmm…; fa: اِ، اِم، امم، اوم، ممم…; optional "like", "یعنی", "خب"…) are underlined. **Find pauses and fillers** lists them with checkboxes for review; **Remove** cuts the checked ones in one undo step (pauses keep 0.1 s next to the words).
+- While playing, the spoken word lights up (updated on the DOM, so long transcripts do not re-render every frame).
+- **Pro**: cutting words and removing pauses/fillers ask Free users to log in or upgrade; transcribing itself (speech-to-text) stays free like auto subtitles.
+
+### Verified
+- Unit tests: ripple cut across video/music/title tracks with frames kept in place, cues cut/shrunk/moved, markers moved; locked tracks untouched; overlapping ranges merged; transcript words through in-point; fillers in English and Persian (with and without the optional ones); pauses with padding.
+- **E2E `e2e/transcript.spec.ts`**: a talk clip over a music clip with a known transcript; "um" underlined; selecting "um world" + Delete cuts exactly 0.9 s from both clips; Find lists 2 pauses; Remove shortens the talk below 2 s; undo restores.
+- Opt-in `STT_E2E=1`: transcribing the 72 s Persian sample for text editing with the small timestamped model gives 93 words (1.7 min).
+
+### Known issues / not done
+- The cut follows word timings from Whisper, which can be off by ~0.1 s: a cut can clip the edge of a word. Undo is one step.
+- Words that Whisper merges or splits differently from how they sound are cut as Whisper wrote them.

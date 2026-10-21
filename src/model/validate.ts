@@ -85,6 +85,7 @@ const clip = z.object({
     .optional(),
   speedPreset: z.enum(['montage', 'hero', 'bullet', 'flashIn', 'flashOut', 'jumpCut', 'custom']).optional(),
   freeze: z.literal(true).optional(),
+  transcript: z.object({ language: z.string(), rtl: z.boolean(), words: z.array(z.object({ text: z.string(), s: nonNeg, e: nonNeg })) }).optional(),
   transform: z.object({
     x: num,
     y: num,

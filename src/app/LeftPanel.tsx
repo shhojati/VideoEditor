@@ -6,11 +6,13 @@ import { MediaBin } from '../features/media-bin/MediaBin';
 import { SubtitlesPanel } from '../features/subtitles/SubtitlesPanel';
 import { useSubtitlesUi, type PanelTab } from '../features/subtitles/subtitlesUi';
 import { TransitionsPanel } from '../features/transitions/TransitionsPanel';
+import { TranscriptPanel } from '../features/transcript/TranscriptPanel';
 import type { Project } from '../model/types';
 
 export const PANEL_TABS: { id: PanelTab; icon: string; label: string }[] = [
   { id: 'media', icon: '🎞', label: 'panels.media' },
   { id: 'subtitles', icon: '💬', label: 'panels.subtitles' },
+  { id: 'transcript', icon: '📝', label: 'panels.transcript' },
   { id: 'stickers', icon: '🌟', label: 'panels.stickers' },
   { id: 'sounds', icon: '🔊', label: 'panels.sounds' },
   { id: 'overlays', icon: '🎇', label: 'panels.overlays' },
@@ -57,6 +59,8 @@ export function LeftPanel({ project, tabs }: { project: Project; tabs?: PanelTab
           <MediaBin />
         ) : tab === 'subtitles' ? (
           <SubtitlesPanel project={project} />
+        ) : tab === 'transcript' ? (
+          <TranscriptPanel project={project} />
         ) : tab === 'transitions' ? (
           <TransitionsPanel />
         ) : tab === 'effects' ? (

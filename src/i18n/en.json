@@ -105,7 +105,10 @@
     "cutToBeat": "Cut to beat",
     "reverse": "Reverse",
     "freeze": "Freeze frame",
-    "reframe": "Auto reframe"
+    "reframe": "Auto reframe",
+    "cutText": "Cut words",
+    "removePauses": "Remove pauses and fillers",
+    "transcribe": "Transcribe"
   },
   "panels": {
     "media": "Media",
@@ -124,7 +127,8 @@
     "library": "Library",
     "fx": "Effects",
     "effects": "Effects",
-    "filters": "Filters"
+    "filters": "Filters",
+    "transcript": "Text"
   },
   "settings": {
     "title": "Project settings",
@@ -1354,5 +1358,23 @@
       "missingModel": "The person detector is not installed. Put it in public/models with scripts/fetch-models.mjs.",
       "failed": "Auto reframe failed on this clip."
     }
+  },
+  "transcript": {
+    "intro": "Select a clip with speech on the timeline and transcribe it. Then edit the video like a document: select words and press Delete to cut them from every track.",
+    "transcribe_one": "Transcribe the selected clip",
+    "transcribe_other": "Transcribe {{count}} selected clips",
+    "transcribe_zero": "Select clips with speech to transcribe",
+    "pauses": "Pauses from",
+    "fillers": "Filler words (um, uh, اِم…)",
+    "optional": "Also \"like\", \"یعنی\"…",
+    "optionalHint": "Words that are often fillers but can be meant.",
+    "find": "Find pauses and fillers",
+    "cut": "Cut selected words",
+    "cutHint": "Select words in the text, then Delete (or this button): they are cut from every unlocked track and the gap closes.",
+    "nothing": "Nothing to remove.",
+    "pause": "pause {{s}} s",
+    "remove_one": "Remove {{count}}",
+    "remove_other": "Remove {{count}}",
+    "close": "Close"
   }
 }

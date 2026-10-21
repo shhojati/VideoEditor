@@ -90,6 +90,7 @@ const defs: EffectDef[] = [
   { kind: 'roughenEdges', name: 'Roughen Edges', params: [num('border', 8, 0, 100, 0.5, 'px'), num('sharpness', 1, 0.1, 10, 0.1), num('scale', 100, 5, 500, 1, '%'), num('evolution', 0, 0, 360, 1, '°')] },
   { kind: 'findEdges', name: 'Find Edges', params: [bool('invert', false), num('blend', 0, 0, 100, 1, '%')] },
   { kind: 'posterize', name: 'Posterize', params: [num('levels', 6, 2, 64, 1)] },
+  { kind: 'mosaic', name: 'Mosaic', params: [num('blockSize', 20, 2, 400, 1, 'px'), bool('sharpColors', false)] },
   // Perspective
   { kind: 'cameraTracker3d', name: '3D Camera Tracker', params: [], later: true },
   { kind: 'bevelAlpha', name: 'Bevel Alpha', params: [num('thickness', 3, 0, 60, 0.5, 'px'), num('lightAngle', -60, -180, 180, 1, '°'), color('lightColor', '#ffffff'), num('intensity', 40, 0, 100, 1, '%')] },
@@ -133,7 +134,7 @@ export const EFFECT_MENU: readonly { category: EffectCategory; kinds: readonly E
   { category: 'colorCorrection', kinds: ['lumetri', 'curves', 'levels', 'hueSaturation', 'tint', 'tritone', 'brightnessContrast'] },
   { category: 'distort', kinds: ['transform', 'warpStabilizer', 'turbulentDisplace', 'displacementMap', 'opticsCompensation', 'powerPin'] },
   { category: 'generate', kinds: ['fill', 'gradientRamp', 'fourColorGradient', 'grid', 'lensFlare', 'stroke'] },
-  { category: 'stylize', kinds: ['glow', 'dropShadow', 'motionTile', 'roughenEdges', 'findEdges', 'posterize'] },
+  { category: 'stylize', kinds: ['glow', 'dropShadow', 'motionTile', 'roughenEdges', 'findEdges', 'mosaic', 'posterize'] },
   { category: 'perspective', kinds: ['cameraTracker3d', 'bevelAlpha', 'sphere', 'dropShadow'] },
   { category: 'time', kinds: ['echo', 'posterizeTime', 'timewarp', 'forceMotionBlur'] },
   { category: 'simulation', kinds: ['particleWorld', 'particleSystems', 'shatter'] },

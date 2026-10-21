@@ -198,6 +198,16 @@ export const BRIGHT_CONTRAST = color(
 
 export const POSTERIZE = color(`uniform float u_levels;`, `rgb = clamp(floor(clamp(rgb, 0.0, 1.0) * u_levels) / (u_levels - 1.0), 0.0, 1.0);`);
 
+/** Blocks of u_block px from the frame's corner: the block's average (25 samples) or its centre colour. */
+export const MOSAIC = fs(`uniform vec2 u_block; uniform bool u_sharp;
+void main() {
+  vec2 cell = floor((gl_FragCoord.xy - u_frame.xy) / u_block) * u_block + u_frame.xy;
+  if (u_sharp) { o = at(cell + 0.5 * u_block); return; }
+  vec4 sum = vec4(0.0);
+  for (float j = 0.0; j < 5.0; j++) for (float i = 0.0; i < 5.0; i++) sum += at(cell + (vec2(i, j) + 0.5) / 5.0 * u_block);
+  o = sum / 25.0;
+}`);
+
 export const FILL = fs(`uniform vec3 u_color; uniform float u_opacity;
 void main() { vec4 c = at(gl_FragCoord.xy); o = mix(c, vec4(u_color * c.a, c.a), u_opacity); }`);
 

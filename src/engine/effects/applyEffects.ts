@@ -164,6 +164,11 @@ export function applyEffects(layer: OffscreenCanvas, effects: readonly Effect[],
       case 'posterize':
         step(run(S.POSTERIZE, cur.tex, { u_levels: Math.max(2, Math.round(n('levels'))) }));
         break;
+      case 'mosaic': {
+        const size = Math.max(1, px(n('blockSize')));
+        step(run(S.MOSAIC, cur.tex, { u_block: [size, size], u_sharp: b('sharpColors') }));
+        break;
+      }
       case 'fill':
         step(run(S.FILL, cur.tex, { u_color: c('color'), u_opacity: n('opacity') / 100 }));
         break;

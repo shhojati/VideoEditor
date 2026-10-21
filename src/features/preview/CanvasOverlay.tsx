@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { findClip } from '../../model/timeline';
 import type { Clip, ID, Project } from '../../model/types';
-import { keepsAspect } from '../../model/overlays';
+import { baseFromDrawn, motionTransform, withMotion } from '../../engine/render/motion';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from '../timeline/timelineUi';
@@ -14,6 +14,7 @@ import {
   editableClipsAt,
   handlesFor,
   moveLineEnd,
+  resizesFreely,
   resizeBox,
   rotateTowards,
   snapMove,
@@ -22,6 +23,7 @@ import {
   type Pt,
 } from './canvasGeometry';
 import { usePreviewView, type View } from './previewView';
+import { TrackerOverlay } from './TrackerOverlay';
 
 /** Screen px: handle size, rotate-handle distance, drag threshold, snap distance, hit slack. */
 const HANDLE = 9;
@@ -83,11 +85,13 @@ export function CanvasOverlay({ project }: { project: Project }) {
   const boxes = useMemo(() => {
     const m = new Map<ID, { clip: Clip; box: Box }>();
     for (const { clip } of active) {
-      const box = clipBox(project, clip, measure());
-      if (box) m.set(clip.id, { clip, box });
+      // Where it is drawn now: clips following a tracker move with it.
+      const moved = withMotion(project, clip, time);
+      const box = clipBox(project, moved, measure());
+      if (box) m.set(clip.id, { clip: moved, box });
     }
     return m;
-  }, [project, active]);
+  }, [project, active, time]);
 
   const selectedHere = selection.filter((id) => boxes.has(id));
   const single = selectedHere.length === 1 && selection.length === 1 ? boxes.get(selectedHere[0])! : null;
@@ -208,20 +212,29 @@ export function CanvasOverlay({ project }: { project: Project }) {
       else if (g.handle.kind === 'end') box = moveLineEnd(it.box, g.handle.end, p, e.shiftKey);
       else {
         const isCorner = g.handle.sx !== 0 && g.handle.sy !== 0;
-        const uniform = !clip.shape || keepsAspect(clip.shape.kind) || (isCorner && e.shiftKey);
+        const uniform = !resizesFreely(clip) || (isCorner && e.shiftKey);
         box = resizeBox(it.box, g.handle.sx, g.handle.sy, p, uniform, e.altKey);
       }
       next.set(it.id, box);
     }
     setGuides(hit);
     const label = { move: 'ops.canvasMove', resize: 'ops.canvasResize', rotate: 'ops.canvasRotate', end: 'ops.canvasResize' }[g.handle.kind];
+    const now = useTransport.getState().time;
     useProjectStore.getState().edit(
       label,
       (d) => {
         for (const it of g.items) {
           const ref = findClip(d, it.id);
           const box = next.get(it.id);
-          if (ref && box && !ref.track.locked) applyBox(ref.clip, it.box, box, W, H, it.scale);
+          if (!ref || !box || ref.track.locked) continue;
+          if (!ref.clip.motion) {
+            applyBox(ref.clip, it.box, box, W, H, it.scale);
+            continue;
+          }
+          // A linked clip: edit where it is drawn, then store the base that draws it there.
+          const drawn = { ...ref.clip, transform: { ...motionTransform(d, ref.clip, now) } };
+          applyBox(drawn, it.box, box, W, H, it.scale);
+          ref.clip.transform = baseFromDrawn(d, ref.clip, now, drawn.transform);
         }
       },
       { mergeKey: g.key, gesture: true },
@@ -270,6 +283,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
         <polygon key={id} points={poly(boxes.get(id)!.box)} fill="none" className="stroke-sky-400" strokeWidth={1.5} data-testid="selection-box" data-clip-id={id} />
       ))}
       {handles}
+      <TrackerOverlay project={project} time={time} />
     </svg>
   );
 }

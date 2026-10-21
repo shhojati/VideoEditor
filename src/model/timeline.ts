@@ -300,11 +300,11 @@ function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | '
 export const createTextClip = (start: number, text: TextProps) => createOverlayClip(start, { text });
 
 /**
- * Put an overlay clip on the first unlocked text (overlay) track with room for it; otherwise on a
- * new one at the top of the stack. Returns the clip id.
+ * Put an overlay clip on the first unlocked text (overlay) track with room for it, above track
+ * index `above` when given; otherwise on a new one at the top of the stack. Returns the clip id.
  */
-function addOverlayClip(p: Project, clip: Clip): ID {
-  let track = p.tracks.find((t) => t.kind === 'text' && !t.locked && isFree(t, clip.start, clip.duration));
+function addOverlayClip(p: Project, clip: Clip, above = -1): ID {
+  let track = p.tracks.find((t, i) => i > above && t.kind === 'text' && !t.locked && isFree(t, clip.start, clip.duration));
   if (!track) {
     track = { id: newId(), kind: 'text', muted: false, locked: false, clips: [] };
     p.tracks.push(track);
@@ -324,6 +324,10 @@ export const addAdjustmentClip = (p: Project, time: number, effects: Effect[] = 
   addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { adjustment: true, effects }), duration: ADJUSTMENT_DEFAULT_DURATION });
 
 export const ADJUSTMENT_DEFAULT_DURATION = 5;
+
+/** An adjustment layer over the given time range, on a graphics track above `trackIndex`. */
+export const addAdjustmentClipAbove = (p: Project, trackIndex: number, start: number, duration: number, props: Pick<Clip, 'effects' | 'mask' | 'transform'>): ID =>
+  addOverlayClip(p, { ...createOverlayClip(Math.max(0, start), { adjustment: true, effects: props.effects }), duration, mask: props.mask, transform: props.transform }, trackIndex);
 
 export const SPEED_RANGE: Range = { min: 0.5, max: 2 };
 

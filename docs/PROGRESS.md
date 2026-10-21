@@ -322,3 +322,27 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - Echo uses frames rendered earlier in the same pass (playback, export); after a seek, echoes build up again over the next frames. Positive echo times (future frames) are ignored.
 - Effects work in frame space (the layer is the whole frame), not in each clip's own bounds: generators (Gradient Ramp, Grid, 4-Color) fill the frame, and Transform/Power Pin move what is inside the frame.
 - Keylight, Warp Stabilizer, 3D Camera Tracker, Timewarp, Force Motion Blur and Shatter need motion tracking, optical flow or 3D simulation; they are listed for later.
+
+## Post-MVP 5 — Motion tracking ✅ (2026-10-21)
+
+### Done
+- **Box tracker** (`engine/track/klt.ts`, `workers/track.worker.ts`), CapCut-style: draw a box on a video clip, track **forward** to the clip's end or **backward** to its start from the playhead. Frames are decoded at ≤ 640 px in a worker. Corner features in the box are followed with pyramidal Lucas–Kanade (forward–backward checked). Each feature remembers where it sits in the box and is pulled back onto its original patch every frame. A RANSAC similarity fit then gives the box's **position, rotation and scale** without drift. A cut or a covered object makes the features stop matching their patches: tracking stops and reports "lost at …"; a box with no detail is refused with a hint.
+- **Model**: `Clip.trackers` (per-frame samples in *source* time, so trims and splits keep them; a split clip keeps the tracker on both parts) and `Clip.motion` (link: follow / stabilize, with **Position / Rotation / Scale** toggles and a reference time, so linking never makes a clip jump). `engine/render/motion.ts` turns a link into the transform a clip is drawn with, in `renderFrame`, so preview = export. Links to deleted trackers are dropped after every edit.
+- **Uses** (inspector → Motion tracking, on the selected tracker):
+  - **Attach a clip**: text, shape, sticker, image, video or adjustment layer follows the object. With rotation/scale on, it orbits and grows around the object. Any visual clip can also pick a tracker under **Follow motion**. Its Transform values become offsets from the object, and canvas drags still work (they are converted back).
+  - **Stabilize this clip**: the clip moves against the object so it stays where it was at the playhead (position + rotation by default; scale optional). Clips following the same tracker stay on the object.
+  - **Blur object / Pixelate object**: an adjustment layer over the clip's range, with a soft **ellipse mask** sized to the box, carrying Gaussian Blur or the new **Mosaic** effect, following the object with all three parts.
+- **Masks for adjustment layers** (`Clip.mask`, rectangle/ellipse, width/height/feather): placed by the layer's transform, with canvas handles. The soft edge is drawn with a canvas shadow, so it works in every browser and in the export worker.
+- **Mosaic** effect (Stylize): block size, block average or sharp colours.
+- Canvas: the tracker box (amber, dashed) shows while its clip is selected. Drag it onto the object and resize it from the corners; the box live-follows the run while the preview steps along. A ⌖ badge marks clips with trackers or links. fa/en strings.
+
+### Verified
+- 220 unit tests: 19 new. They cover sample interpolation; follow with position only, orbiting with rotation + scale, rotation/scale only, the reference time, a scaled source and the inverse for canvas drags; stabilize hold and inverse; box ↔ sample round trip; sample merging; link clean-up and split clips; and the tracker on synthetic footage. Whole-picture motion stays within 0.0002 in scale and angle after 60 frames, a moving object over a different background stays within 1.5 px with no drift, and a cut is reported as lost.
+- **E2E `e2e/tracking.spec.ts`**: a textured square moves 300 px, turns 30° and grows 30 % over 3 s. The box is dragged onto it and Track forward ▶ is clicked: all 90 samples are within 4 px, 0.5° and 1 % of the truth (in the app by hand: 0.03° and 0.1 %). The whole run is one undo step. A green square follows it at 1 s and 2 s. After Stabilize, the tracked box keeps its centre and the frame edge goes black. Pixelate adds a masked, linked adjustment layer. **Preview = export** (0,255,0)/(0,255,1).
+- All other E2E specs, production build and smoke + axe still pass.
+
+### Known issues / not done
+- One box per tracker (no perspective / corner-pin tracking, no planar tracking); out-of-plane turns lose features gradually and may need re-tracking from a later frame.
+- Fixing a bad stretch means moving the box at a frame and re-tracking from there; there is no per-frame keyframe editing (keyframes are a separate, later feature).
+- Stabilize does not zoom automatically to hide the moving edges; raise the clip's scale.
+- Tracking samples raw per-frame poses (no smoothing option yet).

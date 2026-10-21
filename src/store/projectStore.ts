@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { normalizeMotion } from '../engine/render/motion';
 import { normalizeTransitions } from '../model/transitions';
 import type { Project } from '../model/types';
 import * as H from './history';
@@ -27,6 +28,7 @@ export const useProjectStore = create<ProjectState>()((set) => ({
             history: H.edit(s.history, label, (d) => {
               recipe(d);
               normalizeTransitions(d);
+              normalizeMotion(d);
             }, opts),
           }
         : s,

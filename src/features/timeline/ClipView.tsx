@@ -113,6 +113,15 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
           fx{live.length > 1 ? ` ${live.length}` : ''}
         </span>
       )}
+      {(clip.trackers?.length || clip.motion) && (
+        <span
+          data-testid="motion-badge"
+          className="pointer-events-none absolute end-1 top-0.5 rounded bg-amber-400/90 px-1 text-[10px] font-semibold text-black"
+          title={clip.motion ? t(clip.motion.mode === 'stabilize' ? 'tracking.stabilize' : 'tracking.follow') : t('tracking.title')}
+        >
+          ⌖
+        </span>
+      )}
       {clip.blend && clip.blend !== 'normal' && (
         <span
           data-testid="blend-badge"

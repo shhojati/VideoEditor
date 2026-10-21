@@ -10,6 +10,8 @@ import { ShapeSection } from './ShapeSection';
 import { EffectsSection } from './EffectsSection';
 import { isPixelBlend } from '../../engine/render/blend';
 import { BLEND_GROUPS, isOverlay } from '../../model/overlays';
+import { MotionSection, TrackingSection } from '../tracking/TrackingSection';
+import { MaskSection } from './MaskSection';
 
 /**
  * Edit one property of one clip. Continuous changes of the same property (slider drags, typing)
@@ -94,13 +96,15 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {isText && <TextSection text={clip.text!} set={set} />}
       {clip.shape && <ShapeSection shape={clip.shape} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
 
-      {clip.adjustment && (
+      {clip.adjustment && <MaskSection project={project} clip={clip} set={set} />}
+
+      {clip.adjustment && !clip.mask && (
         <Section title={t('inspector.transform')}>
           <NumberField label={t('inspector.opacity')} value={clip.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
         </Section>
       )}
 
-      {visual && !clip.adjustment && (
+      {visual && (!clip.adjustment || clip.mask) && (
         <Section title={t('inspector.transform')}>
           <NumberField label={t('inspector.x')} value={clip.transform.x} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('x', v)} />
           <NumberField label={t('inspector.y')} value={clip.transform.y} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('y', v)} />
@@ -124,6 +128,8 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
         </Section>
       )}
 
+      {visual && <MotionSection project={project} clip={clip} />}
+      {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
       {visual && <BlendSection clip={clip} set={set} />}
       {visual && <EffectsSection clip={clip} set={set} />}
 

@@ -81,6 +81,30 @@ const clip = z.object({
     )
     .optional(),
   adjustment: z.boolean().optional(),
+  mask: z.object({ kind: z.enum(['rectangle', 'ellipse']), width: num.positive(), height: num.positive(), feather: nonNeg }).optional(),
+  trackers: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        width: num.positive(),
+        height: num.positive(),
+        samples: z.array(z.tuple([num, num, num, num, num.positive()])),
+        lostAt: num.optional(),
+      }),
+    )
+    .optional(),
+  motion: z
+    .object({
+      clipId: z.string(),
+      trackerId: z.string(),
+      mode: z.enum(['follow', 'stabilize']),
+      position: z.boolean(),
+      rotation: z.boolean(),
+      scale: z.boolean(),
+      ref: num,
+    })
+    .optional(),
 });
 
 const track = z.object({

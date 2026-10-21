@@ -9,7 +9,7 @@ import { parseProject } from './validate';
 
 describe('effect catalog', () => {
   it("lists After Effects' menu, with the heavy analysis effects marked for later", () => {
-    expect(EFFECT_MENU.map((m) => m.kinds.length)).toEqual([6, 7, 6, 6, 6, 4, 4, 3, 3, 5]);
+    expect(EFFECT_MENU.map((m) => m.kinds.length)).toEqual([6, 7, 6, 6, 7, 4, 4, 3, 3, 5]);
     const later = Object.values(EFFECT_DEFS).filter((d) => d.later).map((d) => d.kind);
     expect(later.sort()).toEqual(['cameraTracker3d', 'forceMotionBlur', 'keylight', 'shatter', 'timewarp', 'warpStabilizer']);
   });

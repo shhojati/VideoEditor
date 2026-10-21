@@ -75,7 +75,18 @@
     "blend": "Change blend mode",
     "addEffect": "Add effect",
     "addFilter": "Apply filter",
-    "addAdjustment": "Add adjustment layer"
+    "addAdjustment": "Add adjustment layer",
+    "addTracker": "Add tracker",
+    "deleteTracker": "Delete tracker",
+    "renameTracker": "Rename tracker",
+    "track": "Track motion",
+    "trackerBox": "Move tracker box",
+    "attachTracker": "Attach to tracker",
+    "stabilize": "Stabilize",
+    "motionLink": "Change motion link",
+    "detachTracker": "Detach from tracker",
+    "coverObject": "Cover object",
+    "mask": "Change mask"
   },
   "panels": {
     "media": "Media",
@@ -660,7 +671,8 @@
       "venetianBlinds": "Venetian Blinds",
       "blockDissolve": "Block Dissolve",
       "gradientWipe": "Gradient Wipe",
-      "look": "Filter"
+      "look": "Filter",
+      "mosaic": "Mosaic"
     },
     "categories": {
       "blurSharpen": "Blur & Sharpen",
@@ -808,7 +820,9 @@
       "blockHeight": "Block height",
       "gradient": "Gradient",
       "preset": "Filter",
-      "intensity": "Intensity"
+      "intensity": "Intensity",
+      "blockSize": "Block size",
+      "sharpColors": "Sharp colours"
     },
     "options": {
       "both": "Horizontal and vertical",
@@ -901,5 +915,53 @@
       "bw": "Black & White",
       "retro": "Retro"
     }
+  },
+  "tracking": {
+    "title": "Motion tracking",
+    "intro": "Track an object in this video so other clips can follow it, or to stabilize or blur it.",
+    "add": "⌖ Track an object",
+    "addAnother": "+ Track another object",
+    "objectN": "Object {{n}}",
+    "name": "Tracker name",
+    "range": "Tracked {{from}}–{{to}} s",
+    "notTracked": "Not tracked yet",
+    "lost": "Lost at {{at}} s: move the box onto the object there and track again.",
+    "boxHint": "Drag the box onto the object in the preview (corners resize), then track.",
+    "back": "◀ Track backward",
+    "forward": "Track forward ▶",
+    "cancel": "Stop",
+    "running": "Tracking… {{pct}}%",
+    "errors": {
+      "featureless": "Not enough detail in the box. Make it bigger or put it on a more textured part of the object.",
+      "media": "This video can’t be decoded for tracking.",
+      "failed": "Tracking failed."
+    },
+    "use": "Use the motion",
+    "attach": "Attach a clip…",
+    "stabilize": "Stabilize this clip",
+    "blur": "Blur object",
+    "pixelate": "Pixelate object",
+    "delete": "Delete tracker",
+    "select": "Show this tracker",
+    "follow": "Follow motion",
+    "followPick": "Follow a tracked object…",
+    "follows": "Follows “{{name}}”",
+    "stabilized": "Stabilized on “{{name}}”",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale",
+    "detach": "Detach",
+    "stabilizeHint": "Edges may show: raise the scale to hide them.",
+    "followHint": "Position, scale and rotation in Transform are relative to the object."
+  },
+  "mask": {
+    "title": "Mask",
+    "shape": "Shape",
+    "none": "None",
+    "rectangle": "Rectangle",
+    "ellipse": "Ellipse",
+    "width": "Width",
+    "height": "Height",
+    "feather": "Feather"
   }
 }

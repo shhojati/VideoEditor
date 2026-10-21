@@ -1,10 +1,12 @@
 // The one composite function shared by preview and export (plan §4.1): given the project, a time
 // and already-decoded frames, draw the frame. Synchronous and free of hidden state.
 import { clipVisibleRange, cutTime } from '../../model/transitions';
-import type { Clip, Project, Track, Transform, Transition } from '../../model/types';
+import type { Clip, Project, Track, Transition } from '../../model/types';
 import { isOverlay } from '../../model/overlays';
 import { applyEffects, hasLiveEffects, type FxEnv } from '../effects/applyEffects';
 import { drawBlended, seedOf } from './blend';
+import { withMotion } from './motion';
+import { placeMedia } from './placement';
 import { drawShapeClip } from './shapes';
 import { drawSubtitles } from './subtitles';
 import { drawTextClip } from './text';
@@ -70,35 +72,7 @@ export function drawPlanAt(project: Project, t: number): TrackDraw[] {
   return plan;
 }
 
-export interface Placement {
-  /** Rectangle (centred on the origin, before rotation) the whole source frame is drawn into. */
-  frame: { x: number; y: number; w: number; h: number };
-  /** Visible (cropped) rectangle, same space; used as the clip path. */
-  visible: { x: number; y: number; w: number; h: number };
-  /** Centre of the visible rectangle on the canvas. */
-  cx: number;
-  cy: number;
-  rotation: number;
-}
-
-/** Where a source of srcW×srcH lands on a canvas of canvasW×canvasH for a transform. Pure. */
-export function placeMedia(srcW: number, srcH: number, canvasW: number, canvasH: number, tr: Transform): Placement {
-  const crop = tr.crop ?? { x: 0, y: 0, width: 1, height: 1 };
-  const visW = srcW * crop.width;
-  const visH = srcH * crop.height;
-  const fitScale = (tr.fit === 'cover' ? Math.max : Math.min)(canvasW / visW, canvasH / visH) * tr.scale;
-  const w = visW * fitScale;
-  const h = visH * fitScale;
-  const fullW = srcW * fitScale;
-  const fullH = srcH * fitScale;
-  return {
-    visible: { x: -w / 2, y: -h / 2, w, h },
-    frame: { x: -w / 2 - crop.x * fullW, y: -h / 2 - crop.y * fullH, w: fullW, h: fullH },
-    cx: canvasW / 2 + tr.x * canvasW,
-    cy: canvasH / 2 + tr.y * canvasH,
-    rotation: (tr.rotation * Math.PI) / 180,
-  };
-}
+export { placeMedia, type Placement } from './placement';
 
 /** Where effects run: the frame on the canvas and the pixel scale, from the context's transform. */
 function effectEnv(ctx: Ctx2D, clip: Clip, t: number, width: number, height: number): FxEnv {
@@ -134,10 +108,56 @@ export function drawClip(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup,
       c.drawImage(ctx.canvas, 0, 0);
       c.restore();
     };
-    drawBlended(ctx, clip.blend, copyBelow, { seed, post, alpha: clip.transform.opacity });
+    const view = ctx.getTransform();
+    const masked = clip.mask
+      ? (layer: OffscreenCanvas) => {
+          post(layer);
+          maskLayer(layer, clip, view, width, height);
+        }
+      : post;
+    drawBlended(ctx, clip.blend, copyBelow, { seed, post: masked, alpha: clip.transform.opacity });
     return;
   }
   drawBlended(ctx, clip.blend, (c) => drawClipPixels(c, clip, t, lookup, width, height), { seed, post });
+}
+
+let maskCanvas: OffscreenCanvas | null = null;
+
+/**
+ * Keep only the part of `layer` inside the clip's mask (placed by its transform; `view` maps project
+ * pixels to the layer). A soft edge is drawn as the shadow of a shape moved out of sight, which
+ * blurs the same way everywhere (unlike ctx.filter, it works in every browser and in workers).
+ */
+function maskLayer(layer: OffscreenCanvas, clip: Clip, view: DOMMatrix, width: number, height: number) {
+  const mask = clip.mask!;
+  const tr = clip.transform;
+  if (!maskCanvas || maskCanvas.width !== layer.width || maskCanvas.height !== layer.height) maskCanvas = new OffscreenCanvas(layer.width, layer.height);
+  const m = maskCanvas.getContext('2d')!;
+  m.setTransform(1, 0, 0, 1, 0, 0);
+  m.clearRect(0, 0, layer.width, layer.height);
+  const feather = mask.feather * tr.scale * Math.hypot(view.a, view.b);
+  const off = feather > 0.5 ? layer.width + layer.height + 4 * feather : 0;
+  m.setTransform(view.a, view.b, view.c, view.d, view.e - off, view.f);
+  m.translate(width / 2 + tr.x * width, height / 2 + tr.y * height);
+  m.rotate((tr.rotation * Math.PI) / 180);
+  m.scale(tr.scale, tr.scale);
+  m.beginPath();
+  if (mask.kind === 'ellipse') m.ellipse(0, 0, mask.width / 2, mask.height / 2, 0, 0, 2 * Math.PI);
+  else m.rect(-mask.width / 2, -mask.height / 2, mask.width, mask.height);
+  m.fillStyle = '#000';
+  if (off) {
+    m.shadowColor = '#000';
+    m.shadowBlur = feather;
+    m.shadowOffsetX = off;
+  }
+  m.fill();
+  m.shadowColor = 'transparent';
+  const c = layer.getContext('2d')!;
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'destination-in';
+  c.drawImage(maskCanvas, 0, 0);
+  c.restore();
 }
 
 function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number) {
@@ -175,12 +195,14 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
   ctx.save();
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, width, height);
+  // Clips linked to a tracker are drawn where the tracked object takes them.
+  const moved = (clip: Clip) => withMotion(project, clip, t);
   for (const item of drawPlanAt(project, t)) {
-    if (item.kind === 'clip') drawClip(ctx, item.clip, t, lookup, width, height);
+    if (item.kind === 'clip') drawClip(ctx, moved(item.clip), t, lookup, width, height);
     else
       drawTransition(ctx, item.transition.kind, item.progress, width, height,
-        () => drawClip(ctx, item.from, t, lookup, width, height),
-        () => drawClip(ctx, item.to, t, lookup, width, height),
+        () => drawClip(ctx, moved(item.from), t, lookup, width, height),
+        () => drawClip(ctx, moved(item.to), t, lookup, width, height),
       );
   }
   if (opts.subtitles !== false) drawSubtitles(ctx, project, t, width, height);

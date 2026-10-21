@@ -239,6 +239,53 @@ export interface Clip {
    * it while it is on screen, mixed in by its opacity and blend mode.
    */
   adjustment?: boolean;
+  /** Adjustment layers only: limit the effect to this shape, placed by the clip's transform. */
+  mask?: Mask;
+  /** Video clips: objects tracked in the clip's media (see model/motion.ts). */
+  trackers?: Tracker[];
+  /** Move with a tracked object (or, on the tracked clip itself, against it: stabilize). */
+  motion?: MotionLink;
+}
+
+/** Sizes in project pixels at scale 1, centred on the clip's position. */
+export interface Mask {
+  kind: 'rectangle' | 'ellipse';
+  width: number;
+  height: number;
+  /** Soft edge, project pixels. */
+  feather: number;
+}
+
+/**
+ * One tracker sample: source time (s), box centre x / y (fractions of the source's display width /
+ * height), angle (degrees, clockwise, unwrapped) and scale (relative to the tracker's width/height).
+ */
+export type TrackSample = [time: number, x: number, y: number, angle: number, scale: number];
+
+/** A box followed through a video clip's media. Samples are in source time, so trims keep them valid. */
+export interface Tracker {
+  id: ID;
+  name: string;
+  /** Box size at scale 1, as fractions of the source's display width / height. */
+  width: number;
+  height: number;
+  /** Sorted by time. */
+  samples: TrackSample[];
+  /** Source time where tracking stopped because the object was lost. */
+  lostAt?: number;
+}
+
+export interface MotionLink {
+  /** A tracker on a video clip (see resolveTracker in model/motion.ts for which clip is used). */
+  clipId: ID;
+  trackerId: ID;
+  /** 'follow': this clip moves with the object; 'stabilize': the tracked clip moves against it. */
+  mode: 'follow' | 'stabilize';
+  position: boolean;
+  rotation: boolean;
+  scale: boolean;
+  /** Source time (of the tracked clip) at which this clip's own transform applies unchanged. */
+  ref: number;
 }
 
 export type EffectKind =
@@ -273,6 +320,7 @@ export type EffectKind =
   | 'roughenEdges'
   | 'findEdges'
   | 'posterize'
+  | 'mosaic'
   | 'cameraTracker3d'
   | 'bevelAlpha'
   | 'sphere'

@@ -128,6 +128,17 @@ export interface ClipAudio {
   space?: SpaceFx;
   /** Speed changes keep the original pitch. */
   keepPitch?: boolean;
+  /** Gets quieter while other clips have speech (music under a voiceover); see engine/audio/ducking.ts. */
+  duck?: ClipDuck;
+}
+
+export interface ClipDuck {
+  /** How far down, in dB (negative). */
+  amount: number;
+  /** Seconds to go down before speech starts. */
+  attack: number;
+  /** Seconds to come back up after it ends. */
+  release: number;
 }
 
 export type VoiceKind =

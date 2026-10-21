@@ -1,4 +1,5 @@
 import { volumeAt, volumeRamp } from '../model/keyframes';
+import { DUCK_DEFAULTS, duckGainAt, duckRamps, type Interval } from './audio/ducking';
 import { transitionsOfClip } from '../model/transitions';
 import type { Clip, Track, Transition } from '../model/types';
 
@@ -47,9 +48,16 @@ export function audioCrossfadeWindow(track: Track, tr: Transition, mediaDuration
 /**
  * Gain over time for a clip on a track. A side with a transition gets an equal-power crossfade over
  * the cut's audio window (sin in / cos out, so the two clips keep a constant total power) instead
- * of the clip's own fade on that side.
+ * of the clip's own fade on that side. A clip set to duck also follows its plan (`duck`, timeline
+ * intervals with speech; see engine/audio/ducking.ts).
  */
-export function audioEnvelope(clip: Clip, track?: Track, mediaDuration: MediaDuration = () => undefined): AudioEnvelope {
+export function audioEnvelope(
+  clip: Clip,
+  track?: Track,
+  mediaDuration: MediaDuration = () => undefined,
+  duck?: Interval[],
+): AudioEnvelope {
+  const duckSettings = clip.audio.duck && duck?.length ? { ...DUCK_DEFAULTS, ...clip.audio.duck } : undefined;
   const tr = track ? transitionsOfClip(track, clip.id) : {};
   const s = clip.start;
   const e = clip.start + clip.duration;
@@ -70,13 +78,15 @@ export function audioEnvelope(clip: Clip, track?: Track, mediaDuration: MediaDur
     if (usable(outWin)) {
       if (t > outWin![0]) g *= Math.cos(((t - outWin![0]) / (outWin![1] - outWin![0])) * (Math.PI / 2));
     } else if (!tr.out && clip.audio.fadeOut > 0) g *= Math.max(0, Math.min(1, (e - t) / clip.audio.fadeOut));
+    if (duckSettings) g *= duckGainAt(duck!, duckSettings, t);
     return Math.max(0, g);
   };
 
   const ramps: [number, number][] = [];
   const keyed = volumeRamp(clip);
   const volRamp: [number, number] | null = keyed ? [Math.max(start, keyed[0]), Math.min(end, keyed[1])] : null;
-  for (const r of [inRamp, volRamp, outRamp].sort((a, b) => (a?.[0] ?? 0) - (b?.[0] ?? 0))) {
+  const duckRanges = duckSettings ? duckRamps(duck!, duckSettings).map(([a, b]): [number, number] => [Math.max(start, a), Math.min(end, b)]) : [];
+  for (const r of [inRamp, volRamp, outRamp, ...duckRanges].sort((a, b) => (a?.[0] ?? 0) - (b?.[0] ?? 0))) {
     if (!r || r[1] - r[0] <= 0) continue;
     const last = ramps.at(-1);
     if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);

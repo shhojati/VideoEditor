@@ -4,6 +4,7 @@ import type { Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { AudioEngine } from '../audio/audioEngine';
+import type { DuckPlan } from '../audio/ducking';
 import { readers } from '../decode/mediaReader';
 import { ensureFont, isFontReady } from '../../lib/fonts';
 import { renderFrame, visualClipsAt } from '../render/renderFrame';
@@ -26,6 +27,8 @@ class PlaybackEngine {
   private background = '#000';
 
   readonly stats = { video: this.video.stats, audio: this.audio.stats };
+  /** Auto-ducking plan for a project (set by the app: it needs the media waveforms). */
+  duckPlan: (project: Project) => DuckPlan = () => ({});
 
   private get project(): Project | undefined {
     return useProjectStore.getState().history?.present;
@@ -102,7 +105,7 @@ class PlaybackEngine {
     cancelAnimationFrame(this.raf);
     const t0 = from >= duration - 1e-3 ? 0 : from;
     this.writeTransport({ time: t0, playing: true });
-    await this.audio.start(project, t0, volume);
+    await this.audio.start(project, t0, volume, this.duckPlan(project));
     if (token !== this.playToken) return;
     this.video.startStreams(project, t0);
     const tick = () => {

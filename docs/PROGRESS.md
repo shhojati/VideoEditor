@@ -440,3 +440,18 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Import and placement are two undo steps (as for library items).
 - No punch-in over an existing take, and no pause/resume within one take.
+
+## Post-MVP 11 — Auto ducking ✅ (2026-10-21)
+
+### Done
+- **Duck under voice** (Audio section; `Clip.audio.duck` = amount dB, go-down and come-back times): the clip gets quieter wherever another audible clip has speech, e.g. music under a voiceover. It is a live setting, so it follows every edit (moving the voice, trimming, muting a track). A **↓ −12 dB** badge marks ducked clips on the timeline.
+- **Speech detection** (`engine/audio/ducking.ts`): from each asset's waveform peaks (already made for the timeline), with a threshold relative to the recording's own loud level, pauses under 0.4 s bridged and blips under 0.15 s dropped. Activity maps to the timeline through each clip's in-point and speed; gaps the music could not recover in (shorter than go-down + come-back) are merged, so it does not pump between words. The music starts going down *before* speech (the plan is known ahead).
+- **One plan, two hosts**: the main thread makes a duck plan (timeline intervals per ducked clip, `features/media-bin/speechActivity.ts`); the preview passes it to the audio engine and the export sends it to the worker. Both apply it in `audioEnvelope` (gain × duck curve, with its ramps added to the gain automation), so preview = export.
+
+### Verified
+- Unit tests: loud runs, bridging and blip removal; adaptive threshold on a quiet recording; the duck curve's down/hold/up shape; plan mapping through in-point, merging, muted tracks and silent clips ignored; envelope gain and ramps.
+- **E2E `e2e/ducking.spec.ts`**: a 220 Hz "music" WAV and a quiet 660 Hz "voice" (2–4 s) on two tracks; Duck under voice ticked in the inspector; the exported audio RMS is 0.35 before, **0.095 during** and 0.35 after the voice.
+
+### Known issues / not done
+- Speech detection is level based: any sound on a non-ducked clip (sound effects too) ducks the music. Choosing which clips count as voice is not offered yet.
+- Waveforms are made after import; until then a new clip does not duck others.

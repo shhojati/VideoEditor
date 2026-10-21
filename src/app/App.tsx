@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { playbackEngine } from '../engine/playback/engine';
 import { ExportDialog } from '../features/export/ExportDialog';
 import { RecordDialog } from '../features/record/RecordDialog';
+import { projectDuckPlan } from '../features/media-bin/speechActivity';
 import { Inspector } from '../features/inspector/Inspector';
 import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
@@ -52,6 +53,7 @@ function Editor() {
   useEffect(() => {
     const stopAutosave = startAutosave();
     const stopMedia = startMediaWatcher();
+    playbackEngine.duckPlan = projectDuckPlan;
     const stopPlayback = playbackEngine.init();
     void bootstrap(t('app.untitled'));
     return () => {

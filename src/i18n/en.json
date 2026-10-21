@@ -317,7 +317,12 @@
     "arrowEnd": "End",
     "none": "None",
     "blending": "Blending",
-    "length": "Length"
+    "length": "Length",
+    "duck": "Duck under voice",
+    "duckAmount": "Duck by",
+    "duckAttack": "Go down",
+    "duckRelease": "Come back",
+    "duckHint": "Gets quieter wherever another clip has speech (for music under a voiceover). Follows your edits."
   },
   "subtitles": {
     "lane": "Subtitles {{lang}}",

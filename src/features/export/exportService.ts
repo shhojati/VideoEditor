@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { FORMATS, outputMime, outputName, type ExportSettings } from '../../engine/export/settings';
 import type { Project } from '../../model/types';
 import type { ExportMessage, ExportRequest } from '../../workers/export.worker';
+import { projectDuckPlan } from '../media-bin/speechActivity';
 import { exportSubtitleFile } from '../subtitles/subtitleActions';
 import type { WatermarkSpec } from '../../engine/render/watermark';
 import { loadWatermark, watermarkImageUrl } from '../../lib/appConfig';
@@ -123,7 +124,8 @@ export async function startExport(project: Project, settings: ExportSettings, po
       useExport.setState({ stage: 'error', error: data.message });
     }
   };
-  w.postMessage({ type: 'start', project, settings, file: fileHandle ?? undefined, watermark } satisfies ExportRequest);
+  const duck = projectDuckPlan(project);
+  w.postMessage({ type: 'start', project, settings, file: fileHandle ?? undefined, watermark, duck } satisfies ExportRequest);
 }
 
 export function cancelExport() {

@@ -19,6 +19,7 @@ import { keyedEdit, playheadIn } from '../keyframes/keyframeService';
 import { KeyframesSection } from '../keyframes/KeyframesSection';
 import { setKeepPitch } from '../../model/voiceFx';
 import { VoiceSection } from './VoiceSection';
+import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 
 /**
  * Edit one property of one clip, as it looks at the playhead (on an animated clip the change lands
@@ -176,6 +177,29 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
           <NumberField label={t('inspector.volume')} value={shown.audio.volume} min={0} max={2} factor={100} unit="%" onChange={(v) => set('volume', (c) => void (c.audio.volume = v))} />
           <NumberField label={t('inspector.fadeIn')} value={clip.audio.fadeIn} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeIn', (c) => void (c.audio.fadeIn = v))} />
           <NumberField label={t('inspector.fadeOut')} value={clip.audio.fadeOut} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeOut', (c) => void (c.audio.fadeOut = v))} />
+          <label className="flex items-center gap-2 text-xs text-neutral-300" title={t('inspector.duckHint')}>
+            <input
+              type="checkbox"
+              data-testid="duck-toggle"
+              checked={!!clip.audio.duck}
+              onChange={(e) => {
+                const on = e.target.checked;
+                set('duck', (c) => {
+                  if (on) c.audio.duck = { ...DUCK_DEFAULTS };
+                  else delete c.audio.duck;
+                });
+              }}
+            />
+            {t('inspector.duck')}
+          </label>
+          {clip.audio.duck && (
+            <>
+              <NumberField label={t('inspector.duckAmount')} value={clip.audio.duck.amount} min={-30} max={0} step={1} unit="dB" onChange={(v) => set('duckAmount', (c) => void (c.audio.duck!.amount = v))} />
+              <NumberField label={t('inspector.duckAttack')} value={clip.audio.duck.attack} min={0.05} max={2} step={0.05} unit="s" onChange={(v) => set('duckAttack', (c) => void (c.audio.duck!.attack = v))} />
+              <NumberField label={t('inspector.duckRelease')} value={clip.audio.duck.release} min={0.05} max={3} step={0.05} unit="s" onChange={(v) => set('duckRelease', (c) => void (c.audio.duck!.release = v))} />
+              <p className="text-[11px] text-neutral-400">{t('inspector.duckHint')}</p>
+            </>
+          )}
         </Section>
       )}
       {audible && <VoiceSection clip={shown} set={set} />}

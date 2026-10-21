@@ -93,6 +93,7 @@ const clip = z.object({
     voice: z.object({ kind: z.enum(VOICE_KINDS), pitch: num.min(PITCH_RANGE.min).max(PITCH_RANGE.max), amount: unit }).optional(),
     space: z.object({ kind: z.enum(SPACE_KINDS), mix: unit, size: unit }).optional(),
     keepPitch: z.boolean().optional(),
+    duck: z.object({ amount: num.min(-40).max(0), attack: num.min(0.05).max(3), release: num.min(0.05).max(3) }).optional(),
   }),
   text: textProps.optional(),
   shape: shapeProps.optional(),

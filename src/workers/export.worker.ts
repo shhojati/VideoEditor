@@ -59,6 +59,7 @@ import { getMediaFile } from '../lib/opfs';
 import { ZipWriter } from '../lib/zip';
 import { timelineDuration } from '../model/timeline';
 import type { ID, Project } from '../model/types';
+import type { DuckPlan } from '../engine/audio/ducking';
 
 export type ExportRequest =
   | {
@@ -68,6 +69,8 @@ export type ExportRequest =
       file?: FileSystemFileHandle;
       /** Free plan (features/account/policy.ts). */
       watermark?: WatermarkSpec;
+      /** Auto-ducking plan, made on the main thread from the waveforms (engine/audio/ducking.ts). */
+      duck?: DuckPlan;
     }
   | { type: 'cancel' };
 
@@ -184,15 +187,18 @@ async function decodeRange(opfsPath: string, from: number, to: number): Promise<
   return { channels: out, rate, start };
 }
 
-async function mixAudio(project: Project, duration: number): Promise<[Float32Array, Float32Array] | null> {
+async function mixAudio(project: Project, duration: number, duck: DuckPlan): Promise<[Float32Array, Float32Array] | null> {
   const clips = audibleClips(project);
   if (!clips.length) return null;
   const n = Math.ceil(duration * AUDIO_RATE);
   const mix: [Float32Array, Float32Array] = [new Float32Array(n), new Float32Array(n)];
   for (const [i, { clip, track, opfsPath }] of clips.entries()) {
     // Transitions extend a clip's audible range (crossfades) past its own edges.
-    const env = audioEnvelope(clip, track, (c) =>
-      c.assetId ? project.assets[c.assetId]?.duration : undefined,
+    const env = audioEnvelope(
+      clip,
+      track,
+      (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined),
+      duck[clip.id],
     );
     const range = await decodeRange(
       opfsPath,
@@ -623,6 +629,7 @@ async function run(
   input: ExportSettings,
   file?: FileSystemFileHandle,
   watermark?: WatermarkSpec,
+  duck: DuckPlan = {},
 ) {
   const t0 = performance.now();
   const settings = fitToFormat(input);
@@ -641,7 +648,7 @@ async function run(
   if (settings.format !== 'mp3')
     await Promise.all([...fonts].map((f) => ensureFont(f.split('|')[0], Number(f.split('|')[1]))));
 
-  const audio = hasAudio(settings) ? await mixAudio(project, duration) : null;
+  const audio = hasAudio(settings) ? await mixAudio(project, duration, duck) : null;
   checkCancel();
 
   const writable = file ? await file.createWritable() : null;
@@ -673,7 +680,7 @@ self.onmessage = async (e: MessageEvent<ExportRequest>) => {
   }
   cancelled = false;
   try {
-    await run(e.data.project, e.data.settings, e.data.file, e.data.watermark);
+    await run(e.data.project, e.data.settings, e.data.file, e.data.watermark, e.data.duck);
   } catch (err) {
     if (err instanceof Cancelled) post({ type: 'cancelled' });
     else post({ type: 'error', message: err instanceof Error ? err.message : String(err) });

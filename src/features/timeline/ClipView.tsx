@@ -115,6 +115,15 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
           fx{live.length > 1 ? ` ${live.length}` : ''}
         </span>
       )}
+      {clip.audio.duck && (
+        <span
+          data-testid="duck-badge"
+          className="pointer-events-none absolute end-1 bottom-0.5 rounded bg-sky-500/80 px-1 text-[10px] font-semibold text-black"
+          title={t('inspector.duck')}
+        >
+          ↓ {clip.audio.duck.amount} dB
+        </span>
+      )}
       {(clip.trackers?.length || clip.motion) && (
         <span
           data-testid="motion-badge"

@@ -12,6 +12,7 @@ import { sourceTimeAt } from '../render/renderFrame';
 import { voiceLatency } from './voiceDsp';
 import workletUrl from './voiceFx.worklet.ts?worker&url';
 import type { VoiceFxOptions } from './voiceFx.worklet';
+import type { DuckPlan } from './ducking';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
 const SCHEDULE_AHEAD = 2;
@@ -54,7 +55,7 @@ export class AudioEngine {
   }
 
   /** Start playing the project from timeline time t0. Returns once the clock is anchored. */
-  async start(project: Project, t0: number, volume: number) {
+  async start(project: Project, t0: number, volume: number, duck: DuckPlan = {}) {
     this.stop();
     const ctx = this.context;
     if (ctx.state !== 'running') await ctx.resume();
@@ -66,7 +67,7 @@ export class AudioEngine {
     for (const track of project.tracks) {
       if (track.muted || track.kind === 'text') continue;
       for (const clip of track.clips) {
-        const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined));
+        const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined), duck[clip.id]);
         if (env.end <= t0 || peakVolume(clip) <= 0) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;

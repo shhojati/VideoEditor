@@ -67,7 +67,12 @@ export default defineConfig({
   server: { headers: isolation },
   preview: { headers: isolation },
   worker: { format: 'es' },
-  optimizeDeps: { exclude: ['@huggingface/transformers'] },
+  optimizeDeps: {
+    exclude: ['@huggingface/transformers'],
+    // Loaded lazily by the export worker; listed so the first export doesn't make Vite re-optimize
+    // and reload the page.
+    include: ['@mediabunny/aac-encoder', '@mediabunny/mp3-encoder'],
+  },
   // The app is one ~900 kB (≈260 kB gzip) chunk; fine for an internal tool loaded once.
   build: { chunkSizeWarningLimit: 1200 },
   test: {

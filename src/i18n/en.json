@@ -396,24 +396,50 @@
   },
   "export": {
     "open": "Export",
-    "title": "Export video (MP4)",
+    "title": "Export",
+    "format": "Format",
+    "formats": {
+      "mp4": "MP4 (H.264)",
+      "mov": "QuickTime MOV (H.264)",
+      "webm": "WebM (VP9)",
+      "avi": "AVI (H.264, PCM audio)",
+      "mp3": "MP3 (audio only)",
+      "gif": "GIF (animated)",
+      "png": "PNG image",
+      "jpg": "JPG image"
+    },
     "resolution": "Resolution",
     "fps": "Frame rate",
     "quality": "Quality",
     "qualities": {
       "low": "Small file",
       "medium": "Medium",
-      "high": "High"
+      "high": "High",
+      "custom": "Custom"
     },
+    "videoBitrate": "Video bitrate (kbps)",
+    "audioBitrate": "Audio bitrate",
+    "pcmAudio": "Audio: uncompressed 16-bit PCM, {{kbps}}",
+    "imageMode": "Images",
+    "imageModes": {
+      "frame": "Current frame ({{time}})",
+      "sequence": "All frames (ZIP)"
+    },
+    "gifNote": "GIF has no sound and at most 256 colours per frame.",
     "burnSubtitles": "Burn subtitles into the picture",
     "alsoSrt": "Also save subtitles as SRT",
     "summary": "{{size}} · {{duration}} long · up to {{bytes}}",
+    "bitrateSummary": "Bitrate: {{video}} video + {{audio}} audio = {{total}}",
+    "frameSummary": "{{size}} · frame at {{time}} · about {{bytes}}",
     "stage": {
       "audio": "Preparing audio…",
-      "video": "Rendering video…"
+      "video": "Rendering video…",
+      "encode": "Encoding audio…",
+      "frames": "Rendering frames…"
     },
     "eta": "about {{time}} left",
     "done": "Created \"{{name}}\" ({{bytes}}) in {{seconds}} s ({{ratio}}× the video length).",
+    "averageBitrate": "Average bitrate: {{kbps}}.",
     "opusWarning": "No AAC encoder was available (neither the browser's nor the built-in one); audio was saved as Opus, which some players cannot play.",
     "download": "Download file",
     "error": "Export failed: {{message}}",

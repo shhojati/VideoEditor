@@ -396,24 +396,50 @@
   },
   "export": {
     "open": "خروجی",
-    "title": "خروجی ویدیو (MP4)",
+    "title": "خروجی",
+    "format": "فرمت",
+    "formats": {
+      "mp4": "MP4 (H.264)",
+      "mov": "QuickTime MOV (H.264)",
+      "webm": "WebM (VP9)",
+      "avi": "AVI (H.264 + PCM)",
+      "mp3": "MP3 (فقط صدا)",
+      "gif": "GIF (متحرک)",
+      "png": "عکس PNG",
+      "jpg": "عکس JPG"
+    },
     "resolution": "کیفیت تصویر",
     "fps": "نرخ فریم",
     "quality": "کیفیت فشرده‌سازی",
     "qualities": {
       "low": "کم‌حجم",
       "medium": "متوسط",
-      "high": "بالا"
+      "high": "بالا",
+      "custom": "دلخواه"
     },
+    "videoBitrate": "بیت‌ریت ویدیو (kbps)",
+    "audioBitrate": "بیت‌ریت صدا",
+    "pcmAudio": "صدا: PCM شانزده‌بیتی بدون فشرده‌سازی، {{kbps}}",
+    "imageMode": "عکس",
+    "imageModes": {
+      "frame": "فریم فعلی ({{time}})",
+      "sequence": "همه‌ی فریم‌ها (ZIP)"
+    },
+    "gifNote": "GIF صدا ندارد و هر فریم حداکثر ۲۵۶ رنگ دارد.",
     "burnSubtitles": "زیرنویس روی تصویر نوشته شود",
     "alsoSrt": "فایل SRT زیرنویس هم ذخیره شود",
     "summary": "{{size}} · مدت {{duration}} · حداکثر {{bytes}}",
+    "bitrateSummary": "بیت‌ریت: ویدیو {{video}} + صدا {{audio}} = {{total}}",
+    "frameSummary": "{{size}} · فریم {{time}} · حدود {{bytes}}",
     "stage": {
       "audio": "آماده‌سازی صدا…",
-      "video": "ساخت ویدیو…"
+      "video": "ساخت ویدیو…",
+      "encode": "ساخت صدا…",
+      "frames": "ساخت فریم‌ها…"
     },
     "eta": "حدود {{time}} مانده",
     "done": "«{{name}}» ساخته شد ({{bytes}}) در {{seconds}} ثانیه ({{ratio}}× زمان ویدیو).",
+    "averageBitrate": "بیت‌ریت میانگین: {{kbps}}.",
     "opusWarning": "رمزگذار AAC (نه مرورگر و نه داخلی) در دسترس نبود؛ صدا با Opus ذخیره شد که ممکن است در برخی پخش‌کننده‌ها پخش نشود.",
     "download": "دانلود فایل",
     "error": "خروجی ناموفق بود: {{message}}",

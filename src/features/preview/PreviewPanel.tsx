@@ -7,6 +7,7 @@ import { CanvasOverlay } from './CanvasOverlay';
 import { TransportBar } from './TransportBar';
 import { backingRatio, panBy, setViewport, usePreviewView, zoomTo } from './previewView';
 import { spaceHand } from './spaceHand';
+import { Scopes } from './Scopes';
 
 /**
  * Zoomable, pannable preview. The canvas covers the whole viewport; the engine draws the picture
@@ -56,6 +57,7 @@ export function PreviewPanel({ project }: { project: Project }) {
             style={{ left: view.ox, top: view.oy, width: width * view.k, height: height * view.k }}
           />
           <CanvasOverlay project={project} />
+          <Scopes />
         </div>
         <TransportBar fps={project.settings.fps} />
       </div>

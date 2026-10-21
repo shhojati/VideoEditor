@@ -100,11 +100,20 @@ const matrixOf = (m: DOMMatrix): Affine => [m.a, m.b, m.c, m.d, m.e, m.f];
  * alpha/transform/filter are respected. An adjustment layer applies its effects to what has been
  * drawn so far instead (limited to its masks).
  */
-export function drawClip(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number, masks?: ResolvedMasks) {
+export function drawClip(
+  ctx: Ctx2D,
+  clip: Clip,
+  t: number,
+  lookup: FrameLookup,
+  width: number,
+  height: number,
+  masks?: ResolvedMasks,
+  luts?: Project['luts'],
+) {
   // Dancing Dissolve re-rolls its pattern 30 times a second; Dissolve keeps one per clip.
   const seed = clip.blend === 'dancingDissolve' ? seedOf(clip.id) ^ Math.floor(t * 30) : seedOf(clip.id);
   const effects = clip.effects;
-  const fx = hasLiveEffects(effects) ? (layer: OffscreenCanvas) => void applyEffects(layer, effects!, effectEnv(ctx, clip, t, width, height)) : undefined;
+  const fx = hasLiveEffects(effects) ? (layer: OffscreenCanvas) => void applyEffects(layer, effects!, { ...effectEnv(ctx, clip, t, width, height), luts }) : undefined;
   const view = masks && matrixOf(ctx.getTransform());
   const cut = masks && ((layer: OffscreenCanvas) => applyMasks(layer, masks, view!));
   if (clip.adjustment) {
@@ -176,7 +185,7 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
   const draw = (clip: Clip) => {
     const keyed = keyedClip(clip, t);
     const moved = withMotion(project, keyed, t);
-    drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, keyed, t, moved));
+    drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, keyed, t, moved), project.luts);
   };
   for (const item of drawPlanAt(project, t)) {
     if (item.kind === 'clip') draw(item.clip);

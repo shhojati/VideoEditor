@@ -3,6 +3,7 @@ import { findClip } from '../../model/timeline';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { openRecorder } from '../record/recordService';
+import { useScopes } from './Scopes';
 import { jumpToEdit, stepFrames } from '../timeline/actions';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { stepZoom, usePreviewView, ZOOM_PRESETS, zoomTo, zoomToFit } from './previewView';
@@ -128,6 +129,7 @@ export function TransportBar({ fps }: { fps: number }) {
         />
       </label>
       <div className="ms-auto flex gap-1">
+        <ScopesButton />
         <ZoomControls />
         <span className="mx-1 w-px self-stretch bg-line" />
         <button className={iconBtn} disabled={!selection.length} onClick={() => setFit('contain')} title={t('transport.fitHint')}>
@@ -138,5 +140,15 @@ export function TransportBar({ fps }: { fps: number }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function ScopesButton() {
+  const { t } = useTranslation();
+  const open = useScopes((s) => s.open);
+  return (
+    <button className={`${iconBtn} ${open ? 'bg-accent/40' : ''}`} aria-pressed={open} onClick={() => useScopes.setState({ open: !open })} title={t('scopes.toggle')} data-testid="scopes-toggle">
+      📊
+    </button>
   );
 }

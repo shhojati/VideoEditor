@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { defaultParams, EFFECT_DEFS, moveEffect, type ParamSpec } from '../../model/effects';
-import type { Asset, Clip, Effect } from '../../model/types';
+import type { Asset, Clip, Effect, Project } from '../../model/types';
+import { useProject } from '../../store/projectStore';
+import { LutField, WheelField } from './ColorControls';
 import { useSubtitlesUi } from '../subtitles/subtitlesUi';
 import type { SetFn } from './ClipInspector';
 import { ColorField, NumberField, Section, SelectField } from './controls';
@@ -38,10 +40,10 @@ function EffectCard({ effect, first, last, set, clip, asset }: { effect: Effect;
   const [open, setOpen] = useState(true);
   const def = EFFECT_DEFS[effect.kind];
   const name = effect.kind === 'look' ? `${t('filters.label')}: ${t(`filters.names.${effect.params.preset}`)}` : t(`effects.names.${effect.kind}`);
-  const edit = (prop: string, fn: (e: Effect) => void) =>
-    set(`fx.${effect.id}.${prop}`, (c) => {
+  const edit = (prop: string, fn: (e: Effect, p: Project) => void) =>
+    set(`fx.${effect.id}.${prop}`, (c, p) => {
       const e = c.effects?.find((x) => x.id === effect.id);
-      if (e) fn(e);
+      if (e) fn(e, p);
     });
   const iconBtn = 'rounded px-1.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
   return (
@@ -100,12 +102,13 @@ function ParamField({
 }: {
   spec: ParamSpec;
   effect: Effect;
-  edit: (prop: string, fn: (e: Effect) => void) => void;
+  edit: (prop: string, fn: (e: Effect, p: Project) => void) => void;
   /** Colours can be picked from this clip's frame. */
   picker?: { clip: Clip; asset: Asset };
 }) {
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
+  const luts = useProject()?.luts;
   const label = t(`effects.params.${spec.key}`, { defaultValue: spec.key });
   const value = (key: string, fallback: unknown) => effect.params[key] ?? fallback;
   const setParam = (key: string, v: number | string | boolean) => edit(key, (e) => void (e.params[key] = v));
@@ -149,6 +152,34 @@ function ParamField({
           value={String(value(spec.key, spec.default))}
           options={spec.options.map((o) => ({ value: o, label: spec.key === 'preset' ? t(`filters.names.${o}`) : t(`effects.options.${o}`, { defaultValue: o }) }))}
           onChange={(v) => setParam(spec.key, v)}
+        />
+      );
+    case 'wheel':
+      return (
+        <WheelField
+          label={label}
+          x={Number(value(`${spec.key}X`, 0))}
+          y={Number(value(`${spec.key}Y`, 0))}
+          onChange={(x, y) =>
+            edit(spec.key, (e) => {
+              e.params[`${spec.key}X`] = x;
+              e.params[`${spec.key}Y`] = y;
+            })
+          }
+        />
+      );
+    case 'lut':
+      return (
+        <LutField
+          label={label}
+          value={String(value(spec.key, ''))}
+          luts={luts}
+          onChange={(id, add) =>
+            edit(spec.key, (e, p) => {
+              if (add) (p.luts ??= {})[add.id] = add.lut;
+              e.params[spec.key] = id;
+            })
+          }
         />
       );
     case 'point':

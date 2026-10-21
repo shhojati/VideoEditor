@@ -31,6 +31,16 @@ export interface Project {
   subtitleTracks: SubtitleTrack[];
   /** Timeline markers (M), ascending. */
   markers?: Marker[];
+  /** Colour lookup tables used by LUT effects: imported .cube files and built-ins (model/luts.ts). */
+  luts?: Record<ID, ProjectLut>;
+}
+
+export interface ProjectLut {
+  name: string;
+  /** Points per axis. */
+  size: number;
+  /** size³ RGB bytes (red fastest, then green, then blue), base64. */
+  data: string;
 }
 
 export interface Marker {
@@ -484,7 +494,9 @@ export type EffectKind =
   | 'blockDissolve'
   | 'gradientWipe'
   /** A Filters-pane preset (a colour/texture look with an intensity). */
-  | 'look';
+  | 'look'
+  | 'lut3d'
+  | 'colorWheels';
 
 /** Parameter values by key; points are stored as `<key>X` / `<key>Y` fractions of the frame. */
 export type EffectParams = Record<string, number | string | boolean>;

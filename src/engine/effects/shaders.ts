@@ -167,6 +167,28 @@ export const LUT = color(
   rgb = mix(rgb, m, u_mask);`,
 );
 
+/** 3D LUT, packed as blue slices side by side; trilinear = bilinear in two slices, then mixed. */
+export const LUT3D = color(
+  `uniform sampler2D u_lut3; uniform float u_size, u_mix;`,
+  `float n = u_size; vec3 q = clamp(rgb, 0.0, 1.0) * (n - 1.0);
+  float b0 = floor(q.b), b1 = min(b0 + 1.0, n - 1.0);
+  vec2 p0 = vec2((q.r + b0 * n + 0.5) / (n * n), (q.g + 0.5) / n);
+  vec2 p1 = vec2((q.r + b1 * n + 0.5) / (n * n), (q.g + 0.5) / n);
+  vec3 m = mix(texture(u_lut3, p0).rgb, texture(u_lut3, p1).rgb, q.b - b0);
+  rgb = mix(rgb, m, u_mix);`,
+);
+
+/** Lift / gamma / gain (colour offsets per channel), white balance and saturation. */
+export const WHEELS = color(
+  `uniform vec3 u_lift, u_gamma, u_gain; uniform float u_temp, u_tint, u_sat;`,
+  `rgb = clamp(rgb, 0.0, 1.0);
+  rgb *= 1.0 + u_gain;
+  rgb += u_lift * (1.0 - rgb);
+  rgb = pow(max(rgb, 0.0), 1.0 / max(1.0 + u_gamma, vec3(0.05)));
+  rgb *= vec3(1.0 + 0.25 * u_temp + 0.1 * u_tint, 1.0 - 0.2 * u_tint, 1.0 - 0.25 * u_temp + 0.1 * u_tint);
+  rgb = mix(vec3(luma(rgb)), rgb, u_sat);`,
+);
+
 export const HUE_SAT = color(
   `uniform float u_hue, u_saturation, u_lightness, u_colorize, u_colorizeHue, u_colorizeSaturation;`,
   `vec3 h = rgb2hsl(clamp(rgb, 0.0, 1.0));

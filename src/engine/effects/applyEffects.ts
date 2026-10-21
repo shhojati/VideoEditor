@@ -2,7 +2,8 @@
 // clip as drawn), on the GPU, and writes the result back into the layer.
 import { EFFECT_DEFS, param, transitionCompletion } from '../../model/effects';
 import { lookOf } from '../../model/looks';
-import type { Effect } from '../../model/types';
+import { lutTexture } from '../../model/luts';
+import type { Effect, ProjectLut } from '../../model/types';
 import { Gl, type Target, type Uniform } from './gl';
 import { columnMajor, curveLut, homography, invert2, levelsLut, particlesAt, transformMatrix } from './math';
 import * as S from './shaders';
@@ -22,6 +23,8 @@ export interface FxEnv {
   frame: { x: number; y: number; w: number; h: number };
   /** What is under the clip (Displacement Map's "layer below"). */
   below?: CanvasImageSource;
+  /** The project's LUTs (Apply LUT). */
+  luts?: Record<string, ProjectLut>;
 }
 
 export const isLive = (e: Effect) => e.enabled && !EFFECT_DEFS[e.kind].later;
@@ -45,6 +48,18 @@ const rgbOf = (hex: string): [number, number, number] => {
 };
 /** Direction for an angle in degrees clockwise from up, in y-up pixel space. */
 const dirOf = (deg: number): [number, number] => [Math.sin((deg * Math.PI) / 180), Math.cos((deg * Math.PI) / 180)];
+/**
+ * A colour wheel's RGB offset: the wheel point's hue, pushed away from grey by its distance from the
+ * centre, plus the luminance slider; scaled by `strength`.
+ */
+export function wheelOffset(x: number, y: number, lumaShift: number, strength: number): [number, number, number] {
+  const amount = Math.min(1, Math.hypot(x, y));
+  const hue = (((Math.atan2(y, x) / (2 * Math.PI)) % 1) + 1) % 1;
+  // Fully saturated colour of that hue, minus its own luma: a pure chroma direction.
+  const rgb = [0, 2 / 3, 1 / 3].map((o) => Math.max(0, Math.min(1, Math.abs(((hue + o) % 1) * 6 - 3) - 1)));
+  const l = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+  return rgb.map((v) => ((v - l) * amount + lumaShift) * strength) as [number, number, number];
+}
 const CHANNEL: Record<string, [number, number, number]> = { red: [1, 0, 0], green: [0, 1, 0], blue: [0, 0, 1], luminance: [0.299, 0.587, 0.114], rgb: [1, 1, 1] };
 
 // ---- frame history (Echo, Posterize Time) --------------------------------------------------------
@@ -280,6 +295,26 @@ export function applyEffects(layer: OffscreenCanvas, effects: readonly Effect[],
         const view = { final: 0, matte: 1, status: 2 }[s('view')] ?? 0;
         step(run(S.KEY_COMPOSITE, cur.tex, { u_dominant: [dom === 0 ? 1 : 0, dom === 1 ? 1 : 0, dom === 2 ? 1 : 0], u_spill: n('spill') / 100, u_view: view }, { u_map: matte.tex }));
         g.release(matte);
+        break;
+      }
+      case 'lut3d': {
+        const lut = env.luts?.[s('lut')];
+        if (!lut) break;
+        step(run(S.LUT3D, cur.tex, { u_size: lut.size, u_mix: n('intensity') / 100 }, { u_lut3: g.uploadLut3d(lutTexture(lut), lut.size, 4) }));
+        break;
+      }
+      case 'colorWheels': {
+        const w = (key: string, strength: number) => wheelOffset(n(`${key}X`), n(`${key}Y`), n(`${key}Luma`) / 100, strength);
+        step(
+          run(S.WHEELS, cur.tex, {
+            u_lift: w('lift', 0.25),
+            u_gamma: w('gamma', 0.6),
+            u_gain: w('gain', 0.6),
+            u_temp: n('temperature') / 100,
+            u_tint: n('tint') / 100,
+            u_sat: n('saturation') / 100,
+          }),
+        );
         break;
       }
       case 'colorRange': {

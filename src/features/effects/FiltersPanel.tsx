@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { applyEffects } from '../../engine/effects/applyEffects';
 import { createEffect } from '../../model/effects';
 import { LOOK_MENU, type LookId } from '../../model/looks';
+import { BUILTIN_LUT_IDS, builtinLut, type BuiltinLutId } from '../../model/luts';
 import { findClip } from '../../model/timeline';
 import { useProject } from '../../store/projectStore';
 import { useTimelineUi } from '../timeline/timelineUi';
@@ -55,21 +56,24 @@ function sampleImage(): OffscreenCanvas {
   return c;
 }
 
-/** One data URL per preset, rendered with the real look shader. */
-function renderThumbs(ids: readonly LookId[]): Record<string, string> {
+/** One data URL per preset (looks, and built-in LUTs as `lut:<id>`), rendered with the real shaders. */
+function renderThumbs(ids: readonly LookId[], lutIds: readonly BuiltinLutId[] = []): Record<string, string> {
   const base = sampleImage();
   const out: Record<string, string> = {};
   const work = new OffscreenCanvas(THUMB_W, THUMB_H);
   const plain = document.createElement('canvas');
   plain.width = THUMB_W;
   plain.height = THUMB_H;
-  for (const id of ids) {
+  const items = [...ids.map((id) => ({ key: id, effect: createEffect('look', { preset: id }) })), ...lutIds.map((id) => ({ key: `lut:${id}`, effect: createEffect('lut3d', { lut: id }) }))];
+  const luts = Object.fromEntries(lutIds.map((id) => [id, builtinLut(id)]));
+  for (const { key, effect } of items) {
     const ctx = work.getContext('2d')!;
     ctx.globalCompositeOperation = 'copy';
     ctx.drawImage(base, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
-    const ok = applyEffects(work, [createEffect('look', { preset: id })], {
-      key: `thumb:${id}`,
+    const ok = applyEffects(work, [effect], {
+      luts,
+      key: `thumb:${key}`,
       time: 0.5,
       local: 0.5,
       duration: 1,
@@ -81,7 +85,7 @@ function renderThumbs(ids: readonly LookId[]): Record<string, string> {
     const p = plain.getContext('2d')!;
     p.clearRect(0, 0, THUMB_W, THUMB_H);
     p.drawImage(work, 0, 0);
-    out[id] = plain.toDataURL('image/jpeg', 0.8);
+    out[key] = plain.toDataURL('image/jpeg', 0.8);
   }
   return out;
 }
@@ -97,7 +101,7 @@ export function FiltersPanel() {
   const ids = useMemo(() => [...new Set(LOOK_MENU.flatMap((g) => g.ids))], []);
   useEffect(() => {
     // After paint, so the tab shows at once.
-    const id = requestAnimationFrame(() => setThumbs(renderThumbs(ids)));
+    const id = requestAnimationFrame(() => setThumbs(renderThumbs(ids, BUILTIN_LUT_IDS)));
     return () => cancelAnimationFrame(id);
   }, [ids, version]);
 
@@ -144,6 +148,32 @@ export function FiltersPanel() {
             </div>
           </section>
         ))}
+        <section className="mb-3" data-testid="lut-pack">
+          <h3 className="mb-1.5 text-[11px] font-medium tracking-wide text-neutral-400 uppercase">{t('luts.title')}</h3>
+          <div className="grid grid-cols-3 gap-1.5">
+            {BUILTIN_LUT_IDS.map((id) => (
+              <button
+                key={id}
+                draggable
+                data-testid="lut-item"
+                data-lut={id}
+                className="flex flex-col overflow-hidden rounded bg-surface-2 text-start hover:ring-1 hover:ring-accent"
+                title={t('effects.itemHint')}
+                onClick={() => applyFx({ type: 'lut', id })}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'copy';
+                  e.dataTransfer.setData('text/plain', id);
+                  fxDrag.item = { type: 'lut', id };
+                }}
+                onDragEnd={() => (fxDrag.item = null)}
+              >
+                <div className="aspect-[3/2] w-full bg-surface-3">{thumbs[`lut:${id}`] && <img src={thumbs[`lut:${id}`]} alt="" draggable={false} className="h-full w-full object-cover" />}</div>
+                <span className="truncate px-1 py-0.5 text-[10px] text-neutral-300">{t(`luts.names.${id}`)}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-neutral-400">{t('luts.hint')}</p>
+        </section>
       </div>
     </div>
   );

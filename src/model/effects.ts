@@ -23,7 +23,11 @@ export type ParamSpec =
   | { key: string; type: 'bool'; default: boolean }
   | { key: string; type: 'select'; default: string; options: readonly string[] }
   /** A point in the frame, as fractions (0..1) from the top-left; stored as `${key}X` / `${key}Y`. */
-  | { key: string; type: 'point'; default: readonly [number, number] };
+  | { key: string; type: 'point'; default: readonly [number, number] }
+  /** A colour wheel: an offset in the unit disc (direction = hue, distance = amount); stored like a point. */
+  | { key: string; type: 'wheel'; default: readonly [number, number] }
+  /** One of the project's LUTs (Project.luts key). */
+  | { key: string; type: 'lut'; default: string };
 
 export interface EffectDef {
   kind: EffectKind;
@@ -38,6 +42,7 @@ const num = (key: string, d: number, min: number, max: number, step?: number, un
 const color = (key: string, d: string): ParamSpec => ({ key, type: 'color', default: d });
 const bool = (key: string, d: boolean): ParamSpec => ({ key, type: 'bool', default: d });
 const select = (key: string, d: string, options: readonly string[]): ParamSpec => ({ key, type: 'select', default: d, options });
+const wheel = (key: string): ParamSpec => ({ key, type: 'wheel', default: [0, 0] });
 const point = (key: string, x: number, y: number): ParamSpec => ({ key, type: 'point', default: [x, y] });
 
 const DIMENSIONS = ['both', 'horizontal', 'vertical'] as const;
@@ -136,6 +141,22 @@ const defs: EffectDef[] = [
   { kind: 'gradientWipe', name: 'Gradient Wipe', params: [num('completion', 50, 0, 100, 1, '%'), num('softness', 10, 0, 100, 1, '%'), select('gradient', 'luminance', ['luminance', 'horizontal', 'vertical', 'radial', 'noise']), bool('invert', false), ...ANIMATE] },
   // Filters pane presets (not listed in the Effects pane).
   { kind: 'look', name: 'Filter', params: [select('preset', 'cinematic', LOOK_IDS), num('intensity', 100, 0, 100, 1, '%')] },
+  { kind: 'lut3d', name: 'Apply LUT', params: [{ key: 'lut', type: 'lut', default: '' }, num('intensity', 100, 0, 100, 1, '%')] },
+  {
+    kind: 'colorWheels',
+    name: 'Color Wheels',
+    params: [
+      wheel('lift'),
+      num('liftLuma', 0, -100, 100, 1, '%'),
+      wheel('gamma'),
+      num('gammaLuma', 0, -100, 100, 1, '%'),
+      wheel('gain'),
+      num('gainLuma', 0, -100, 100, 1, '%'),
+      num('temperature', 0, -100, 100, 1),
+      num('tint', 0, -100, 100, 1),
+      num('saturation', 100, 0, 200, 1, '%'),
+    ],
+  },
 ];
 
 export const EFFECT_DEFS: Record<EffectKind, EffectDef> = Object.fromEntries(defs.map((d) => [d.kind, d])) as Record<EffectKind, EffectDef>;
@@ -143,7 +164,7 @@ export const EFFECT_DEFS: Record<EffectKind, EffectDef> = Object.fromEntries(def
 /** The Effects pane, in After Effects' menu order. Drop Shadow is listed under Stylize and Perspective. */
 export const EFFECT_MENU: readonly { category: EffectCategory; kinds: readonly EffectKind[] }[] = [
   { category: 'blurSharpen', kinds: ['gaussianBlur', 'fastBoxBlur', 'cameraLensBlur', 'directionalBlur', 'sharpen', 'unsharpMask'] },
-  { category: 'colorCorrection', kinds: ['lumetri', 'curves', 'levels', 'hueSaturation', 'tint', 'tritone', 'brightnessContrast'] },
+  { category: 'colorCorrection', kinds: ['lumetri', 'colorWheels', 'lut3d', 'curves', 'levels', 'hueSaturation', 'tint', 'tritone', 'brightnessContrast'] },
   { category: 'distort', kinds: ['transform', 'warpStabilizer', 'turbulentDisplace', 'displacementMap', 'opticsCompensation', 'powerPin'] },
   { category: 'generate', kinds: ['fill', 'gradientRamp', 'fourColorGradient', 'grid', 'lensFlare', 'stroke'] },
   { category: 'stylize', kinds: ['glow', 'dropShadow', 'motionTile', 'roughenEdges', 'findEdges', 'mosaic', 'posterize'] },
@@ -160,7 +181,7 @@ export const EFFECT_KINDS = defs.map((d) => d.kind) as [EffectKind, ...EffectKin
 export function defaultParams(kind: EffectKind): EffectParams {
   const out: EffectParams = {};
   for (const p of EFFECT_DEFS[kind].params) {
-    if (p.type === 'point') {
+    if (p.type === 'point' || p.type === 'wheel') {
       out[`${p.key}X`] = p.default[0];
       out[`${p.key}Y`] = p.default[1];
     } else out[p.key] = p.default;

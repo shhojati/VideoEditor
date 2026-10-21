@@ -775,7 +775,9 @@
       "blockDissolve": "Block Dissolve",
       "gradientWipe": "Gradient Wipe",
       "look": "Filter",
-      "mosaic": "Mosaic"
+      "mosaic": "Mosaic",
+      "lut3d": "Apply LUT",
+      "colorWheels": "Color Wheels"
     },
     "categories": {
       "blurSharpen": "Blur & Sharpen",
@@ -821,7 +823,7 @@
       "p100": "White (100 %)",
       "inBlack": "Input black",
       "inWhite": "Input white",
-      "gamma": "Gamma",
+      "gamma": "Midtones (gamma)",
       "outBlack": "Output black",
       "outWhite": "Output white",
       "hue": "Hue",
@@ -927,7 +929,13 @@
       "blockSize": "Block size",
       "sharpColors": "Sharp colours",
       "choke": "Choke (+ shrink, − grow)",
-      "view": "View"
+      "view": "View",
+      "lut": "LUT",
+      "lift": "Shadows (lift)",
+      "liftLuma": "Shadows brightness",
+      "gammaLuma": "Midtones brightness",
+      "gain": "Highlights (gain)",
+      "gainLuma": "Highlights brightness"
     },
     "options": {
       "both": "Horizontal and vertical",
@@ -1297,5 +1305,34 @@
       "missing": "The original media of this reversed clip was removed.",
       "failed": "Could not reverse this media."
     }
+  },
+  "luts": {
+    "title": "LUTs",
+    "none": "None",
+    "import": "Import .cube…",
+    "badFile": "Not a usable .cube file: {{reason}}",
+    "readFailed": "Could not read the file.",
+    "hint": "Built-in looks as colour lookup tables. Your own .cube files: add \"Apply LUT\" from Effects → Color Correction.",
+    "names": {
+      "tealOrange": "Teal & orange",
+      "goldenHour": "Golden hour",
+      "coolNight": "Cool night",
+      "bleachBypass": "Bleach bypass",
+      "fadedFilm": "Faded film",
+      "vintage": "Vintage",
+      "noir": "Noir",
+      "sepia": "Sepia",
+      "crossProcess": "Cross process",
+      "pastel": "Pastel",
+      "highContrast": "High contrast",
+      "moody": "Moody"
+    }
+  },
+  "scopes": {
+    "toggle": "Scopes: histogram, waveform, vectorscope",
+    "histogram": "Histogram",
+    "waveform": "Waveform",
+    "vectorscope": "Vectorscope",
+    "close": "Close scopes"
   }
 }

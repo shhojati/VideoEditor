@@ -239,6 +239,7 @@ export const projectSchema = z.object({
   assets: z.record(z.string(), asset),
   tracks: z.array(track),
   subtitleTracks: z.array(subtitleTrack),
+  luts: z.record(z.string(), z.object({ name: z.string(), size: num.int().min(2).max(65), data: z.string() })).optional(),
   markers: z.array(z.object({ id: z.string(), t: nonNeg, label: z.string().optional(), color: z.string().optional() })).optional(),
 });
 

@@ -113,6 +113,16 @@ export class Gl {
     return tex;
   }
 
+  /** A 3D LUT packed as size² × size RGBA texels (see model/luts.ts lutTexture), in its own slot. */
+  uploadLut3d(data: Uint8Array, size: number, slot: number): WebGLTexture {
+    const gl = this.gl;
+    let tex = this.inputs[slot];
+    if (!tex) tex = this.inputs[slot] = this.newTexture(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, size * size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    return tex;
+  }
+
   /** A 256×1 lookup table (RGBA bytes), in its own slot. */
   uploadLut(data: Uint8Array, slot: number): WebGLTexture {
     const gl = this.gl;

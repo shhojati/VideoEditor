@@ -425,3 +425,18 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - A line that mixes RTL and LTR words is laid out in logical order, so the highlighted word can be misplaced; single-direction lines are exact.
 - Explicit line breaks inside a cue are ignored by the animated styles (lines are re-balanced).
+
+## Post-MVP 10 — Voiceover and webcam recording ✅ (2026-10-21)
+
+### Done
+- **Record** (🎙 in the transport bar, `features/record/`): microphone choice, live level meter, optional **camera** with a preview, "mute the timeline while recording", 3-2-1 countdown, elapsed time, Stop. The preview plays from the playhead while recording so the take lines up with the picture (an empty timeline just records).
+- On Stop the take (`MediaRecorder`, WebM with Opus, VP9 with a camera) is imported like any file (`importFileAs`) as "Voiceover N" / "Camera N" and placed on a **new** track at the time recording started, so it never covers existing clips. The start is the latency-compensated playhead minus the mic's input latency.
+- The meter's AudioContext is created in the click that opens the recorder (created after the permission prompt, Chrome may keep it suspended). Errors: access blocked, no device, unsupported browser.
+
+### Verified
+- **E2E `e2e/record.spec.ts`** (Chrome fake mic and camera, set in `playwright.config.ts`): the meter reacts to the fake beep; a 2 s voiceover becomes an audio asset and a ~2 s clip at 0 s; with the camera on and the playhead at 1 s, the take is a video asset on a new video track starting at ~1 s. Passes 3/3 repeated.
+- In the browser without a mic: the dialog says no device was found and Record is disabled; Persian at phone width lays out correctly.
+
+### Known issues / not done
+- Import and placement are two undo steps (as for library items).
+- No punch-in over an existing take, and no pause/resume within one take.

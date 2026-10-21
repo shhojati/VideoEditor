@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { findClip } from '../../model/timeline';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
+import { openRecorder } from '../record/recordService';
 import { jumpToEdit, stepFrames } from '../timeline/actions';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { stepZoom, usePreviewView, ZOOM_PRESETS, zoomTo, zoomToFit } from './previewView';
@@ -108,6 +109,9 @@ export function TransportBar({ fps }: { fps: number }) {
         title={t('transport.loop')}
       >
         🔁
+      </button>
+      <button className={`${iconBtn} text-red-400`} onClick={openRecorder} title={t('record.open')} aria-label={t('record.open')} data-testid="record-open">
+        🎙
       </button>
       {/* Phones use the hardware volume keys. */}
       <label className="flex items-center gap-1 max-md:hidden" title={t('transport.volume')}>

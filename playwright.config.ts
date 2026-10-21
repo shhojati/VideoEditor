@@ -22,6 +22,9 @@ export default defineConfig({
     storageState: STORAGE_STATE,
     viewport: { width: 1400, height: 900 },
     trace: 'retain-on-failure',
+    // Recording tests: a fake mic (beep) and camera (test pattern), allowed without a prompt.
+    permissions: ['microphone', 'camera'],
+    launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
   },
   webServer: [
     apiServer(API_PORT),

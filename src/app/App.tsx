@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { playbackEngine } from '../engine/playback/engine';
 import { ExportDialog } from '../features/export/ExportDialog';
+import { RecordDialog } from '../features/record/RecordDialog';
 import { Inspector } from '../features/inspector/Inspector';
 import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
@@ -72,6 +73,9 @@ function Editor() {
           <ErrorBoundary area={t('export.title')}>
             <ExportDialog project={project} />
           </ErrorBoundary>
+          <ErrorBoundary area={t('record.title')}>
+            <RecordDialog />
+          </ErrorBoundary>
           <Onboarding project={project} />
         </>
       )}
@@ -96,6 +100,9 @@ function Editor() {
           </main>
           <ErrorBoundary area={t('export.title')}>
             <ExportDialog project={project} />
+          </ErrorBoundary>
+          <ErrorBoundary area={t('record.title')}>
+            <RecordDialog />
           </ErrorBoundary>
           <TimelineSplitter kind="desktop" target={timelineRef} />
           <div ref={timelineRef} className="flex min-h-[120px] shrink-0 flex-col" style={{ height: `${timelineShare * 100}%` }}>

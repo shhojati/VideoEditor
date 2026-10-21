@@ -1203,5 +1203,25 @@
     "expired": "Expired {{date}}",
     "open": "Open editor",
     "refresh": "Refresh"
+  },
+  "record": {
+    "open": "Record voiceover or camera",
+    "title": "Record",
+    "mic": "Microphone",
+    "level": "Level",
+    "defaultDevice": "Default",
+    "camera": "Camera",
+    "cameraDevice": "Camera device",
+    "muteTimeline": "Mute the timeline while recording",
+    "hint": "The preview plays from the playhead while you record, and the take is placed there on a new track.",
+    "start": "Record",
+    "stop": "Stop",
+    "close": "Close",
+    "saving": "Saving the take…",
+    "errors": {
+      "denied": "Microphone or camera access was blocked. Allow it in the browser address bar and try again.",
+      "noDevice": "No microphone or camera was found.",
+      "failed": "Recording is not available in this browser."
+    }
   }
 }

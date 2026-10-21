@@ -13,7 +13,7 @@ docker compose --profile tools run --rm fetch-models   # once: downloads ~1.1 GB
 docker compose up -d
 ```
 
-The models are the `whisper-<size>_timestamped` exports, which also give word timings for animated captions. A server that still has only the older `whisper-<size>` folders keeps working, but with segment timings only. To upgrade, run the `fetch-models` command again: the deploy job keeps `fetch-models.mjs` up to date on the server, and the command downloads only the new folders. The old ones can then be deleted.
+The same command also downloads the person detector for auto reframe (`Xenova/yolos-tiny`, ~10 MB, Apache-2.0). The Whisper models are the `whisper-<size>_timestamped` exports, which also give word timings for animated captions. A server that still has only the older `whisper-<size>` folders keeps working, but with segment timings only. To upgrade, run the `fetch-models` command again: the deploy job keeps `fetch-models.mjs` up to date on the server, and the command downloads only the new folders. The old ones can then be deleted.
 
 Add a site to the host's Caddy (`/etc/caddy/Caddyfile`) and reload it with `sudo systemctl reload caddy`; Caddy gets the certificate itself:
 

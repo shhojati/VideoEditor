@@ -108,7 +108,7 @@ export function clipsWithTracker(project: Project, trackerId: string): { clip: C
  * carrying clip on screen at t (after a split), then the linked clip.
  */
 export function resolveTracker(project: Project, clip: Clip, link: MotionLink, t: number): { clip: Clip; tracker: Tracker } | undefined {
-  if (link.mode === 'stabilize') {
+  if (link.mode === 'stabilize' || link.mode === 'reframe') {
     const tracker = clip.trackers?.find((x) => x.id === link.trackerId);
     return tracker && { clip, tracker };
   }
@@ -139,6 +139,21 @@ function motionDelta(project: Project, clip: Clip, t: number, depth: number): De
   const src = resolveTracker(project, clip, link, t);
   if (!src) return undefined;
   const { width: W, height: H } = project.settings;
+  if (link.mode === 'reframe') {
+    const size = sourceSize(project, clip);
+    const now = sampleAt(src.tracker, srcTime(clip, t));
+    if (!size || !now) return undefined;
+    // Slide the picture so the subject is in the middle of the frame, but never past its edges.
+    const centred = { ...keyedTransform(clip, t), x: 0, y: 0 };
+    const subject = mediaMap(size.sw, size.sh, W, H, centred).toCanvas(now[1] * size.sw, now[2] * size.sh);
+    const { frame } = placeMedia(size.sw, size.sh, W, H, centred);
+    const room = { x: Math.max(0, (frame.w - W) / 2), y: Math.max(0, (frame.h - H) / 2) };
+    const off = {
+      x: Math.min(room.x, Math.max(-room.x, W / 2 - subject.x)),
+      y: Math.min(room.y, Math.max(-room.y, H / 2 - subject.y)),
+    };
+    return { da: 0, k: 1, move: (p) => ({ x: p.x + off.x, y: p.y + off.y }), unmove: (p) => ({ x: p.x - off.x, y: p.y - off.y }) };
+  }
   if (link.mode === 'stabilize') {
     const size = sourceSize(project, clip);
     const now = sampleAt(src.tracker, srcTime(clip, t));
@@ -207,7 +222,7 @@ export function baseFromDrawn(project: Project, clip: Clip, t: number, drawn: Tr
   const { width: W, height: H } = project.settings;
   const rotation = drawn.rotation - d.da / RAD;
   const scale = drawn.scale / d.k;
-  if (clip.motion?.mode === 'stabilize') {
+  if (clip.motion?.mode === 'stabilize' || clip.motion?.mode === 'reframe') {
     // The offset depends on the base rotation and scale but adds to the base position: measure it
     // with the new rotation/scale at position 0.
     const probe = { ...drawn, x: 0, y: 0, rotation, scale };
@@ -274,6 +289,8 @@ export function normalizeMotion(project: Project) {
       const link = clip.motion;
       if (!link) continue;
       const own = !!clip.trackers?.some((x) => x.id === link.trackerId);
-      if (link.mode === 'stabilize' ? !own : !ids.has(link.trackerId) || (own && clipsWithTracker(project, link.trackerId).length === 1)) delete clip.motion;
+      // Stabilize and reframe use the clip's own tracker; follow needs one on another clip.
+      const self = link.mode === 'stabilize' || link.mode === 'reframe';
+      if (self ? !own : !ids.has(link.trackerId) || (own && clipsWithTracker(project, link.trackerId).length === 1)) delete clip.motion;
     }
 }

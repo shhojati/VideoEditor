@@ -104,7 +104,8 @@
     "marker": "Marker",
     "cutToBeat": "Cut to beat",
     "reverse": "Reverse",
-    "freeze": "Freeze frame"
+    "freeze": "Freeze frame",
+    "reframe": "Auto reframe"
   },
   "panels": {
     "media": "Media",
@@ -1070,7 +1071,9 @@
     "scale": "Scale",
     "detach": "Detach",
     "stabilizeHint": "Edges may show: raise the scale to hide them.",
-    "followHint": "Position, scale and rotation in Transform are relative to the object."
+    "followHint": "Position, scale and rotation in Transform are relative to the object.",
+    "reframed": "Auto reframed: the picture follows the person.",
+    "reframeHint": "Adjust the path with the tracker above, or move the clip on the canvas to offset it."
   },
   "masks": {
     "title": "Masks (roto)",
@@ -1192,6 +1195,10 @@
       "unauthorized": "Please log in again.",
       "network": "Could not reach the server. Check your connection and try again.",
       "bad_request": "Something went wrong. Please try again."
+    },
+    "aiOnly": {
+      "login": "Log in to use AI features.",
+      "upgrade": "AI features (auto reframe, text-based editing, translation) are part of Pro."
     }
   },
   "exportGate": {
@@ -1334,5 +1341,18 @@
     "waveform": "Waveform",
     "vectorscope": "Vectorscope",
     "close": "Close scopes"
+  },
+  "reframe": {
+    "title": "Auto reframe",
+    "intro": "Finds the person in the clip and keeps them in the middle when the picture is cropped to fill the frame (e.g. a landscape video in a vertical project). Runs on this device.",
+    "clip": "Auto reframe this clip",
+    "again": "Reframe again",
+    "project": "Make the project vertical (9:16) and reframe all clips",
+    "left_one": "{{count}} clip left",
+    "left_other": "{{count}} clips left",
+    "errors": {
+      "missingModel": "The person detector is not installed. Put it in public/models with scripts/fetch-models.mjs.",
+      "failed": "Auto reframe failed on this clip."
+    }
   }
 }

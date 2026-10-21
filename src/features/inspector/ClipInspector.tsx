@@ -21,6 +21,7 @@ import { VoiceSection } from './VoiceSection';
 import { CleanupSection } from './CleanupSection';
 import { BeatsSection } from './BeatsSection';
 import { SpeedSection } from './SpeedSection';
+import { ReframeSection } from '../tracking/ReframeSection';
 import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 
 /**
@@ -139,6 +140,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
 
       {visual && <MasksSection project={project} clip={clip} />}
       {visual && <MotionSection project={project} clip={clip} />}
+      {asset?.kind === 'video' && <ReframeSection project={project} clip={clip} />}
       {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
       {visual && <BlendSection clip={clip} set={set} />}
       {visual && <EffectsSection clip={shown} asset={asset} set={set} />}

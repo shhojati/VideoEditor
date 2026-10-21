@@ -433,8 +433,11 @@ export interface MotionLink {
   /** A tracker on a video clip (see resolveTracker in model/motion.ts for which clip is used). */
   clipId: ID;
   trackerId: ID;
-  /** 'follow': this clip moves with the object; 'stabilize': the tracked clip moves against it. */
-  mode: 'follow' | 'stabilize';
+  /**
+   * 'follow': this clip moves with the object; 'stabilize': the tracked clip moves against it;
+   * 'reframe': the clip (filling the frame) slides so the subject stays centred (auto reframe).
+   */
+  mode: 'follow' | 'stabilize' | 'reframe';
   position: boolean;
   rotation: boolean;
   scale: boolean;

@@ -1,8 +1,9 @@
-// Downloads Whisper ONNX models into public/models/ so speech-to-text runs fully offline.
-// Run ONCE on a machine with internet access, then copy public/models/ to the target machine.
+// Downloads the ONNX models into public/models/ so speech-to-text and auto reframe run fully
+// offline. Run ONCE on a machine with internet access, then copy public/models/ to the target machine.
 //
-//   node scripts/fetch-models.mjs                 # tiny + base + small
-//   node scripts/fetch-models.mjs base            # just one
+//   node scripts/fetch-models.mjs                 # Whisper tiny + base + small, and the person detector
+//   node scripts/fetch-models.mjs base            # just one Whisper size
+//   node scripts/fetch-models.mjs detect          # just the person detector (auto reframe)
 //   HF_ENDPOINT=https://my-mirror node scripts/fetch-models.mjs   # use a mirror
 import { mkdirSync, existsSync, statSync, createWriteStream } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -11,7 +12,10 @@ import { pipeline } from 'node:stream/promises';
 
 const endpoint = process.env.HF_ENDPOINT ?? 'https://huggingface.co';
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const sizes = process.argv.slice(2).length ? process.argv.slice(2) : ['tiny', 'base', 'small'];
+const args = process.argv.slice(2);
+const WHISPER_SIZES = ['tiny', 'base', 'small'];
+const sizes = args.length ? args.filter((a) => WHISPER_SIZES.includes(a)) : WHISPER_SIZES;
+const detector = !args.length || args.includes('detect');
 
 const META = [
   'config.json', 'generation_config.json', 'preprocessor_config.json', 'tokenizer.json',
@@ -21,10 +25,8 @@ const META = [
 // encoder fp32 + decoder q8 (WASM) and q4 (WebGPU). Must match DTYPES in src/engine/stt.
 const WEIGHTS = ['onnx/encoder_model.onnx', 'onnx/decoder_model_merged_quantized.onnx', 'onnx/decoder_model_merged_q4.onnx'];
 
-for (const size of sizes) {
-  // The "_timestamped" exports also output cross-attentions, which word-level timestamps need.
-  const repo = `onnx-community/whisper-${size}_timestamped`;
-  for (const file of [...META, ...WEIGHTS]) {
+async function fetchRepo(repo, files) {
+  for (const file of files) {
     const dest = join(root, 'public/models', repo, file);
     if (existsSync(dest) && statSync(dest).size > 0) { console.log('skip', repo, file); continue; }
     mkdirSync(dirname(dest), { recursive: true });
@@ -34,3 +36,10 @@ for (const size of sizes) {
     console.log('ok  ', repo, file, (statSync(dest).size / 1e6).toFixed(1) + 'MB');
   }
 }
+
+for (const size of sizes) {
+  // The "_timestamped" exports also output cross-attentions, which word-level timestamps need.
+  await fetchRepo(`onnx-community/whisper-${size}_timestamped`, [...META, ...WEIGHTS]);
+}
+// Person detector for auto reframe (YOLOS-tiny, Apache-2.0), quantized: ~10 MB.
+if (detector) await fetchRepo('Xenova/yolos-tiny', ['config.json', 'preprocessor_config.json', 'onnx/model_quantized.onnx']);

@@ -136,3 +136,50 @@ test('export needs an account; Free exports ≤ 60 s with a watermark; Pro remov
   await expect(page.getByTestId('account-button')).toContainText('PRO');
   expect(await exportFrameAndCountMarks(page)).toBe(0);
 });
+
+test('AI features need Pro: log in first, then the upgrade dialog', async ({ page }) => {
+  test.setTimeout(2 * 60_000);
+  await page.addInitScript(() => localStorage.setItem('onboarding-hidden', '1'));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'English' }).click();
+  const base64 = await page.evaluate(async () => {
+    const depPath = '/node_modules/.vite/deps/mediabunny.js';
+    const mb: typeof import('mediabunny') = await import(/* @vite-ignore */ depPath);
+    const canvas = new OffscreenCanvas(320, 180);
+    const ctx = canvas.getContext('2d')!;
+    const output = new mb.Output({ format: new mb.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new mb.BufferTarget() });
+    const video = new mb.CanvasSource(canvas, { codec: 'avc', bitrate: mb.QUALITY_LOW });
+    output.addVideoTrack(video, { frameRate: 30 });
+    await output.start();
+    for (let n = 0; n < 30; n++) {
+      ctx.fillStyle = '#336';
+      ctx.fillRect(0, 0, 320, 180);
+      await video.add(n / 30, 1 / 30);
+    }
+    await output.finalize();
+    const bytes = new Uint8Array(output.target.buffer!);
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  });
+  await page.getByTestId('media-input').setInputFiles({ name: 'clip.mp4', mimeType: 'video/mp4', buffer: Buffer.from(base64, 'base64') });
+  await expect(page.locator('[data-testid=asset-card][data-status=ready]')).toBeVisible({ timeout: 60_000 });
+  await page.getByTestId('asset-add').click();
+  await page.locator('[data-testid=clip]').first().click({ position: { x: 10, y: 10 } });
+
+  // Logged out: asks to log in.
+  await page.getByTestId('reframe-clip').click();
+  await expect(page.getByText('Log in to use AI features.')).toBeVisible();
+  await expect(page.getByTestId('auth-dialog')).toBeVisible();
+  await page.getByTestId('auth-switch').click();
+  await page.getByTestId('auth-email').fill(`ai-${Date.now()}@example.com`);
+  await page.getByTestId('auth-password').fill('free-password');
+  await page.getByTestId('auth-submit').click();
+  await expect(page.getByTestId('auth-dialog')).toHaveCount(0);
+
+  // Free: the account dialog, to upgrade; nothing runs.
+  await page.getByTestId('reframe-clip').click();
+  await expect(page.getByText(/AI features .* are part of Pro/)).toBeVisible();
+  await expect(page.getByTestId('account-dialog').getByTestId('account-plan')).toHaveAttribute('data-plan', 'free');
+  await expect(page.getByTestId('reframe-progress')).toHaveCount(0);
+});

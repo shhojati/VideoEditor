@@ -130,7 +130,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
         <span
           data-testid="motion-badge"
           className="pointer-events-none absolute end-1 top-0.5 rounded bg-amber-400/90 px-1 text-[10px] font-semibold text-black"
-          title={clip.motion ? t(clip.motion.mode === 'stabilize' ? 'tracking.stabilize' : 'tracking.follow') : t('tracking.title')}
+          title={clip.motion ? t({ stabilize: 'tracking.stabilize', follow: 'tracking.follow', reframe: 'reframe.title' }[clip.motion.mode]) : t('tracking.title')}
         >
           ⌖
         </span>

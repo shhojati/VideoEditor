@@ -542,3 +542,22 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Tables are 8-bit and at most 33³ (fine for looks; not for log-to-Rec.709 technical transforms needing more precision).
 - Scopes read the preview canvas, so they show the preview resolution and zoom crop.
+
+## Post-MVP 17 — Auto reframe (AI person detection, Pro) ✅ (2026-10-21)
+
+### Done
+- **Auto reframe** (inspector → Auto reframe, video clips): finds the main person through the clip and keeps them in the middle when the picture is cropped to fill the frame, e.g. a landscape video in a vertical project. **"Make the project vertical (9:16) and reframe all clips"** switches the aspect and does every video clip in turn (with a count of clips left, and cancel).
+- **Detection** (`workers/detect.worker.ts`): **YOLOS-tiny** (Apache-2.0, ~10 MB, quantized) through transformers.js, served from our own `/models/` like Whisper (`scripts/fetch-models.mjs` downloads it; the server's `fetch-models` command too). Frames are decoded in the worker with the short side at 320 px, 4 per second (at most 120 per clip; ~0.4 s each on WASM, which was 3× faster than WebGPU for this quantized model). The main person is the most confident × largest box; the framing point is its upper body (heads get room).
+  - MediaPipe's face/person models were the first choice, but their download host is not reachable from here; the YOLOS model comes from Hugging Face, like the other models. Faces are not detected separately: close-ups are framed by the person box.
+- **Calm camera** (`model/reframe.ts`): gaps hold the last position (centre if nobody is ever found), a 1 s average, then a lazy follow (no movement inside a 6 % dead zone, at most half a frame per second), then a short symmetric average to ease starts and stops.
+- **Stored as tracking data**: the path is a tracker on the clip, and the clip gets a new motion link mode **`reframe`** (`engine/render/motion.ts`): with fit = cover, the picture slides so the subject is centred, clamped so it always fills the frame; the user's own position offset still applies. Trims, splits and speed changes keep working because samples are in source time. Running it again replaces the previous path.
+- **Pro only** (`features/account/policy.ts` `aiAccess`, `aiGate.ts`): logged out → the login dialog; Free → the account dialog to upgrade (with a message); the panel stays visible to everyone.
+
+### Verified
+- Unit tests: dead zone ignores jitter; a jump is followed below the speed limit and settles; gaps hold, nobody → centre; the reframe link centres the subject and stops at the picture's edge; `aiAccess` for logged out / Free / Pro.
+- **E2E `e2e/account.spec.ts`**: logged out, Auto reframe opens login with "Log in to use AI features"; after registering Free it opens the account dialog (plan Free) and nothing runs.
+- **Opt-in E2E `e2e/reframe.spec.ts`** (`REFRAME_E2E=1`, needs the model and a portrait photo at `D:/repos/.tmp/reframe-person.jpg`, not committed): a photo of a woman slides left to right through a landscape clip; "reframe all" makes the project 1080×1920, the clip cover-fitted and linked, and the camera path runs 0.21 → 0.72 across the frame. 13.7 s for a 4 s clip.
+
+### Known issues / not done
+- Detection speed depends on the device (~0.4 s per frame on WASM here): a minute of footage takes under a minute.
+- With several people, the biggest/most confident one is followed; there is no "pick this person".

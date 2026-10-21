@@ -176,14 +176,14 @@ export function MotionSection({ project, clip }: { project: Project; clip: Clip 
         {link ? (
           <>
             <p className="text-xs text-neutral-200">
-              {t(link.mode === 'stabilize' ? 'tracking.stabilized' : 'tracking.follows', { name: source?.tracker.name ?? '?' })}
+              {t({ stabilize: 'tracking.stabilized', follow: 'tracking.follows', reframe: 'tracking.reframed' }[link.mode], { name: source?.tracker.name ?? '?' })}
               {source && link.mode === 'follow' && (
                 <button className="ms-1 text-accent underline" onClick={() => select([source.clip.id])}>
                   {clipName(project, source.clip, t)}
                 </button>
               )}
             </p>
-            <div className="flex flex-wrap gap-3 text-xs">
+            <div className={`flex flex-wrap gap-3 text-xs ${link.mode === 'reframe' ? 'hidden' : ''}`}>
               {parts.map((k) => (
                 <label key={k} className="flex items-center gap-1">
                   <input type="checkbox" data-testid={`motion-${k}`} checked={link[k]} onChange={(e) => setLink(clip.id, { [k]: e.target.checked })} />
@@ -191,7 +191,7 @@ export function MotionSection({ project, clip }: { project: Project; clip: Clip 
                 </label>
               ))}
             </div>
-            <p className="text-[11px] text-neutral-400">{t(link.mode === 'stabilize' ? 'tracking.stabilizeHint' : 'tracking.followHint')}</p>
+            <p className="text-[11px] text-neutral-400">{t({ stabilize: 'tracking.stabilizeHint', follow: 'tracking.followHint', reframe: 'tracking.reframeHint' }[link.mode])}</p>
             <button className={btn} data-testid="motion-detach" onClick={() => detach(clip.id)}>
               {t('tracking.detach')}
             </button>

@@ -136,7 +136,7 @@ const clip = z.object({
     .object({
       clipId: z.string(),
       trackerId: z.string(),
-      mode: z.enum(['follow', 'stabilize']),
+      mode: z.enum(['follow', 'stabilize', 'reframe']),
       position: z.boolean(),
       rotation: z.boolean(),
       scale: z.boolean(),

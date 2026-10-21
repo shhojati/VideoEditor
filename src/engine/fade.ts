@@ -2,6 +2,7 @@ import { volumeAt, volumeRamp } from '../model/keyframes';
 import { DUCK_DEFAULTS, duckGainAt, duckRamps, type Interval } from './audio/ducking';
 import { transitionsOfClip } from '../model/transitions';
 import type { Clip, Track, Transition } from '../model/types';
+import { handles } from '../model/remap';
 
 /** Linear fade multiplier (0..1) at timeline time `t` for a clip with fade-in/out lengths in seconds. */
 export function fadeAlpha(clip: Pick<Clip, 'start' | 'duration'>, fadeIn: number, fadeOut: number, t: number) {
@@ -38,9 +39,8 @@ export function audioCrossfadeWindow(track: Track, tr: Transition, mediaDuration
   const from = track.clips.find((c) => c.id === tr.fromClipId)!;
   const to = track.clips.find((c) => c.id === tr.toClipId)!;
   const cut = from.start + from.duration;
-  const fromMedia = mediaDuration(from);
-  const afterFrom = fromMedia === undefined ? Infinity : (fromMedia - (from.inPoint + from.duration * from.speed)) / from.speed;
-  const beforeTo = to.inPoint / to.speed;
+  const afterFrom = handles(from, mediaDuration(from)).after;
+  const beforeTo = handles(to, mediaDuration(to)).before;
   const half = tr.duration / 2;
   return [cut - Math.max(0, Math.min(half, beforeTo)), cut + Math.max(0, Math.min(half, afterFrom))];
 }

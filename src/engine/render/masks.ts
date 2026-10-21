@@ -8,6 +8,7 @@ import type { Clip, MaskMode, MaskVertex, Project, RotoMask, Tracker, Transform 
 import { isOverlay } from '../../model/overlays';
 import { sampleAt, type Pt } from './motion';
 import { placeMedia } from './placement';
+import { keyTimeAt } from '../../model/remap';
 
 /** [a, b, c, d, e, f]: (x, y) → (a·x + c·y + e, b·x + d·y + f), as in DOMMatrix. */
 export type Affine = [number, number, number, number, number, number];
@@ -144,7 +145,7 @@ export function resolveMasks(project: Project, clip: Clip, t: number, drawn: Cli
   if (!live?.length) return undefined;
   const layer = layerAffine(project, drawn, drawn.transform);
   if (!layer) return undefined;
-  const s = clip.inPoint + (t - clip.start) * clip.speed;
+  const s = keyTimeAt(clip, t);
   const shapes = live.map((m) => maskShapeAt(project, clip, m, s)).filter((m) => m.opacity > 0);
   return shapes.length ? { layer, shapes } : undefined;
 }

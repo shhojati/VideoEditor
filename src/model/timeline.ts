@@ -4,6 +4,7 @@
 import { newId } from './factories';
 import { isOverlay } from './overlays';
 import type { Asset, AssetKind, Clip, Effect, ID, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
+import { handles, isLinear, retime, sourceLength } from './remap';
 
 /** Shortest clip a trim or split may leave behind (s). */
 export const MIN_CLIP_DURATION = 0.1;
@@ -106,9 +107,15 @@ export function splitClips(p: Project, time: number, clipIds?: ReadonlySet<ID>):
       const offset = time - clip.start;
       if (offset < MIN_CLIP_DURATION - EPS || clip.duration - offset < MIN_CLIP_DURATION - EPS) continue;
       const right: Clip = { ...cloneClip(clip), id: newId() };
+      // Each half keeps showing exactly what it showed (speed curves and reverse included).
+      const leftTiming = retime(clip, clip.start, time);
+      const rightTiming = retime(clip, time, clip.start + clip.duration);
       right.start = time;
       right.duration = clip.duration - offset;
-      right.inPoint = clip.inPoint + offset * clip.speed;
+      right.inPoint = rightTiming.inPoint;
+      if (rightTiming.speedCurve) right.speedCurve = rightTiming.speedCurve;
+      clip.inPoint = leftTiming.inPoint;
+      if (leftTiming.speedCurve) clip.speedCurve = leftTiming.speedCurve;
       right.audio.fadeIn = 0;
       clip.duration = offset;
       clip.audio.fadeOut = 0;
@@ -139,11 +146,11 @@ export function trimLimits(p: Project, clipId: ID, edge: 'start' | 'end'): Range
   const end = clipEnd(clip);
   if (edge === 'start') {
     const prevEnd = clipIndex > 0 ? clipEnd(track.clips[clipIndex - 1]) : 0;
-    const sourceMin = limited ? clip.start - clip.inPoint / clip.speed : -Infinity;
+    const sourceMin = limited ? clip.start - handles(clip, asset!.duration).before : -Infinity;
     return { min: Math.max(prevEnd, sourceMin, 0), max: end - MIN_CLIP_DURATION };
   }
   const nextStart = clipIndex < track.clips.length - 1 ? track.clips[clipIndex + 1].start : Infinity;
-  const sourceMax = limited ? clip.start + (asset!.duration! - clip.inPoint) / clip.speed : Infinity;
+  const sourceMax = !limited ? Infinity : isLinear(clip) ? clip.start + (asset!.duration! - clip.inPoint) / clip.speed : end + handles(clip, asset!.duration).after;
   return { min: clip.start + MIN_CLIP_DURATION, max: Math.min(nextStart, sourceMax) };
 }
 
@@ -155,7 +162,10 @@ export function trimClip(p: Project, clipId: ID, edge: 'start' | 'end', time: nu
   if (!ref || ref.track.locked) return NaN;
   const t = clamp(time, trimLimits(p, clipId, edge));
   const { clip } = ref;
-  if (edge === 'start') {
+  if (!isLinear(clip)) {
+    // Curves are in normalized clip time and reversed clips play from their end: re-derive both.
+    Object.assign(clip, edge === 'start' ? retime(clip, t, clipEnd(clip)) : retime(clip, clip.start, t));
+  } else if (edge === 'start') {
     const delta = t - clip.start;
     clip.inPoint = Math.max(0, clip.inPoint + delta * clip.speed);
     clip.duration -= delta;
@@ -341,8 +351,11 @@ export function setClipSpeed(p: Project, clipId: ID, speed: number): number {
   const { clip, track, clipIndex } = ref;
   const s = clamp(speed, SPEED_RANGE);
   const next = track.clips[clipIndex + 1];
-  const wanted = (clip.duration * clip.speed) / s;
+  // Same source range; a constant speed replaces any ramp.
+  const wanted = sourceLength(clip) / s;
   clip.duration = next ? Math.min(wanted, next.start - clip.start) : wanted;
   clip.speed = s;
+  delete clip.speedCurve;
+  delete clip.speedPreset;
   return s;
 }

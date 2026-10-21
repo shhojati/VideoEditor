@@ -12,6 +12,7 @@ import type { TrackMessage, TrackRequest } from '../../workers/track.worker';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select } from '../timeline/timelineUi';
+import { mediaTimeAt, sourceLength, timelineTimeAt } from '../../model/remap';
 
 export interface TrackJob {
   clipId: ID;
@@ -34,10 +35,10 @@ interface TrackingState {
 export const useTracking = create<TrackingState>()(() => ({ active: null, job: null }));
 
 const project = () => useProjectStore.getState().history?.present;
-const srcTime = (c: Clip, t: number) => c.inPoint + (t - c.start) * c.speed;
-const timelineTime = (c: Clip, s: number) => c.start + (s - c.inPoint) / c.speed;
+const srcTime = mediaTimeAt;
+const timelineTime = timelineTimeAt;
 /** Source range the clip shows. */
-const sourceRange = (c: Clip) => ({ start: c.inPoint, end: c.inPoint + c.duration * c.speed });
+const sourceRange = (c: Clip) => ({ start: c.inPoint, end: c.inPoint + sourceLength(c) });
 
 /** Playhead inside the clip (moving it there if needed); returns the timeline time. */
 function playheadIn(clip: Clip): number {

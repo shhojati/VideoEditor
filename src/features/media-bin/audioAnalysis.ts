@@ -4,6 +4,7 @@ import { hasCleanStage, type NoiseProfile } from '../../engine/audio/cleanDsp';
 import type { Clip, ID, Project } from '../../model/types';
 import { getDerived, putDerived } from '../../store/persistence';
 import { mediaWorker } from './mediaService';
+import { sourceLength } from '../../model/remap';
 
 const profiles = new Map<ID, NoiseProfile>();
 const pending = new Map<ID, Promise<NoiseProfile | undefined>>();
@@ -76,6 +77,6 @@ export async function allNoiseProfiles(project: Project): Promise<Record<ID, Noi
 export async function clipLoudness(project: Project, clip: Clip): Promise<number> {
   const opfsPath = clip.assetId ? project.assets[clip.assetId]?.fileRef.opfsPath : undefined;
   if (!opfsPath) return -Infinity;
-  const { lufs } = await mediaWorker().loudness({ opfsPath, from: clip.inPoint, to: clip.inPoint + clip.duration * clip.speed });
+  const { lufs } = await mediaWorker().loudness({ opfsPath, from: clip.inPoint, to: clip.inPoint + sourceLength(clip) });
   return lufs;
 }

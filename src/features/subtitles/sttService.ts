@@ -85,7 +85,8 @@ function mixItems(project: Project, selectedOnly: boolean): MixItem[] {
     for (const clip of track.clips) {
       if (selectedOnly && !selected.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
-      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0) continue;
+      // Reversed speech cannot be transcribed; a freeze frame is silent.
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || clip.reversed || clip.freeze) continue;
       if (!(asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio))) continue;
       items.push({
         opfsPath: asset.fileRef.opfsPath,
@@ -93,6 +94,7 @@ function mixItems(project: Project, selectedOnly: boolean): MixItem[] {
         duration: clip.duration,
         inPoint: clip.inPoint,
         speed: clip.speed,
+        speedCurve: clip.speedCurve,
         gain: peakVolume(clip),
       });
     }

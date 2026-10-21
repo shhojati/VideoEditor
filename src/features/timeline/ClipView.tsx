@@ -9,6 +9,7 @@ import { applyFx, canDropFx, fxDrag } from '../effects/effectActions';
 import { useProjectStore } from '../../store/projectStore';
 import { beginClipDrag } from './interactions';
 import { TRACK_HEIGHT, useTimelineUi } from './timelineUi';
+import { keyToTimeline, meanSpeed, mediaTimeAt, sourceRangeFor, timelineTimeAt } from '../../model/remap';
 
 const COLORS = {
   video: 'bg-sky-800/90 border-sky-500',
@@ -145,7 +146,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
         </span>
       )}
       {clipKeyTimes(clip).map((s) => {
-        const x = ((s - clip.inPoint) / clip.speed) * pps;
+        const x = (keyToTimeline(clip, s) - clip.start) * pps;
         if (x < 0 || x > width) return null;
         return (
           <span
@@ -208,7 +209,7 @@ function Filmstrip({ clip, assetId, from, to, pps }: StripProps & { assetId: str
   const first = Math.floor((from - clip.start) / tileSec);
   const tiles = [];
   for (let i = first; clip.start + i * tileSec < to; i++) {
-    const srcTime = clip.inPoint + (i + 0.5) * tileSec * clip.speed;
+    const srcTime = mediaTimeAt(clip, clip.start + (i + 0.5) * tileSec);
     let best = 0;
     for (let k = 1; k < thumbs.times.length; k++)
       if (Math.abs(thumbs.times[k] - srcTime) < Math.abs(thumbs.times[best] - srcTime)) best = k;
@@ -244,8 +245,7 @@ function ClipPreviewStrip({ clip, asset, from, to, pps }: StripProps & { asset: 
     ctx.fillStyle = 'rgba(167, 243, 208, 0.75)';
     const buckets = peaks.peaks.length / 2;
     for (let x = 0; x < width; x++) {
-      const tA = clip.inPoint + ((from - clip.start) + x / pps) * clip.speed;
-      const tB = clip.inPoint + ((from - clip.start) + (x + 1) / pps) * clip.speed;
+      const { from: tA, to: tB } = sourceRangeFor(clip, from + x / pps, from + (x + 1) / pps);
       const a = Math.max(0, Math.floor(tA * peaks.peaksPerSecond));
       const b = Math.min(buckets, Math.max(a + 1, Math.floor(tB * peaks.peaksPerSecond)));
       let min = 0;
@@ -257,7 +257,7 @@ function ClipPreviewStrip({ clip, asset, from, to, pps }: StripProps & { asset: 
       const y0 = ((1 - max) / 2) * h;
       ctx.fillRect(x, y0, 1, Math.max(1, ((max - min) / 2) * h));
     }
-  }, [peaks, width, h, from, clip.start, clip.inPoint, clip.speed, pps]);
+  }, [peaks, width, h, from, clip, pps]);
 
   if (asset.kind === 'image') {
     const url = media?.thumbs?.urls[0];
@@ -275,11 +275,11 @@ function ClipPreviewStrip({ clip, asset, from, to, pps }: StripProps & { asset: 
 function BeatTicks({ clip, times, from, to, pps }: { clip: Clip; times: number[]; from: number; to: number; pps: number }) {
   const xs: number[] = [];
   for (const s of times) {
-    const t = clip.start + (s - clip.inPoint) / clip.speed;
+    const t = timelineTimeAt(clip, s);
     if (t >= from && t <= to) xs.push((t - clip.start) * pps);
   }
   // Too dense to read when zoomed far out: show every 4th beat.
-  const step = pps * (times.length > 1 ? (times[1] - times[0]) / clip.speed : 1) < 6 ? 4 : 1;
+  const step = pps * (times.length > 1 ? (times[1] - times[0]) / meanSpeed(clip) : 1) < 6 ? 4 : 1;
   const path = xs.filter((_, i) => i % step === 0).map((x) => `M${x.toFixed(1)} 0v6`).join('');
   return (
     <svg className="pointer-events-none absolute bottom-0 left-0 h-1.5 w-full" data-testid="beat-ticks" data-count={xs.length}>

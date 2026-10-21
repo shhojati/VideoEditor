@@ -8,6 +8,7 @@ import { BinAccumulator, STT_RATE } from '../engine/stt/audio16k';
 import { LoudnessMeter, measureNoiseProfile } from '../engine/audio/cleanDsp';
 import { detectBeats } from '../engine/audio/beats';
 import { exposeRpc } from './rpc';
+import { sourceLength, timelineTimeAt, type Timing } from '../model/remap';
 
 const JPEG = { type: 'image/jpeg', quality: 0.72 } as const;
 
@@ -92,13 +93,8 @@ async function waveform({ opfsPath, duration, peaksPerSecond }: WaveformArgs) {
   }
 }
 
-export interface MixItem {
+export interface MixItem extends Timing {
   opfsPath: string;
-  /** Timeline placement of the clip (s). */
-  start: number;
-  duration: number;
-  inPoint: number;
-  speed: number;
   gain: number;
 }
 
@@ -113,7 +109,7 @@ async function mixdown16k({ items, duration }: { items: MixItem[]; duration: num
       if (!track) continue;
       const acc = new BinAccumulator(Math.floor(item.start * STT_RATE), Math.ceil(item.duration * STT_RATE) + 1);
       let scratch: Float32Array[] = [];
-      const srcEnd = item.inPoint + item.duration * item.speed;
+      const srcEnd = item.inPoint + sourceLength(item);
       for await (const sample of new AudioSampleSink(track).samples(item.inPoint, srcEnd)) {
         const n = sample.numberOfFrames;
         if (scratch.length !== sample.numberOfChannels || scratch[0].length !== n)
@@ -122,7 +118,7 @@ async function mixdown16k({ items, duration }: { items: MixItem[]; duration: num
         const t0 = sample.timestamp;
         const rate = sample.sampleRate;
         // Source time -> timeline time -> 16 kHz output position.
-        acc.push(scratch, (i) => (item.start + (t0 + i / rate - item.inPoint) / item.speed) * STT_RATE);
+        acc.push(scratch, (i) => timelineTimeAt(item, t0 + i / rate) * STT_RATE);
         sample.close();
       }
       acc.addInto(mix, item.gain);

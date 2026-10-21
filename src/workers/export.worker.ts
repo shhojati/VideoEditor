@@ -60,6 +60,7 @@ import { ZipWriter } from '../lib/zip';
 import { timelineDuration } from '../model/timeline';
 import type { ID, Project } from '../model/types';
 import type { AudioAux } from '../engine/audio/audioAux';
+import { sourceRangeFor } from '../model/remap';
 
 export type ExportRequest =
   | {
@@ -200,11 +201,8 @@ async function mixAudio(project: Project, duration: number, aux: AudioAux): Prom
       (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined),
       aux.duck?.[clip.id],
     );
-    const range = await decodeRange(
-      opfsPath,
-      Math.max(0, sourceTimeAt(clip, env.start)),
-      sourceTimeAt(clip, env.end),
-    );
+    const { from, to } = sourceRangeFor(clip, env.start, env.end);
+    const range = await decodeRange(opfsPath, Math.max(0, from), to);
     if (range) mixClip(mix, AUDIO_RATE, clip, range, env, clip.assetId ? aux.noise?.[clip.assetId] : undefined);
     post({ type: 'progress', phase: 'audio', done: i + 1, total: clips.length });
   }

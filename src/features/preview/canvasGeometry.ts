@@ -7,6 +7,7 @@ import { maskShapeAt } from '../../engine/render/masks';
 import { flatten } from '../../model/masks';
 import { keepsAspect } from '../../model/overlays';
 import type { Clip, Project, Track } from '../../model/types';
+import { keyTimeAt } from '../../model/remap';
 
 export interface Pt {
   x: number;
@@ -34,7 +35,7 @@ export const MIN_BOX = 4;
 function adjustmentExtent(project: Project, clip: Clip, t: number) {
   let w = 0;
   let h = 0;
-  const s = clip.inPoint + (t - clip.start) * clip.speed;
+  const s = keyTimeAt(clip, t);
   for (const m of clip.masks ?? []) {
     if (m.off) continue;
     const shape = maskShapeAt(project, clip, m, s);

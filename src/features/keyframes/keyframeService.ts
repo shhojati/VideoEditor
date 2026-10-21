@@ -9,6 +9,7 @@ import type { Clip, ID, KeyEase, Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from '../timeline/timelineUi';
+import { keyRate } from '../../model/remap';
 
 const project = () => useProjectStore.getState().history?.present;
 
@@ -17,7 +18,7 @@ export const isInside = (clip: Clip, t: number) => t >= clip.start && t < clip.s
 /** The playhead, held inside the clip. */
 export const playheadIn = (clip: Clip, time = useTransport.getState().time) => Math.min(clip.start + clip.duration, Math.max(clip.start, time));
 
-export const tolOf = (p: Project, clip: Clip) => keyTolerance(p.settings.fps, clip.speed);
+export const tolOf = (p: Project, clip: Clip) => keyTolerance(p.settings.fps, keyRate(clip));
 
 /** Index of the keyframe under the playhead, or -1. */
 export const keyAtPlayhead = (p: Project, clip: Clip, time?: number) => keyIndexAt(clip, srcTime(clip, playheadIn(clip, time)), tolOf(p, clip));

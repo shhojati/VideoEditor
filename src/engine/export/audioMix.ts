@@ -8,6 +8,7 @@ import { hasVoiceStage, SPACE_TAIL, spaceMixAt, voiceParamsAt } from '../../mode
 import { CleanChain, hasCleanStage, type NoiseProfile } from '../audio/cleanDsp';
 import { SpaceChain, VoiceChain, voiceLatency } from '../audio/voiceDsp';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
+import { mediaTimeAt } from '../../model/remap';
 
 export interface DecodedRange {
   /** Planar source samples (1 or 2+ channels). */
@@ -42,7 +43,7 @@ export function mixClip(
   for (let i = first; i < last; i++) {
     const t = i / outRate;
     if (t < env.start || t >= env.end) continue;
-    const pos = (clip.inPoint + (t - clip.start) * clip.speed - src.start) * src.rate;
+    const pos = (mediaTimeAt(clip, t) - src.start) * src.rate;
     const k = Math.floor(pos);
     if (k < 0 || k >= n) continue;
     const f = pos - k;
@@ -82,7 +83,7 @@ function mixClipFx(
       const t = (i0 + j + lead) / outRate;
       buf[0][j] = buf[1][j] = 0;
       if (t < env.start || t >= env.end) continue;
-      const pos = (clip.inPoint + (t - clip.start) * clip.speed - src.start) * src.rate;
+      const pos = (mediaTimeAt(clip, t) - src.start) * src.rate;
       const k = Math.floor(pos);
       if (k < 0 || k >= n) continue;
       const f = pos - k;
@@ -114,7 +115,8 @@ export function audibleClips(project: Project, only?: ReadonlySet<string>): { cl
     for (const clip of track.clips) {
       if (only && !only.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
-      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0) continue;
+      // A freeze frame is silent.
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || clip.freeze) continue;
       if (asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio)) out.push({ clip, track, opfsPath: asset.fileRef.opfsPath });
     }
   }

@@ -8,6 +8,7 @@
 import { keyedTransform } from '../../model/keyframes';
 import type { Clip, MotionLink, Project, Tracker, TrackSample, Transform } from '../../model/types';
 import { placeMedia } from './placement';
+import { mediaTimeAt, timelineTimeAt } from '../../model/remap';
 
 export interface Pt {
   x: number;
@@ -31,8 +32,9 @@ export interface RotatedBox {
 }
 
 const RAD = Math.PI / 180;
-const srcTime = (c: Clip, t: number) => c.inPoint + (t - c.start) * c.speed;
-const timelineTime = (c: Clip, s: number) => c.start + (s - c.inPoint) / c.speed;
+// Trackers follow the content: they run on media time.
+const srcTime = mediaTimeAt;
+const timelineTime = timelineTimeAt;
 const rotate = (p: Pt, a: number, k = 1): Pt => ({ x: k * (p.x * Math.cos(a) - p.y * Math.sin(a)), y: k * (p.x * Math.sin(a) + p.y * Math.cos(a)) });
 
 /** The sample at source time s: linear between samples, held before the first and after the last. */

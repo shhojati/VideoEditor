@@ -298,8 +298,16 @@ export interface Clip {
   duration: number;
   /** Offset into the source (s). */
   inPoint: number;
-  /** 1 = normal. */
+  /** 1 = normal. Ignored while there is a speed curve. See model/remap.ts. */
   speed: number;
+  /** Speed ramp: absolute speeds at points of normalized clip time (0..1), linear in between. */
+  speedCurve?: SpeedPoint[];
+  /** Which ramp preset the curve came from (for the picker). */
+  speedPreset?: SpeedPreset;
+  /** Plays the source range backwards. */
+  reversed?: boolean;
+  /** Holds the frame at inPoint (a freeze frame clip; silent). */
+  freeze?: true;
   transform: Transform;
   audio: ClipAudio;
   text?: TextProps;
@@ -549,3 +557,8 @@ export interface SubtitleTrack {
   style: SubtitleStyle;
   cues: Cue[];
 }
+
+/** [u, speed]: normalized clip time 0..1 and the speed there (0.1..10). */
+export type SpeedPoint = [number, number];
+
+export type SpeedPreset = 'montage' | 'hero' | 'bullet' | 'flashIn' | 'flashOut' | 'jumpCut' | 'custom';

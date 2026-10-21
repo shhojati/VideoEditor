@@ -1,6 +1,7 @@
 // Transitions between touching clips. Pure functions on the project document, like timeline.ts.
 import { newId } from './factories';
 import type { Clip, ID, Project, Track, Transition, TransitionKind } from './types';
+import { mediaTimeAt } from './remap';
 
 export const TRANSITION_KINDS: TransitionKind[] = [
   'crossfade',
@@ -150,4 +151,4 @@ export function clipVisibleRange(track: Track, clip: Clip): { start: number; end
 }
 
 /** Source time shown at timeline time t, extended past the trim points for transitions. */
-export const extendedSourceTime = (clip: Clip, t: number) => clip.inPoint + (t - clip.start) * clip.speed;
+export const extendedSourceTime = (clip: Clip, t: number) => mediaTimeAt(clip, t);

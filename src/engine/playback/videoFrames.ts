@@ -7,6 +7,7 @@ import { readers } from '../decode/mediaReader';
 import { clipVisibleRange } from '../../model/transitions';
 import { isOverlay } from '../../model/overlays';
 import { frameSourceTime, sourceTimeAt, visualClipsAt, type Drawable } from '../render/renderFrame';
+import { speedAt } from '../../model/remap';
 
 const READ_AHEAD = 6;
 /** Start decoding clips this long before they become visible during playback (s). */
@@ -168,7 +169,7 @@ export class VideoFrames {
       const held = this.held.get(clip.id);
       if (held) {
         // How far behind the clock the shown frame is (0 when on time).
-        const lag = Math.max(0, (src - (held.timestamp + held.duration)) / clip.speed);
+        const lag = Math.max(0, (src - (held.timestamp + held.duration)) / Math.max(1e-3, Math.abs(speedAt(clip, t))));
         this.stats.frames++;
         if (lag > 0) this.stats.dropped++;
         this.stats.sumLag += lag;

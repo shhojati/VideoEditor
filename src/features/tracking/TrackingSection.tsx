@@ -19,6 +19,7 @@ import {
   startTracking,
   useTracking,
 } from './trackingService';
+import { timelineTimeAt } from '../../model/remap';
 
 const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
 const seconds = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
@@ -85,7 +86,7 @@ export function TrackingSection({ project, clip }: { project: Project; clip: Cli
 
 function TrackerRow({ clip, tracker, selected }: { clip: Clip; tracker: Tracker; selected: boolean }) {
   const { t } = useTranslation();
-  const toTimeline = (s: number) => clip.start + (s - clip.inPoint) / clip.speed;
+  const toTimeline = (s: number) => timelineTimeAt(clip, s);
   const first = tracker.samples[0];
   const last = tracker.samples[tracker.samples.length - 1];
   const tracked = tracker.samples.length > 1;

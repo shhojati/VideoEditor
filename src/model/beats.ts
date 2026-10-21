@@ -4,6 +4,7 @@
 import { newId } from './factories';
 import { findClip, MIN_CLIP_DURATION } from './timeline';
 import type { Clip, ID, Project } from './types';
+import { handles, sourceLength, timelineTimeAt } from './remap';
 
 const EPS = 1e-6;
 
@@ -11,8 +12,10 @@ const EPS = 1e-6;
 export function clipBeats(p: Project, clip: Clip): number[] {
   const grid = clip.assetId ? p.assets[clip.assetId]?.beats : undefined;
   if (!grid) return [];
-  const srcEnd = clip.inPoint + clip.duration * clip.speed;
-  return grid.times.filter((s) => s >= clip.inPoint - EPS && s <= srcEnd + EPS).map((s) => clip.start + (s - clip.inPoint) / clip.speed);
+  if (clip.freeze) return [];
+  const srcEnd = clip.inPoint + sourceLength(clip);
+  const times = grid.times.filter((s) => s >= clip.inPoint - EPS && s <= srcEnd + EPS).map((s) => timelineTimeAt(clip, s));
+  return clip.reversed ? times.reverse() : times;
 }
 
 /** Every beat on the timeline from clips on unmuted tracks, ascending (optionally skipping some clips). */
@@ -63,7 +66,7 @@ export function cutToBeat(p: Project, ids: readonly ID[], every: number): CutToB
   const plan: { clip: Clip; start: number; duration: number }[] = [];
   for (const clip of clips) {
     const asset = p.assets[clip.assetId!];
-    const maxDur = asset?.kind === 'image' || asset?.duration === undefined ? Infinity : (asset.duration - clip.inPoint) / clip.speed;
+    const maxDur = asset?.kind === 'image' || asset?.duration === undefined ? Infinity : clip.duration + handles(clip, asset.duration).after;
     let m = every;
     while (m > 1 && beatAt(k + m) - t > maxDur + EPS) m--;
     const duration = Math.max(MIN_CLIP_DURATION, Math.min(beatAt(k + m) - t, maxDur));

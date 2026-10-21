@@ -25,6 +25,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clipBox } from '../preview/canvasGeometry';
 import { setActiveTracker, startTracking } from '../tracking/trackingService';
+import { keyRate, keyTimeAt, keyToTimeline } from '../../model/remap';
 
 interface MaskUiState {
   /** The mask whose points are shown and edited on the canvas. */
@@ -41,9 +42,9 @@ export type MaskValueKey = 'feather' | 'expansion' | 'opacity';
 export type MaskAnimKey = MaskValueKey | 'path';
 
 const project = () => useProjectStore.getState().history?.present;
-const srcTime = (c: Clip, t: number) => c.inPoint + (t - c.start) * c.speed;
+const srcTime = keyTimeAt;
 const lerpOf = (key: MaskAnimKey) => (key === 'path' ? lerpPath : lerpNumber) as Lerp<unknown>;
-const tolerance = (p: Project, c: Clip) => keyTolerance(p.settings.fps, c.speed);
+const tolerance = (p: Project, c: Clip) => keyTolerance(p.settings.fps, keyRate(c));
 
 /** Playhead inside the clip (moving it there if needed); returns the timeline time. */
 function playheadIn(clip: Clip): number {
@@ -197,7 +198,7 @@ export function jumpToMaskKey(clipId: ID, dir: -1 | 1, key?: { maskId: ID; anim:
   const clip = p && findClip(p, clipId)?.clip;
   if (!clip) return;
   const m = key && clip.masks?.find((x) => x.id === key.maskId);
-  const times = (m ? (animOf(m, key!.anim).keys ?? []).map((k) => k.t) : clipKeyTimes(clip)).map((s) => clip.start + (s - clip.inPoint) / clip.speed);
+  const times = (m ? (animOf(m, key!.anim).keys ?? []).map((k) => k.t) : clipKeyTimes(clip)).map((s) => keyToTimeline(clip, s));
   const now = useTransport.getState().time;
   const eps = 0.25 / p!.settings.fps;
   const target = dir === 1 ? times.find((x) => x > now + eps) : [...times].reverse().find((x) => x < now - eps);

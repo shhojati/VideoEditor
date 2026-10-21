@@ -8,12 +8,12 @@ import { hasVoiceStage } from '../../model/voiceFx';
 import type { Clip, Project } from '../../model/types';
 import { readers } from '../decode/mediaReader';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
-import { sourceTimeAt } from '../render/renderFrame';
 import { voiceLatency } from './voiceDsp';
 import workletUrl from './voiceFx.worklet.ts?worker&url';
 import type { VoiceFxOptions } from './voiceFx.worklet';
 import type { AudioAux } from './audioAux';
 import { cleanLatency, hasCleanStage, type NoiseProfile } from './cleanDsp';
+import { sourceRangeFor, timelineTimeAt } from '../../model/remap';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
 const SCHEDULE_AHEAD = 2;
@@ -69,7 +69,7 @@ export class AudioEngine {
       if (track.muted || track.kind === 'text') continue;
       for (const clip of track.clips) {
         const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined), aux.duck?.[clip.id]);
-        if (env.end <= t0 || peakVolume(clip) <= 0) continue;
+        if (env.end <= t0 || peakVolume(clip) <= 0 || clip.freeze) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;
         void this.playClip(clip, env, asset, gen, fx, aux.noise?.[asset.id]);
@@ -128,8 +128,9 @@ export class AudioEngine {
     } else gain.connect(this.master!);
 
     // Before the source starts there is nothing to play (silence), so clamp to 0.
-    const srcFrom = Math.max(0, sourceTimeAt(clip, from));
-    const srcTo = sourceTimeAt(clip, end);
+    const range = sourceRangeFor(clip, from, end);
+    const srcFrom = Math.max(0, range.from);
+    const srcTo = range.to;
     try {
       for await (const { buffer, timestamp } of reader.audio.buffers(srcFrom, srcTo)) {
         if (gen !== this.generation) return;
@@ -137,7 +138,7 @@ export class AudioEngine {
         const offset = Math.max(0, srcFrom - timestamp);
         const length = Math.min(buffer.duration, srcTo - timestamp) - offset;
         if (length <= 0) continue;
-        let when = this.toCtx(clip.start + (timestamp + offset - clip.inPoint) / clip.speed) - lead;
+        let when = this.toCtx(timelineTimeAt(clip, timestamp + offset)) - lead;
         let skip = 0;
         this.stats.buffers++;
         if (when < ctx.currentTime) {

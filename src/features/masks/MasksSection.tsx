@@ -25,6 +25,7 @@ import {
   useMasks,
   type MaskAnimKey,
 } from './maskService';
+import { keyRate, keyTimeAt } from '../../model/remap';
 
 const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
 const iconBtn = 'rounded px-1.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
@@ -169,8 +170,8 @@ function MaskDetails({ project, clip, mask }: { project: Project; clip: Clip; ma
   // While playing the values stay put instead of re-rendering on every clock tick.
   const time = useTransport((s) => (s.playing ? -1 : s.time));
   const at = time < 0 || time < clip.start || time >= clip.start + clip.duration ? clip.start : time;
-  const s = clip.inPoint + (at - clip.start) * clip.speed;
-  const tol = keyTolerance(project.settings.fps, clip.speed);
+  const s = keyTimeAt(clip, at);
+  const tol = keyTolerance(project.settings.fps, keyRate(clip));
   const shape = maskShapeAt(project, clip, mask, s);
   const keys = { clip, mask, s, tol };
   const max = 2 * Math.max(project.settings.width, project.settings.height);

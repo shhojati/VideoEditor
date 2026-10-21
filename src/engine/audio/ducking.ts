@@ -4,6 +4,7 @@
 // both the preview (audioEngine) and the export worker (audioMix) apply through audioEnvelope.
 import { peakVolume } from '../../model/keyframes';
 import type { Clip, ClipDuck, Project } from '../../model/types';
+import { timelineTimeAt } from '../../model/remap';
 
 export type Interval = [number, number];
 /** Speech intervals in source seconds for an asset, or undefined while its waveform is not ready. */
@@ -58,8 +59,10 @@ function clipActivity(clip: Clip, source: Interval[]): Interval[] {
   const end = clip.start + clip.duration;
   const out: Interval[] = [];
   for (const [a, b] of source) {
-    const t0 = Math.max(clip.start, clip.start + (a - clip.inPoint) / clip.speed);
-    const t1 = Math.min(end, clip.start + (b - clip.inPoint) / clip.speed);
+    const ta = timelineTimeAt(clip, a);
+    const tb = timelineTimeAt(clip, b);
+    const t0 = Math.max(clip.start, Math.min(ta, tb));
+    const t1 = Math.min(end, Math.max(ta, tb));
     if (t1 > t0) out.push([t0, t1]);
   }
   return out;
@@ -73,7 +76,7 @@ export function duckPlan(project: Project, activityOf: ActivityOf): DuckPlan {
     if (track.muted || track.kind === 'text') continue;
     for (const clip of track.clips) {
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
-      if (!asset || asset.kind === 'image' || (asset.kind === 'video' && !asset.hasAudio)) continue;
+      if (!asset || asset.kind === 'image' || (asset.kind === 'video' && !asset.hasAudio) || clip.freeze) continue;
       if (clip.audio.duck) ducked.push(clip);
       else if (peakVolume(clip) > 0) voice.push(...clipActivity(clip, activityOf(asset.id) ?? []));
     }

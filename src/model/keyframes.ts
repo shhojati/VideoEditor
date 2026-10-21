@@ -4,6 +4,7 @@
 // every edit at the playhead lands in a keyframe there (added when missing). Pure.
 import { EFFECT_DEFS, defaultParams } from './effects';
 import type { Clip, ClipKeyframe, KeyEase } from './types';
+import { keyTimeAt, keyToTimeline } from './remap';
 
 export type KeyValues = Record<string, number>;
 
@@ -21,8 +22,9 @@ const EASE: Record<KeyEase, (f: number) => number> = {
 
 export const easeAt = (ease: KeyEase | undefined, f: number) => EASE[ease ?? DEFAULT_EASE](Math.min(1, Math.max(0, f)));
 
-export const srcTime = (clip: Clip, t: number) => clip.inPoint + (t - clip.start) * clip.speed;
-export const timelineTime = (clip: Clip, s: number) => clip.start + (s - clip.inPoint) / clip.speed;
+/** Keyframes run on the clip's key clock (source time; local time for a freeze frame), see remap.ts. */
+export const srcTime = keyTimeAt;
+export const timelineTime = keyToTimeline;
 
 export { keyTolerance } from './masks';
 

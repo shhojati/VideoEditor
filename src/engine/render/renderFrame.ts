@@ -13,6 +13,7 @@ import { drawShapeClip } from './shapes';
 import { drawSubtitles } from './subtitles';
 import { drawTextClip } from './text';
 import { drawTransition } from './transitions';
+import { mediaTimeAt } from '../../model/remap';
 
 /** Anything with display dimensions that can draw itself (Mediabunny VideoSample fits this). */
 export interface Drawable {
@@ -27,7 +28,7 @@ export type FrameLookup = (clip: Clip, t: number) => Drawable | undefined;
 export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 /** Time inside the source media that the clip shows at timeline time `t` (extends past trim points). */
-export const sourceTimeAt = (clip: Clip, t: number) => clip.inPoint + (t - clip.start) * clip.speed;
+export const sourceTimeAt = (clip: Clip, t: number) => mediaTimeAt(clip, t);
 
 export const isActiveAt = (clip: Clip, t: number) => t >= clip.start && t < clip.start + clip.duration;
 

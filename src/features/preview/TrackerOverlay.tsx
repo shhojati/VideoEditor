@@ -9,6 +9,7 @@ import { useTimelineUi } from '../timeline/timelineUi';
 import { useTracking } from '../tracking/trackingService';
 import { corners, MIN_BOX, resizeBox, toWorld, type Pt } from './canvasGeometry';
 import { usePreviewView } from './previewView';
+import { mediaTimeAt } from '../../model/remap';
 
 const HANDLE = 9;
 let dragSeq = 0;
@@ -65,7 +66,7 @@ export function TrackerOverlay({ project, time }: { project: Project; time: numb
         const c = findClip(d, clipId)?.clip;
         const tr = c?.trackers?.find((x) => x.id === tracker.id);
         if (!c || !tr) return;
-        const s = c.inPoint + (time - c.start) * c.speed;
+        const s = mediaTimeAt(c, time);
         const r = boxToSample(d, c, tr, time, s, next);
         if (!r) return;
         putSample(tr.samples, r.sample);

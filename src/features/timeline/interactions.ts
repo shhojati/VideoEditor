@@ -191,7 +191,10 @@ function assetDropPreview(e: DragEvent, trackId: ID | null): DragPreview | null 
 }
 
 export function onLaneDragOver(e: DragEvent, trackId: ID | null) {
-  if (!assetDrag.assetId) return;
+  if (!assetDrag.assetId) {
+    if (assetDrag.pending) e.preventDefault(); // accept the drop; the clip is placed once downloaded
+    return;
+  }
   e.preventDefault();
   e.dataTransfer.dropEffect = 'copy';
   const preview = assetDropPreview(e, trackId);
@@ -203,7 +206,14 @@ export function onLaneDragLeave(e: DragEvent) {
 }
 
 export function onLaneDrop(e: DragEvent, trackId: ID | null) {
-  if (!assetDrag.assetId) return;
+  if (!assetDrag.assetId) {
+    if (!assetDrag.pending) return;
+    e.preventDefault();
+    const lane = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    assetDrag.pending(trackId, Math.max(0, (e.clientX - lane.left) / useTimelineUi.getState().pps));
+    assetDrag.pending = null;
+    return;
+  }
   e.preventDefault();
   const preview = assetDropPreview(e, trackId);
   useTimelineUi.setState({ drag: null });
@@ -227,6 +237,20 @@ export function addAssetAtPlayhead(assetId: ID) {
     .reverse()
     .find((t) => !t.locked && trackAccepts(t, asset.kind) && isFree(t, start, duration));
   addAssetClip(assetId, target?.id ?? null, start);
+}
+
+/**
+ * Place an asset that was dropped before it was ready: on `trackId` if that track takes it (at the
+ * nearest free spot), otherwise on a new track.
+ */
+export function placeAssetAt(assetId: ID, trackId: ID | null, time: number) {
+  const p = project();
+  const asset = p.assets[assetId];
+  if (!asset) return;
+  const track = trackId ? p.tracks.find((t) => t.id === trackId) : undefined;
+  if (track && !track.locked && trackAccepts(track, asset.kind))
+    addAssetClip(assetId, track.id, nearestFreeStart(track, time, createClip(asset, time).duration));
+  else addAssetClip(assetId, null, time);
 }
 
 /** One undo step: a clip of the asset at `start`, on `target` or (null) a new track. */

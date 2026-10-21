@@ -13,6 +13,7 @@ import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
 import { Ruler } from './Ruler';
 import { SubtitleLane } from './SubtitleLane';
 import { CutMarkers } from './CutMarkers';
+import { ShapeMenu } from '../shapes/ShapeMenu';
 import { onTransitionDragOver, onTransitionDrop } from '../transitions/transitionActions';
 import { HEADER_WIDTH, RULER_HEIGHT, select, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
@@ -52,6 +53,7 @@ export function TimelinePanel({ project }: { project: Project }) {
         <Button className="text-xs" onClick={() => addText(t('text.default'))} data-testid="btn-add-text">
           T+ {t('text.add')}
         </Button>
+        <ShapeMenu />
         <span className="mx-1 h-4 w-px bg-line" />
         <Button className="text-xs" onClick={splitAtPlayhead} title={`${t('timeline.split')} (S)`} data-testid="btn-split">
           ✂ {t('timeline.split')}

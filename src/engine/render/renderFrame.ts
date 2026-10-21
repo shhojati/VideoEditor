@@ -2,6 +2,10 @@
 // and already-decoded frames, draw the frame. Synchronous and free of hidden state.
 import { clipVisibleRange, cutTime } from '../../model/transitions';
 import type { Clip, Project, Track, Transform, Transition } from '../../model/types';
+import { isOverlay } from '../../model/overlays';
+import { applyEffects, hasLiveEffects, type FxEnv } from '../effects/applyEffects';
+import { drawBlended, seedOf } from './blend';
+import { drawShapeClip } from './shapes';
 import { drawSubtitles } from './subtitles';
 import { drawTextClip } from './text';
 import { drawTransition } from './transitions';
@@ -13,8 +17,8 @@ export interface Drawable {
   draw(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, dx: number, dy: number, dw: number, dh: number): void;
 }
 
-/** Returns the decoded frame to show for a clip, if it is available. */
-export type FrameLookup = (clip: Clip) => Drawable | undefined;
+/** Returns the decoded frame to show for a clip at timeline time t, if it is available. */
+export type FrameLookup = (clip: Clip, t: number) => Drawable | undefined;
 
 export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -96,15 +100,55 @@ export function placeMedia(srcW: number, srcH: number, canvasW: number, canvasH:
   };
 }
 
-/** Draw one clip as it looks at time t. The context's alpha/transform/filter are respected. */
+/** Where effects run: the frame on the canvas and the pixel scale, from the context's transform. */
+function effectEnv(ctx: Ctx2D, clip: Clip, t: number, width: number, height: number): FxEnv {
+  const m = ctx.getTransform();
+  const scale = Math.hypot(m.a, m.b);
+  return {
+    key: clip.id,
+    time: t,
+    local: Math.max(0, t - clip.start),
+    duration: clip.duration,
+    scale,
+    unit: (scale * Math.min(width, height)) / 1080,
+    frame: { x: m.e, y: m.f, w: width * m.a, h: height * m.d },
+    below: ctx.canvas,
+  };
+}
+
+/**
+ * Draw one clip as it looks at time t, with its effects and blend mode. The context's
+ * alpha/transform/filter are respected. An adjustment layer applies its effects to what has been
+ * drawn so far instead.
+ */
 export function drawClip(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number) {
-  if (clip.text) {
-    // Inside a transition a text clip may be drawn outside its own range: hold its edge state.
-    const tc = Math.min(clip.start + clip.duration - 1e-3, Math.max(clip.start, t));
-    drawTextClip(ctx, clip, tc, width, height);
+  // Dancing Dissolve re-rolls its pattern 30 times a second; Dissolve keeps one per clip.
+  const seed = clip.blend === 'dancingDissolve' ? seedOf(clip.id) ^ Math.floor(t * 30) : seedOf(clip.id);
+  const effects = clip.effects;
+  const post = hasLiveEffects(effects) ? (layer: OffscreenCanvas) => void applyEffects(layer, effects!, effectEnv(ctx, clip, t, width, height)) : undefined;
+  if (clip.adjustment) {
+    if (!post || clip.transform.opacity <= 0) return;
+    const copyBelow = (c: Ctx2D) => {
+      c.save();
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.drawImage(ctx.canvas, 0, 0);
+      c.restore();
+    };
+    drawBlended(ctx, clip.blend, copyBelow, { seed, post, alpha: clip.transform.opacity });
     return;
   }
-  const src = lookup(clip);
+  drawBlended(ctx, clip.blend, (c) => drawClipPixels(c, clip, t, lookup, width, height), { seed, post });
+}
+
+function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number) {
+  if (isOverlay(clip)) {
+    // Inside a transition an overlay may be drawn outside its own range: hold its edge state.
+    const tc = Math.min(clip.start + clip.duration - 1e-3, Math.max(clip.start, t));
+    if (clip.text) drawTextClip(ctx, clip, tc, width, height);
+    else drawShapeClip(ctx, clip, tc, width, height);
+    return;
+  }
+  const src = lookup(clip, t);
   if (!src || clip.transform.opacity <= 0) return;
   const p = placeMedia(src.displayWidth, src.displayHeight, width, height, clip.transform);
   ctx.save();

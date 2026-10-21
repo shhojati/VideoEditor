@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
-import { useProject } from '../../store/projectStore';
+import { useProject, useProjectStore } from '../../store/projectStore';
 import { useNewProjectDialog } from './NewProjectDialog';
+import { BUNDLE_EXT, openProjectFile, PROJECT_EXT, ProjectFileError, saveProjectFile, useProjectFileTask } from './projectFile';
 import { deleteProject, openProject, refreshList, useProjectList } from './session';
+import { friendlyError, showToast } from '../../app/toasts';
 
 export function ProjectMenu() {
   const { t, i18n } = useTranslation();
@@ -11,6 +13,20 @@ export function ProjectMenu() {
   const ref = useRef<HTMLDivElement>(null);
   const current = useProject();
   const { projects, loadError } = useProjectList();
+  const task = useProjectFileTask((s) => s.task);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const item = 'w-full rounded px-2 py-1.5 text-start text-sm hover:bg-surface-3 disabled:opacity-40';
+
+  const save = (withMedia: boolean) => {
+    setOpen(false);
+    // The latest state, not the one from this menu's last render (an edit may have just landed).
+    const project = useProjectStore.getState().history?.present;
+    if (!project) return;
+    saveProjectFile(project, withMedia).then(
+      (missing) => missing?.length && showToast(t('projectFile.notIncluded', { count: missing.length })),
+      (err) => showToast(friendlyError(err, t)),
+    );
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +51,28 @@ export function ProjectMenu() {
       {loadError && (
         <span className="ms-2 text-xs text-red-400">{t('project.loadError', { error: loadError })}</span>
       )}
+      {task && (
+        <span className="ms-2 text-xs text-neutral-400" data-testid="project-file-progress">
+          {t(task.kind === 'save' ? 'projectFile.saving' : 'projectFile.opening', { pct: Math.round(task.progress * 100) })}
+        </span>
+      )}
+      <input
+        ref={fileInput}
+        type="file"
+        hidden
+        accept={`${PROJECT_EXT},${BUNDLE_EXT}`}
+        data-testid="project-file-input"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          setOpen(false);
+          openProjectFile(file).then(
+            ({ missing }) => missing && showToast(t('projectFile.missingMedia', { count: missing })),
+            (err) => showToast(err instanceof ProjectFileError ? t('projectFile.invalid', { reason: err.message }) : friendlyError(err, t)),
+          );
+        }}
+      />
       {open && (
         <div
           role="menu"
@@ -49,6 +87,15 @@ export function ProjectMenu() {
             }}
           >
             {t('project.new')}
+          </button>
+          <button role="menuitem" data-testid="open-project-file" className={item} onClick={() => fileInput.current?.click()}>
+            {t('projectFile.open')}
+          </button>
+          <button role="menuitem" data-testid="save-project-file" className={item} disabled={!current} onClick={() => save(false)}>
+            {t('projectFile.save')}
+          </button>
+          <button role="menuitem" data-testid="save-project-bundle" className={item} disabled={!current} onClick={() => save(true)}>
+            {t('projectFile.saveWithMedia')}
           </button>
           <div className="my-1 border-t border-line" />
           {projects.length === 0 && <div className="px-2 py-1.5 text-sm text-neutral-400">{t('project.empty')}</div>}

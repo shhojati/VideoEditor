@@ -93,6 +93,8 @@ jobs:
           script_stop: true
           script: |
             cd "$APP_DIR"
+            # Library folders for the Stickers / Sound effects / Overlays panes (files are added by hand).
+            mkdir -p library/stickers library/sounds library/overlays
             if grep -q '^TAG=' .env; then sed -i "s/^TAG=.*/TAG=$TAG/" .env; else echo "TAG=$TAG" >> .env; fi
             # The token only lives for this job, so log in, pull, and log out again.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin

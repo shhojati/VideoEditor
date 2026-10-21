@@ -23,6 +23,24 @@ editor.example.com {
 
 The app container already sends the COOP/COEP headers and MIME types; the proxy passes them through unchanged.
 
+### Media library (Stickers, Sound effects, Overlays panes)
+
+The library panes list files from `/srv/video-editor/library`, mounted read-only into the container at `/library` (`deploy/docker-compose.yml`). nginx lists each folder as JSON (`autoindex_format json`), so adding a file is all it takes; there is no manifest. One level of subfolders becomes categories in the pane.
+
+```
+/srv/video-editor/library/
+  stickers/    .png .gif (animated GIFs play and loop)    e.g. stickers/emoji/smile.gif
+  sounds/      .ogg .mp3                                  e.g. sounds/whoosh/fast.mp3
+  overlays/    .mp4 .webm .mov (short clips; added with blend mode Screen, so shoot them on black)
+```
+
+```bash
+mkdir -p /srv/video-editor/library/{stickers,sounds,overlays}
+docker compose up -d   # once, after the volume was added to docker-compose.yml
+```
+
+Files must be readable by the container (`chmod -R a+rX library`). Names may contain spaces and Persian letters. Users see new files after reopening the pane (⟳). A file is downloaded into the user's browser the first time it is used in a project.
+
 ## 1. Build
 
 On a machine with Node 20+ and access to the npm mirror:

@@ -12,6 +12,7 @@ import {
   zoomBy,
 } from '../features/timeline/actions';
 import { select } from '../features/timeline/timelineUi';
+import { spaceDown } from '../features/preview/spaceHand';
 import { useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
 import { useShortcutSheet } from './ShortcutSheet';
@@ -33,7 +34,7 @@ const WITH_CTRL: Record<string, Handler> = {
 };
 
 const PLAIN: Record<string, Handler> = {
-  Space: () => useTransport.getState().toggle(),
+  Space: (e) => spaceDown(e) || useTransport.getState().toggle(),
   KeyS: splitAtPlayhead,
   Delete: (e) => deleteSelection(e.shiftKey),
   Backspace: (e) => deleteSelection(e.shiftKey),

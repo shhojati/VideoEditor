@@ -5,7 +5,8 @@ import type { VideoSample, VideoSampleSink } from 'mediabunny';
 import type { Clip, ID, Project } from '../../model/types';
 import { readers } from '../decode/mediaReader';
 import { clipVisibleRange } from '../../model/transitions';
-import { frameSourceTime, visualClipsAt, type Drawable } from '../render/renderFrame';
+import { isOverlay } from '../../model/overlays';
+import { frameSourceTime, sourceTimeAt, visualClipsAt, type Drawable } from '../render/renderFrame';
 
 const READ_AHEAD = 6;
 /** Start decoding clips this long before they become visible during playback (s). */
@@ -74,10 +75,10 @@ export class VideoFrames {
   constructor(private readonly onFrame: () => void) {}
 
   /** Synchronous lookup for renderFrame. */
-  lookup = (clip: Clip): Drawable | undefined => {
+  lookup = (clip: Clip, t: number): Drawable | undefined => {
     const asset = clip.assetId ? this.project?.assets[clip.assetId] : undefined;
     if (!asset) return undefined;
-    if (asset.kind === 'image') return readers.peek(asset)?.image ?? undefined;
+    if (asset.kind === 'image') return readers.peek(asset)?.imageAt(sourceTimeAt(clip, t)) ?? undefined;
     return this.held.get(clip.id);
   };
 
@@ -86,7 +87,7 @@ export class VideoFrames {
   /** Paused: make sure every visible clip gets the exact frame for time t. */
   seek(project: Project, t: number) {
     this.project = project;
-    const active = visualClipsAt(project, t).filter(({ clip }) => !clip.text);
+    const active = visualClipsAt(project, t).filter(({ clip }) => !isOverlay(clip));
     this.releaseExcept(new Set(active.map(({ clip }) => clip.id)));
     for (const { clip } of active) {
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;

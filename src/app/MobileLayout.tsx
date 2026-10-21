@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Inspector } from '../features/inspector/Inspector';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
-import { useSubtitlesUi } from '../features/subtitles/subtitlesUi';
+import { useSubtitlesUi, type PanelTab } from '../features/subtitles/subtitlesUi';
 import { TimelinePanel } from '../features/timeline/TimelinePanel';
 import { useTimelineUi } from '../features/timeline/timelineUi';
 import type { Project } from '../model/types';
@@ -11,13 +11,16 @@ import { useMobileUi, useTimelineShare } from './layout';
 import { TimelineSplitter } from './Splitter';
 import { LeftPanel } from './LeftPanel';
 
-type NavId = 'media' | 'subtitles' | 'transitions' | 'inspector';
-const NAV: { id: NavId; icon: string; label: string }[] = [
-  { id: 'media', icon: '🎞', label: 'panels.media' },
-  { id: 'subtitles', icon: '💬', label: 'panels.subtitles' },
-  { id: 'transitions', icon: '✨', label: 'panels.transitions' },
+type NavId = 'media' | 'subtitles' | 'library' | 'fx' | 'inspector';
+/** Each button opens a group of left-panel tabs (or the inspector). */
+const NAV: { id: NavId; icon: string; label: string; tabs?: PanelTab[] }[] = [
+  { id: 'media', icon: '🎞', label: 'panels.media', tabs: ['media'] },
+  { id: 'subtitles', icon: '💬', label: 'panels.subtitles', tabs: ['subtitles'] },
+  { id: 'library', icon: '🌟', label: 'panels.library', tabs: ['stickers', 'sounds', 'overlays'] },
+  { id: 'fx', icon: '✨', label: 'panels.fx', tabs: ['transitions', 'effects', 'filters'] },
   { id: 'inspector', icon: '⚙', label: 'panels.inspector' },
 ];
+const navOf = (tab: PanelTab) => NAV.find((n) => n.tabs?.includes(tab))!.id;
 
 /**
  * Phone layout: preview on top, timeline below, and a bottom navigation whose tabs open the side
@@ -30,12 +33,13 @@ export function MobileLayout({ project }: { project: Project }) {
   const hasSelection = useTimelineUi((s) => s.selection.length > 0);
   const timelineShare = useTimelineShare((s) => s.mobile);
   const timelineRef = useRef<HTMLDivElement>(null);
-  const active: NavId | null = sheet === 'inspector' ? 'inspector' : sheet === 'panels' ? tab : null;
+  const active: NavId | null = sheet === 'inspector' ? 'inspector' : sheet === 'panels' ? navOf(tab) : null;
 
   const open = (id: NavId) => {
     if (id === active) return useMobileUi.setState({ sheet: null });
     if (id === 'inspector') return useMobileUi.setState({ sheet: 'inspector' });
-    useSubtitlesUi.setState({ tab: id });
+    const tabs = NAV.find((n) => n.id === id)!.tabs!;
+    if (!tabs.includes(tab)) useSubtitlesUi.setState({ tab: tabs[0] });
     useMobileUi.setState({ sheet: 'panels' });
   };
 
@@ -75,7 +79,7 @@ export function MobileLayout({ project }: { project: Project }) {
                 </ErrorBoundary>
               ) : (
                 <ErrorBoundary area={t('panels.media')}>
-                  <LeftPanel project={project} />
+                  <LeftPanel project={project} tabs={NAV.find((n) => n.id === active)!.tabs} />
                 </ErrorBoundary>
               )}
             </div>

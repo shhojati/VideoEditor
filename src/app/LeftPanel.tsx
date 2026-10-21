@@ -1,34 +1,72 @@
 import { useTranslation } from 'react-i18next';
+import { EffectsPanel } from '../features/effects/EffectsPanel';
+import { FiltersPanel } from '../features/effects/FiltersPanel';
+import { LibraryPanel } from '../features/library/LibraryPanel';
 import { MediaBin } from '../features/media-bin/MediaBin';
 import { SubtitlesPanel } from '../features/subtitles/SubtitlesPanel';
-import { useSubtitlesUi } from '../features/subtitles/subtitlesUi';
+import { useSubtitlesUi, type PanelTab } from '../features/subtitles/subtitlesUi';
 import { TransitionsPanel } from '../features/transitions/TransitionsPanel';
 import type { Project } from '../model/types';
 
-/** Media bin and subtitle editor share the left column as tabs. */
-export function LeftPanel({ project }: { project: Project }) {
+export const PANEL_TABS: { id: PanelTab; icon: string; label: string }[] = [
+  { id: 'media', icon: '🎞', label: 'panels.media' },
+  { id: 'subtitles', icon: '💬', label: 'panels.subtitles' },
+  { id: 'stickers', icon: '🌟', label: 'panels.stickers' },
+  { id: 'sounds', icon: '🔊', label: 'panels.sounds' },
+  { id: 'overlays', icon: '🎇', label: 'panels.overlays' },
+  { id: 'transitions', icon: '✨', label: 'panels.transitions' },
+  { id: 'effects', icon: '🪄', label: 'panels.effects' },
+  { id: 'filters', icon: '🎨', label: 'panels.filters' },
+];
+
+/**
+ * The left column: media bin, subtitles, the server library panes, transitions, effects and filters, as tabs.
+ * `tabs` limits it to a group (the phone layout opens one group per bottom-navigation button).
+ */
+export function LeftPanel({ project, tabs }: { project: Project; tabs?: PanelTab[] }) {
   const { t } = useTranslation();
-  const tab = useSubtitlesUi((s) => s.tab);
-  const tabBtn = (id: 'media' | 'subtitles' | 'transitions', label: string) => (
-    <button
-      role="tab"
-      aria-selected={tab === id}
-      data-testid={`tab-${id}`}
-      className={`min-w-0 flex-1 truncate px-1.5 py-1.5 text-xs font-medium ${tab === id ? 'border-b-2 border-accent text-white' : 'text-neutral-400 hover:text-white'}`}
-      onClick={() => useSubtitlesUi.setState({ tab: id })}
-    >
-      {label}
-    </button>
-  );
+  const current = useSubtitlesUi((s) => s.tab);
+  const shown = PANEL_TABS.filter((x) => !tabs || tabs.includes(x.id));
+  const tab = shown.some((x) => x.id === current) ? current : shown[0].id;
   return (
     <section className="flex min-h-0 min-w-0 flex-col bg-surface-1">
-      {/* Phones switch these tabs from the bottom navigation instead. */}
-      <div role="tablist" className="flex border-b border-line max-md:hidden">
-        {tabBtn('media', t('panels.media'))}
-        {tabBtn('subtitles', t('panels.subtitles'))}
-        {tabBtn('transitions', t('panels.transitions'))}
+      {shown.length > 1 && (
+        <div role="tablist" className="grid grid-cols-[repeat(auto-fit,minmax(56px,1fr))] border-b border-line">
+          {shown.map(({ id, icon, label }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              data-testid={`tab-${id}`}
+              title={t(label)}
+              className={`flex min-w-0 flex-col items-center gap-0.5 px-1 py-1 text-[11px] font-medium ${
+                tab === id ? 'bg-surface-2 text-white shadow-[inset_0_-2px_0_var(--color-accent)]' : 'text-neutral-400 hover:text-white'
+              }`}
+              onClick={() => useSubtitlesUi.setState({ tab: id })}
+            >
+              <span className="text-sm leading-none" aria-hidden>
+                {icon}
+              </span>
+              <span className="max-w-full truncate">{t(label)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="min-h-0 flex-1 overflow-auto">
+        {tab === 'media' ? (
+          <MediaBin />
+        ) : tab === 'subtitles' ? (
+          <SubtitlesPanel project={project} />
+        ) : tab === 'transitions' ? (
+          <TransitionsPanel />
+        ) : tab === 'effects' ? (
+          <EffectsPanel />
+        ) : tab === 'filters' ? (
+          <FiltersPanel />
+        ) : (
+          <LibraryPanel kind={tab} />
+        )}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">{tab === 'media' ? <MediaBin /> : tab === 'subtitles' ? <SubtitlesPanel project={project} /> : <TransitionsPanel />}</div>
     </section>
   );
 }

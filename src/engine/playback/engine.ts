@@ -22,6 +22,8 @@ class PlaybackEngine {
   private writing = false;
   private playToken = 0;
   private editTimer: ReturnType<typeof setTimeout> | undefined;
+  private view: { k: number; ox: number; oy: number } | undefined;
+  private background = '#000';
 
   readonly stats = { video: this.video.stats, audio: this.audio.stats };
 
@@ -68,9 +70,16 @@ class PlaybackEngine {
     };
   }
 
-  attach(canvas: HTMLCanvasElement | null) {
+  /**
+   * `view` maps project pixels to canvas backing pixels (zoom/pan); without one the picture fills
+   * the canvas. Outside the picture the canvas is filled with `background`.
+   */
+  attach(canvas: HTMLCanvasElement | null, view?: { k: number; ox: number; oy: number }, background = '#000') {
     this.canvas = canvas;
-    this.requestRender();
+    this.view = view;
+    this.background = background;
+    // Draw now: resizing the canvas has just cleared it (playing, the next tick draws).
+    if (!useTransport.getState().playing) this.render(useTransport.getState().time);
   }
 
   private writeTransport(patch: Partial<ReturnType<typeof useTransport.getState>>) {
@@ -161,8 +170,23 @@ class PlaybackEngine {
         (e) => console.warn('font failed to load', family, e),
       );
     }
-    ctx.setTransform(canvas.width / project.settings.width, 0, 0, canvas.height / project.settings.height, 0, 0);
+    const { width, height } = project.settings;
+    const v = this.view;
+    if (!v) {
+      ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+      renderFrame(project, t, ctx, this.video.lookup);
+      return;
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = this.background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(v.k, 0, 0, v.k, v.ox, v.oy);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, width, height);
+    ctx.clip();
     renderFrame(project, t, ctx, this.video.lookup);
+    ctx.restore();
   }
 }
 

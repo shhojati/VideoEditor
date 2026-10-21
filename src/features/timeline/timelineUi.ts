@@ -61,5 +61,9 @@ export function select(ids: ID[], mode: 'replace' | 'toggle' = 'replace') {
   });
 }
 
-/** Asset currently being dragged from the media bin (dataTransfer is unreadable during dragover). */
-export const assetDrag: { assetId: ID | null } = { assetId: null };
+/**
+ * Asset currently being dragged from the media bin or a library pane (dataTransfer is unreadable
+ * during dragover). A library item whose file is still downloading has no asset yet: then
+ * `pending` is set and receives the drop position instead.
+ */
+export const assetDrag: { assetId: ID | null; pending?: ((trackId: ID | null, time: number) => void) | null } = { assetId: null };

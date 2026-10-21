@@ -3,9 +3,13 @@ import { detectRtl } from '../../engine/render/textLayout';
 import { DEFAULT_TEXT_MAX_WIDTH } from '../../engine/render/text';
 import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
 import { findClip, moveClips, SPEED_RANGE, setClipSpeed, trimClip } from '../../model/timeline';
-import type { Clip, ID, Project, TextProps, Transform } from '../../model/types';
+import type { BlendMode, Clip, ID, Project, TextProps, Transform } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
-import { ColorField, NumberField, Section, Segmented, SelectField } from './controls';
+import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
+import { ShapeSection } from './ShapeSection';
+import { EffectsSection } from './EffectsSection';
+import { isPixelBlend } from '../../engine/render/blend';
+import { BLEND_GROUPS, isOverlay } from '../../model/overlays';
 
 /**
  * Edit one property of one clip. Continuous changes of the same property (slider drags, typing)
@@ -31,7 +35,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
   const set = useClipEditor(clipId);
   const isText = !!clip.text;
-  const visual = isText || asset?.kind === 'video' || asset?.kind === 'image';
+  const visual = isOverlay(clip) || asset?.kind === 'video' || asset?.kind === 'image';
   const timed = asset?.kind === 'video' || asset?.kind === 'audio';
   const audible = asset?.kind === 'audio' || (asset?.kind === 'video' && asset.hasAudio);
   const setTransform = <K extends keyof Transform>(key: K, v: Transform[K]) =>
@@ -40,7 +44,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   return (
     <fieldset disabled={track.locked} className="min-w-0 disabled:opacity-60" data-testid="clip-inspector">
       <div className="truncate border-b border-line px-3 py-2 text-sm font-medium text-white" dir="auto">
-        {isText ? t('inspector.textClip') : asset?.name}
+        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : asset?.name}
         {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
       </div>
 
@@ -88,15 +92,22 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       </Section>
 
       {isText && <TextSection text={clip.text!} set={set} />}
+      {clip.shape && <ShapeSection shape={clip.shape} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
 
-      {visual && (
+      {clip.adjustment && (
+        <Section title={t('inspector.transform')}>
+          <NumberField label={t('inspector.opacity')} value={clip.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
+        </Section>
+      )}
+
+      {visual && !clip.adjustment && (
         <Section title={t('inspector.transform')}>
           <NumberField label={t('inspector.x')} value={clip.transform.x} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('x', v)} />
           <NumberField label={t('inspector.y')} value={clip.transform.y} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('y', v)} />
           <NumberField label={t('inspector.scale')} value={clip.transform.scale} min={0.1} max={4} factor={100} unit="%" onChange={(v) => setTransform('scale', v)} />
           <NumberField label={t('inspector.rotation')} value={clip.transform.rotation} min={-180} max={180} step={1} unit="°" onChange={(v) => setTransform('rotation', v)} />
           <NumberField label={t('inspector.opacity')} value={clip.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
-          {!isText && (
+          {!isOverlay(clip) && (
             <>
               <Segmented
                 label={t('inspector.fit')}
@@ -113,6 +124,9 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
         </Section>
       )}
 
+      {visual && <BlendSection clip={clip} set={set} />}
+      {visual && <EffectsSection clip={clip} set={set} />}
+
       {audible && (
         <Section title={t('inspector.audio')}>
           <NumberField label={t('inspector.volume')} value={clip.audio.volume} min={0} max={2} factor={100} unit="%" onChange={(v) => set('volume', (c) => void (c.audio.volume = v))} />
@@ -124,7 +138,43 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   );
 }
 
-type SetFn = ReturnType<typeof useClipEditor>;
+export type SetFn = ReturnType<typeof useClipEditor>;
+
+/** Blend mode picker, grouped as in After Effects. */
+function BlendSection({ clip, set }: { clip: Clip; set: SetFn }) {
+  const { t } = useTranslation();
+  const mode = clip.blend ?? 'normal';
+  return (
+    <Section title={t('inspector.blending')}>
+      <label className="flex flex-col gap-1 text-xs">
+        <span className="text-neutral-400">{t('blend.label')}</span>
+        <select
+          data-testid="blend-mode"
+          className="min-w-0 rounded bg-surface-3 px-2 py-1"
+          value={mode}
+          onChange={(e) => {
+            const v = e.target.value as BlendMode;
+            set('blend', (c) => void (c.blend = v === 'normal' ? undefined : v));
+          }}
+        >
+          {BLEND_GROUPS.map((group, i) => [
+            i > 0 && (
+              <option key={`sep${i}`} disabled>
+                ──────────
+              </option>
+            ),
+            ...group.map((m) => (
+              <option key={m} value={m}>
+                {t(`blend.${m}`)}
+              </option>
+            )),
+          ])}
+        </select>
+      </label>
+      {isPixelBlend(mode) && <p className="text-[11px] text-neutral-400">{t('blend.slowHint')}</p>}
+    </Section>
+  );
+}
 
 function CropFields({ clip, set }: { clip: Clip; set: SetFn }) {
   const { t } = useTranslation();
@@ -155,12 +205,6 @@ function CropFields({ clip, set }: { clip: Clip; set: SetFn }) {
     </>
   );
 }
-
-const FADE_PRESETS = [
-  { key: 'none', value: 0 },
-  { key: 'quick', value: 0.3 },
-  { key: 'slow', value: 1 },
-] as const;
 
 function TextSection({ text, set }: { text: TextProps; set: SetFn }) {
   const { t } = useTranslation();

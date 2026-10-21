@@ -161,7 +161,8 @@ export async function importFiles(files: File[]) {
   for (const [i, file] of media.entries()) await importOne(file, jobs[i].id);
 }
 
-async function importOne(file: File, jobId: string) {
+/** Import one file; returns the new asset id, or null when it failed (the job shows why). */
+async function importOne(file: File, jobId: string, extra: Partial<Asset> = {}): Promise<ID | null> {
   try {
     const probed = await probeFile(file);
     if (!(await hasRoomFor(file.size))) throw new ProbeError('quota');
@@ -172,17 +173,27 @@ async function importOne(file: File, jobId: string) {
       await writeMediaFile(opfsPath, file, (progress) => setJob(jobId, { progress }));
     } catch {
       setJob(jobId, { stage: 'error', error: { code: 'copy' } });
-      return;
+      return null;
     }
     const { warnings: _warnings, ...meta } = probed;
     useProjectStore.getState().edit('ops.importMedia', (p) => {
-      p.assets[id] = { id, ...meta, fileRef: { opfsPath } };
+      p.assets[id] = { id, ...meta, ...extra, fileRef: { opfsPath } };
     });
     dismissImport(jobId);
+    return id;
   } catch (e) {
     const err = e instanceof ProbeError ? { code: e.code, codec: e.codec } : { code: 'unsupportedFormat' as const };
     setJob(jobId, { stage: 'error', error: err });
+    return null;
   }
+}
+
+/** Import a single file with extra asset fields (e.g. its library origin). */
+export function importFileAs(file: File, extra: Partial<Asset>): Promise<ID | null> {
+  void requestPersistentStorage();
+  const job = { id: newId(), name: file.name, stage: 'probing' as const, progress: 0 };
+  useMedia.setState((s) => ({ imports: [...s.imports, job] }));
+  return importOne(file, job.id, extra);
 }
 
 // ---- relink / remove ----------------------------------------------------------------------------

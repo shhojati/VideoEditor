@@ -15,7 +15,8 @@ export function TransitionInspector({ project, fromId, toId }: { project: Projec
   const { track, from, to, transition } = cut;
   const others = { ...track, transitions: (track.transitions ?? []).filter((x) => x !== transition) };
   const max = maxTransitionDuration(others, from, to);
-  const name = (c: typeof from) => (c.text ? c.text.content : (project.assets[c.assetId ?? '']?.name ?? ''));
+  const name = (c: typeof from) =>
+    c.text ? c.text.content : c.shape ? t(`shapes.${c.shape.kind}`) : (project.assets[c.assetId ?? '']?.name ?? '');
 
   return (
     <div data-testid="transition-inspector">

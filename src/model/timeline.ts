@@ -2,7 +2,8 @@
 // inside useProjectStore().edit() (Immer draft) — or on a plain object in tests.
 // Invariant: clips on one track never overlap and are kept sorted by start.
 import { newId } from './factories';
-import type { Asset, AssetKind, Clip, ID, Project, TextProps, Track, TrackKind } from './types';
+import { isOverlay } from './overlays';
+import type { Asset, AssetKind, Clip, Effect, ID, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
 
 /** Shortest clip a trim or split may leave behind (s). */
 export const MIN_CLIP_DURATION = 0.1;
@@ -31,8 +32,11 @@ export function createClip(asset: Asset, start: number): Clip {
     duration: asset.kind === 'image' ? IMAGE_DEFAULT_DURATION : (asset.duration ?? IMAGE_DEFAULT_DURATION),
     inPoint: 0,
     speed: 1,
-    transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    // A sticker starts small instead of filling the frame.
+    transform: { x: 0, y: 0, scale: asset.library?.kind === 'stickers' ? 0.35 : 1, rotation: 0, opacity: 1 },
     audio: { volume: 1, fadeIn: 0, fadeOut: 0 },
+    // Library overlays (light leaks, dust, particles on black) are meant to be screened over the picture.
+    ...(asset.library?.kind === 'overlays' && { blend: 'screen' as const }),
   };
 }
 
@@ -245,7 +249,7 @@ export function copyClips(p: Project, ids: ReadonlySet<ID>): ClipboardItem[] {
 export function pasteClips(p: Project, items: ClipboardItem[], time: number): ID[] {
   const ids: ID[] = [];
   for (const item of items) {
-    const kind = p.tracks[item.trackIndex]?.kind ?? (item.clip.text ? 'text' : undefined);
+    const kind = p.tracks[item.trackIndex]?.kind ?? (isOverlay(item.clip) ? 'text' : undefined);
     let track = p.tracks[item.trackIndex];
     if (!track || track.locked || (kind && track.kind !== kind)) {
       track = p.tracks.find((t) => !t.locked && t.kind === kind) as Track;
@@ -275,29 +279,31 @@ export function cueBoundaries(p: Project): number[] {
   return p.subtitleTracks.flatMap((st) => st.cues.flatMap((c) => [c.start, c.end]));
 }
 
-// ---- text clips & clip properties ---------------------------------------------------------------
+// ---- overlay (text, shape) clips & clip properties ---------------------------------------------------------------
 
 export const TEXT_DEFAULT_DURATION = 3;
 
-export function createTextClip(start: number, text: TextProps): Clip {
+/** A clip that draws itself (text or shape): no media, default transform slightly below centre for text. */
+function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects'>): Clip {
   return {
     id: newId(),
     start,
     duration: TEXT_DEFAULT_DURATION,
     inPoint: 0,
     speed: 1,
-    transform: { x: 0, y: 0.3, scale: 1, rotation: 0, opacity: 1 },
+    transform: { x: 0, y: props.text ? 0.3 : 0, scale: 1, rotation: 0, opacity: 1 },
     audio: { volume: 1, fadeIn: 0, fadeOut: 0 },
-    text,
+    ...props,
   };
 }
 
+export const createTextClip = (start: number, text: TextProps) => createOverlayClip(start, { text });
+
 /**
- * Add a text clip at `time` on the first unlocked text track with room there; otherwise on a new
- * text track at the top of the stack. Returns the clip id.
+ * Put an overlay clip on the first unlocked text (overlay) track with room for it; otherwise on a
+ * new one at the top of the stack. Returns the clip id.
  */
-export function addTextClip(p: Project, time: number, text: TextProps): ID {
-  const clip = createTextClip(Math.max(0, time), text);
+function addOverlayClip(p: Project, clip: Clip): ID {
   let track = p.tracks.find((t) => t.kind === 'text' && !t.locked && isFree(t, clip.start, clip.duration));
   if (!track) {
     track = { id: newId(), kind: 'text', muted: false, locked: false, clips: [] };
@@ -307,6 +313,18 @@ export function addTextClip(p: Project, time: number, text: TextProps): ID {
   return clip.id;
 }
 
+export const addTextClip = (p: Project, time: number, text: TextProps): ID =>
+  addOverlayClip(p, createTextClip(Math.max(0, time), text));
+
+export const addShapeClip = (p: Project, time: number, shape: ShapeProps): ID =>
+  addOverlayClip(p, createOverlayClip(Math.max(0, time), { shape }));
+
+/** An adjustment layer (its effects apply to everything below) on a graphics track. */
+export const addAdjustmentClip = (p: Project, time: number, effects: Effect[] = []): ID =>
+  addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { adjustment: true, effects }), duration: ADJUSTMENT_DEFAULT_DURATION });
+
+export const ADJUSTMENT_DEFAULT_DURATION = 5;
+
 export const SPEED_RANGE: Range = { min: 0.5, max: 2 };
 
 /**
@@ -315,7 +333,7 @@ export const SPEED_RANGE: Range = { min: 0.5, max: 2 };
  */
 export function setClipSpeed(p: Project, clipId: ID, speed: number): number {
   const ref = findClip(p, clipId);
-  if (!ref || ref.track.locked || ref.clip.text) return NaN;
+  if (!ref || ref.track.locked || isOverlay(ref.clip)) return NaN;
   const { clip, track, clipIndex } = ref;
   const s = clamp(speed, SPEED_RANGE);
   const next = track.clips[clipIndex + 1];

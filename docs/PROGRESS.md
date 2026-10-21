@@ -246,3 +246,79 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 
 ### Next
 Owner to try the MVP plus transitions on real footage, the internal server and VLC.
+
+## Post-MVP 2 — Preview zoom, canvas handles, shapes, blend modes, project files ✅ (2026-10-21)
+
+### Done
+- **Preview zoom and pan** (`features/preview/previewView.ts`): Fit, 25/50/100/200/400 % presets and −/+ in the transport bar (the current level is shown), Ctrl+wheel zooms about the pointer (5–800 %), wheel / Shift+wheel / Space+drag / middle-drag pan, two-finger pinch on touch. Panning stops a quarter viewport past the picture's edge. The canvas now covers the whole preview area and the engine draws through a view transform, clipped to the frame; the backing store follows the viewport, so zooming in stays sharp (text, shapes) without costing more pixels. Over the preview, Space plays/pauses on release unless it was used to pan.
+- **On-canvas handles** (`CanvasOverlay.tsx`, `canvasGeometry.ts`): click the topmost clip under the pointer to select it (Shift/Ctrl toggles), drag to move (snaps the centre to the frame centre lines and unrotated edges to the frame edges, with guides; Alt: no snap; Shift: one axis), corner handles resize (media and text scale uniformly; shapes resize freely, Shift keeps proportions, Alt resizes about the centre), edge handles on shapes, a rotate handle (Shift: 15° steps), and draggable end points for lines. Works for video, image, text and shape clips, at any zoom. Each drag is one undo step (`EditOptions.gesture` merges regardless of time); Escape cancels a drag.
+- **Shapes** (`model/overlays.ts`, `engine/render/shapes.ts`, `features/inspector/ShapeSection.tsx`): rectangle, square, circle, oval, triangle, star, line, from **★+ Shape** in the timeline toolbar, at the playhead. They live on the Text track, now labelled **Overlay** (the stored kind stays `text`, so no migration). Inspector: type (switching keeps size/colours sensibly), width/height (square and circle stay square), fill on/off + opacity, stroke colour/width/opacity, solid/dashed/dotted, rounded corners (rectangle, square, triangle), star points + inner radius, line arrowheads (start/end/both), shadow, fade presets + exact fades. Timeline clips show the shape icon and name.
+- **Blend modes per clip** (`engine/render/blend.ts`): Normal; Darken, Multiply, Color burn, Darker color; Lighten, Screen, Color dodge; Overlay, Soft light, Hard light; Difference; Hue, Saturation, Color, Luminosity — for video, image, text and shape clips. A blended clip is drawn into its own layer and composited in one go (so its own fill/stroke/box do not blend with each other, as in Photoshop), through the frame's current state, so transitions, opacity and fades still work. Darker color is computed per pixel (Rec. 601 luma). Picked in a **Blending** section in the inspector; a ◐ badge on the timeline clip names the mode.
+- **Project files** (`features/projects/projectFile.ts`, `lib/zip.ts`), in the Projects menu:
+  - **Save project file (.vproj)**: the project as JSON (format tag + version). Media stays in the browser; elsewhere it opens with "File not found" + Choose file.
+  - **Save project with media (.vprojz)**: a stored (uncompressed) ZIP with `project.json` and every media file, ZIP64 when over 4 GB; streamed to the save dialog's file, or a download built from on-disk blobs.
+  - **Open project file…**: either kind (sniffed by content), migrated and validated, opened as a **new copy** (new id); bundled media goes into OPFS first (same-size files already there are kept). Progress shows next to the menu; a notice says how many files need relinking; broken files are refused with a reason.
+
+### Verified
+- 181 unit tests (adds view maths, box geometry/resize/rotate/line ends/snapping/write-back, shape painting with opacities and dashes, star geometry, kind switching, darker-colour pixels, validation of shapes and blend modes, project file round-trip and refusals, ZIP CRC and round-trip with UTF-8 names).
+- **E2E `e2e/canvas.spec.ts`**:
+  - Zoom: Ctrl+wheel keeps the point under the pointer, Space+drag pans by exactly the drag and does not start playback, 100 % shows 1920 CSS px, Fit restores.
+  - Shapes: square added from the menu; move, corner resize (stays square) and Shift-rotate (multiple of 15°) are one undo step each and undo back to the start. Blue square over red: **preview = export** for multiply (37,0,0), darker colour (255,1,0 — red is darker, so it stays) and screen (255,100,235).
+  - Project files: `.vproj` download holds the same tracks; `.vprojz` starts with a ZIP header. With the media deleted from OPFS, the bundle restores the file (asset ready, yellow star screened over red in the preview); the plain file opens with the asset missing and the relink notice; a non-project JSON is refused.
+
+### Known issues / not done
+- Darker color reads the canvas back each frame (≈ 18 ms per preview frame at 733×446 here); it slows export when used on long clips. A WebGL compositor would remove that cost.
+- Text boxes on the canvas use the measured block; wrapping changes as you scale, so a corner drag on wrapped text is approximate.
+- Canvas handles move several selected clips together, but resize/rotate act on a single selection only.
+- Opening a project file always makes a copy; there is no "replace existing project".
+
+## Post-MVP 3 — After Effects blend modes, library panes (Stickers, Sound FX, Overlays) ✅ (2026-10-21)
+
+### Done
+- **Blend modes, After Effects' list** (`engine/render/blend.ts`), in its groups: Normal, Dissolve, Dancing Dissolve | Darken, Multiply, Color Burn, Classic Color Burn, Linear Burn, Darker Color | Add, Lighten, Screen, Color Dodge, Classic Color Dodge, Linear Dodge, Lighter Color | Overlay, Soft Light, Hard Light, Linear Light, Vivid Light, Pin Light, Hard Mix | Difference, Classic Difference, Exclusion, Subtract, Divide | Hue, Saturation, Color, Luminosity (32).
+  - 19 are composited by the browser (Add and Linear Dodge = `lighter`; Classic Difference = Difference, identical at 8 bits per channel).
+  - The other 13 are computed per pixel: separable ones via a 256×256 lookup table per mode; Darker/Lighter Color compare Rec. 601 luma of the whole pixel; Dissolve shows each pixel fully or not at all with probability = its opacity (stable per clip), Dancing Dissolve re-rolls 30×/s. The inspector notes that these are slower.
+  - "Classic" burn/dodge use the original formulas without the black/white special cases; at 8 bits they differ from the new ones only at the extremes.
+- **Library panes** (`lib/library.ts`, `features/library/`): **Stickers** (.png/.gif), **Sound FX** (.ogg/.mp3), **Overlays** (.mp4/.webm/.mov) list `library/<kind>/` on the server (subfolders = categories), with search and reload. Stickers show thumbnails on a checkerboard, overlays play muted on hover, sounds have a ▶ preview. Click adds at the playhead; drag drops on the timeline (if dropped before the download finished, the clip is placed there once it is in). The file is downloaded and imported once per project (asset remembers `library: { kind, path }`) and reused afterwards. Stickers start at 35 % scale; overlays go on a new video track above with blend **Screen**.
+- **Animated GIF (and APNG/WebP)** (`engine/decode/animatedImage.ts`): all frames decoded once with `ImageDecoder`, looped by clip time, in preview and export (`FrameLookup` now gets the time).
+- **Server**: nginx lists `/library/` as JSON (`autoindex_format json`, listings `no-cache`); compose mounts `/srv/video-editor/library` read-only; the deploy job creates `library/{stickers,sounds,overlays}`. In dev/preview a Vite plugin serves the same listing from `public/library` (git-ignored, never built). See DEPLOY.md, "Media library".
+- Left panel tabs are now two compact rows with icons; on phones the bottom bar groups them (Media, Subtitles, Library, Effects, Properties). The Text/shape track is now labelled **Graphics** (so it is not confused with the Overlays pane).
+
+### Verified
+- 190 unit tests (adds the blend formulas, lookup clamping, Lighter Color, Dissolve proportion and stability, listing parsing with categories/hidden/other files/numeric sort/Persian names, 404 and HTML → unavailable, URL encoding, GIF frame timing incl. loop and rounding).
+- **E2E `e2e/library.spec.ts`** (mocked server in nginx JSON format): two stickers (one in a category, a .txt ignored); click adds a 35 % sticker remembered as a library asset; the 2-frame GIF shows red / green / red at 0.25 / 0.75 / 1.25 s; adding it again reuses the asset; a sound dragged onto the audio lane at 2 s while still downloading lands at 2 s; an overlay goes on a new video track with Screen (blue screened over red = 255,64,255); the export shows the same GIF frames. A server without the folder shows how to add files.
+- Canvas E2E now also checks Subtract (per-pixel table): preview (218,0,0) = export (219,0,0).
+- Dev listing checked by hand with a Persian folder name and a file name with a space.
+
+## Post-MVP 4 — Effects, adjustment layers, filters ✅ (2026-10-21)
+
+### Done
+- **Effect stack per clip** (`Clip.effects`, `model/effects.ts`): video, image, text and shape clips carry an ordered list of effects (on/off, reorder ↑↓, reset ↺, remove ✕, all settings in the inspector; every change is undoable with one step per slider drag). An **fx** badge on the timeline clip counts them.
+- **Engine** (`engine/effects/`): WebGL2 on an OffscreenCanvas, so the export worker runs the very same passes. The clip is drawn into its layer, each effect is one or more full-screen shader passes (half-float targets when available), the result goes back into the layer and is blended with the clip's blend mode. Sizes are in project pixels and scale with the preview zoom and export resolution. Without WebGL2 effects are skipped with one console warning.
+- **Effects pane** — After Effects' menu, 44 working effects:
+  - Blur & Sharpen: Gaussian Blur, Fast Box Blur, Camera Lens Blur (disc/hexagon bokeh with highlight boost), Directional Blur, Sharpen, Unsharp Mask
+  - Color Correction: Lumetri Color (exposure, contrast, highlights, shadows, whites, blacks, temperature, tint, saturation, vibrance, vignette), Curves (5-point, monotone, RGB or one channel), Levels, Hue/Saturation (with colorize), Tint, Tritone, Brightness & Contrast
+  - Distort: Transform (position, scale, rotation, skew, opacity), Turbulent Displace (animated fractal noise), Displacement Map (from the layer below or itself), Optics Compensation, CC Power Pin (4-corner homography)
+  - Generate: Fill, Gradient Ramp, 4-Color Gradient, Grid, Lens Flare, Stroke
+  - Stylize: Glow, Drop Shadow, Motion Tile, Roughen Edges, Find Edges, Posterize
+  - Perspective: Bevel Alpha, CC Sphere, Drop Shadow
+  - Time: Echo (past frames, 6 operators), Posterize Time
+  - Simulation: CC Particle World, CC Particle Systems II (closed-form particles, deterministic for any frame)
+  - Keying: Linear Color Key (with spill suppression), Color Range
+  - Transition: Linear Wipe, Radial Wipe, Venetian Blinds, Block Dissolve, Gradient Wipe — with "animate over the clip" (reveal at the start / wipe away at the end) since there are no keyframes yet.
+  - Listed as **"soon"** and not addable: Warp Stabilizer, 3D Camera Tracker, Timewarp, CC Force Motion Blur, Shatter, Keylight (1.2).
+  - Click adds to the selected clips; with nothing selected it creates an **adjustment layer** at the playhead. Drag an effect onto a clip on the timeline to add it there.
+- **Adjustment layers** (`Clip.adjustment`, on Graphics tracks, "◫ Adjustment layer" button in the Effects pane): the composite below is run through the layer's effects and mixed back with its opacity and blend mode while it is on screen.
+- **Filters pane** (`model/looks.ts`): 40 looks in the 7 requested groups (Noir and VHS appear twice, as asked) — colour grade, split toning, mono mixes, teal & orange, fade/matte, vignette, grain, soft focus, glow, sharpen, chromatic fringes, VHS (wobble, scanlines, bleed), glitch (block shifts), old film (flicker, dust, scratches). Thumbnails are rendered with the real shader from the current preview frame (or a sample scene). A clip has one filter: picking another changes it and keeps the intensity (0–100 %, in the inspector). Filters are an effect in the stack, so they also work on adjustment layers.
+- Left panel: **Effects** and **Filters** tabs; on phones they are in the Effects group of the bottom bar with Transitions.
+
+### Verified
+- 201 unit tests (adds: catalog shape, every default in range, every name/parameter/option translated, filters menu, effects + adjustment layers through validation, one-filter-per-clip, reorder, wipe animation timing, monotone curves, levels, corner-pin homography, transform matrix, deterministic particles).
+- In the browser: all 44 effects and all 40 filters compile and render on a clip; an adjustment layer with Hue/Saturation + Echo renders across frames.
+- **E2E `e2e/effects.spec.ts`**: Brightness & Contrast added to a selected red clip; three adjustment layers made with nothing selected — Hue +120° (red → green), the Mono filter (grey), Fill blue; Gaussian Blur dragged onto the clip; removing an effect and undo. **Preview = export** at each layer: (0,155,0)/(0,155,1), (46,46,46)/(45,45,45), (0,0,255)/(1,0,255). Linear Wipe "reveal at the start" hides the square at 0 s and shows it at 1.5 s; "soon" effects are disabled.
+
+### Known issues / not done
+- No keyframes: effect settings are constant over a clip (transition effects have the start/end animation instead).
+- Echo uses frames rendered earlier in the same pass (playback, export); after a seek, echoes build up again over the next frames. Positive echo times (future frames) are ignored.
+- Effects work in frame space (the layer is the whole frame), not in each clip's own bounds: generators (Gradient Ramp, Grid, 4-Color) fill the frame, and Transform/Power Pin move what is inside the frame.
+- Keylight, Warp Stabilizer, 3D Camera Tracker, Timewarp, Force Motion Blur and Shatter need motion tracking, optical flow or 3D simulation; they are listed for later.

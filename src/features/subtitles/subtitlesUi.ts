@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { useMobileUi } from '../../app/layout';
 import type { ID } from '../../model/types';
 
-/** UI state for the left panel (Media / Subtitles tabs) and the subtitle editor. */
+export type PanelTab = 'media' | 'subtitles' | 'stickers' | 'sounds' | 'overlays' | 'transitions' | 'effects' | 'filters';
+
+/** UI state for the left panel tabs and the subtitle editor. */
 export const useSubtitlesUi = create<{
-  tab: 'media' | 'subtitles' | 'transitions';
+  tab: PanelTab;
   activeTrackId: ID | null;
   /** Cue whose text box should take focus (set by double-clicking a cue on the timeline). */
   focusCueId: ID | null;

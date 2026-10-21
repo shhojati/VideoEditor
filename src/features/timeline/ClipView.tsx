@@ -1,6 +1,10 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Asset, Clip, Track } from '../../model/types';
 import { useMedia } from '../media-bin/mediaService';
+import { SHAPE_ICONS } from '../shapes/shapesUi';
+import { applyFx, canDropFx, fxDrag } from '../effects/effectActions';
+import { useProjectStore } from '../../store/projectStore';
 import { beginClipDrag } from './interactions';
 import { TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 
@@ -9,6 +13,8 @@ const COLORS = {
   image: 'bg-indigo-800/90 border-indigo-400',
   audio: 'bg-emerald-900/90 border-emerald-500',
   text: 'bg-amber-800/90 border-amber-500',
+  shape: 'bg-fuchsia-800/90 border-fuchsia-500',
+  adjustment: 'bg-slate-600/80 border-slate-300 border-dashed',
 };
 
 interface Props {
@@ -45,7 +51,10 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
   const { clip, original, track, asset, view, pps, selected, ghost, invalid } = props;
   const left = clip.start * pps;
   const width = Math.max(2, clip.duration * pps);
-  const kind = clip.text ? 'text' : (asset?.kind ?? 'video');
+  const { t } = useTranslation();
+  const kind = clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : (asset?.kind ?? 'video');
+  const [fxHover, setFxHover] = useState(false);
+  const live = clip.effects?.filter((e) => e.enabled) ?? [];
   // Only the on-screen part of the clip gets thumbnails / waveform.
   const visFrom = Math.max(clip.start, view.t0);
   const visTo = Math.min(clip.start + clip.duration, view.t1);
@@ -60,19 +69,59 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       className={`absolute top-1 overflow-hidden rounded border text-[11px] text-white select-none ${COLORS[kind]} ${
         // Touch: a selected clip drags; an unselected one lets a swipe scroll the timeline.
         selected ? 'touch-none ring-2 ring-white' : ''
-      } ${ghost ? 'opacity-80 shadow-lg' : ''} ${invalid ? 'border-red-500! ring-red-500' : ''} ${
+      } ${ghost ? 'opacity-80 shadow-lg' : ''} ${invalid ? 'border-red-500! ring-red-500' : ''} ${fxHover ? 'ring-2 ring-amber-300' : ''} ${
         track.locked ? 'cursor-not-allowed opacity-60' : 'cursor-grab'
       }`}
       style={{ left, width, height: TRACK_HEIGHT - 8 }}
       onPointerDown={(e) => !track.locked && beginClipDrag(e, original.id, 'move')}
+      // Effects and filters dragged from their panes drop onto a clip.
+      onDragOver={(e) => {
+        const p = useProjectStore.getState().history?.present;
+        if (!p || !canDropFx(p, original.id)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+        setFxHover(true);
+      }}
+      onDragLeave={() => setFxHover(false)}
+      onDrop={(e) => {
+        setFxHover(false);
+        if (!fxDrag.item) return;
+        e.preventDefault();
+        e.stopPropagation();
+        applyFx(fxDrag.item, [original.id]);
+        fxDrag.item = null;
+      }}
     >
       {visTo > visFrom && kind === 'video' && <Filmstrip clip={clip} assetId={asset!.id} from={visFrom} to={visTo} pps={pps} />}
       {visTo > visFrom && (kind === 'audio' || kind === 'image') && (
         <ClipPreviewStrip clip={clip} asset={asset!} from={visFrom} to={visTo} pps={pps} />
       )}
       <span className="pointer-events-none absolute start-1 top-0.5 max-w-full truncate rounded bg-black/50 px-1" dir="auto">
-        {clip.text?.content ?? asset?.name ?? ''}
+        {clip.adjustment
+          ? `◫ ${t('effects.adjustment')}`
+          : clip.shape
+            ? `${SHAPE_ICONS[clip.shape.kind]} ${t(`shapes.${clip.shape.kind}`)}`
+            : (clip.text?.content ?? asset?.name ?? '')}
       </span>
+      {live.length > 0 && (
+        <span
+          data-testid="fx-badge"
+          className="pointer-events-none absolute start-1 bottom-0.5 rounded bg-amber-500/80 px-1 text-[10px] font-semibold text-black"
+          title={live.map((e) => t(`effects.names.${e.kind}`)).join(', ')}
+        >
+          fx{live.length > 1 ? ` ${live.length}` : ''}
+        </span>
+      )}
+      {clip.blend && clip.blend !== 'normal' && (
+        <span
+          data-testid="blend-badge"
+          className="pointer-events-none absolute end-1 bottom-0.5 max-w-[60%] truncate rounded bg-black/60 px-1 text-[10px] text-neutral-200"
+          title={t('blend.label')}
+        >
+          ◐ {t(`blend.${clip.blend}`)}
+        </span>
+      )}
       {!track.locked && (
         <>
           <div

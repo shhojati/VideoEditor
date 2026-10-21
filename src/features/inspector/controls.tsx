@@ -1,5 +1,12 @@
 import { useId, useState, type ReactNode } from 'react';
 
+/** Fade in/out presets shared by text and shape clips (s). */
+export const FADE_PRESETS = [
+  { key: 'none', value: 0 },
+  { key: 'quick', value: 0.3 },
+  { key: 'slow', value: 1 },
+] as const;
+
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2 border-b border-line px-3 py-3">

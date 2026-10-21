@@ -1,4 +1,4 @@
-# Runs on the server from /srv/video-editor (this file, .env, fetch-models.mjs, models/).
+# Runs on the server from /srv/video-editor (this file, .env, fetch-models.mjs, models/, library/).
 # The app listens on 127.0.0.1:${APP_PORT} only; the server's existing web server terminates
 # HTTPS for the domain and proxies to it (see docs/DEPLOY.md, "Docker").
 #
@@ -13,6 +13,9 @@ services:
       - "127.0.0.1:${APP_PORT:-8081}:80"
     volumes:
       - ./models:/usr/share/nginx/html/models:ro
+      # Stickers (png/gif), sound effects (ogg/mp3) and overlays (short videos): drop files into
+      # library/stickers, library/sounds, library/overlays (subfolders = categories).
+      - ./library:/usr/share/nginx/html/library:ro
 
   fetch-models:
     image: node:22-slim

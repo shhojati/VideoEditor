@@ -26,6 +26,7 @@ import { AUDIO_BITRATE, AUDIO_RATE, frameCount, outputSize, videoBitrate, type E
 import { MediaReader } from '../engine/decode/mediaReader';
 import { frameSourceTime, renderFrame, sourceTimeAt, visualClipsAt, type Drawable } from '../engine/render/renderFrame';
 import { clipVisibleRange } from '../model/transitions';
+import { isOverlay } from '../model/overlays';
 import { ensureFont } from '../lib/fonts';
 import { getMediaFile } from '../lib/opfs';
 import { timelineDuration } from '../model/timeline';
@@ -195,7 +196,7 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
 
   // Visual sources.
   const streams = new Map<ID, ExactClipFrames>();
-  const images = new Map<ID, Drawable | null>();
+  const images = new Map<ID, MediaReader | null>();
   const held = new Map<ID, Drawable>();
   const lookup = (clip: Clip) => held.get(clip.id);
 
@@ -220,7 +221,7 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
     for (let i = 0; i < frames; i++) {
       checkCancel();
       const t = i / fps;
-      const active = visualClipsAt(project, t).filter(({ clip }) => !clip.text);
+      const active = visualClipsAt(project, t).filter(({ clip }) => !isOverlay(clip));
       const activeIds = new Set(active.map(({ clip }) => clip.id));
       // Close sources of clips that have ended.
       for (const [id, s] of streams) {
@@ -233,8 +234,8 @@ async function run(project: Project, settings: ExportSettings, file?: FileSystem
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset?.fileRef.opfsPath) continue;
         if (asset.kind === 'image') {
-          if (!images.has(asset.id)) images.set(asset.id, (await MediaReader.open(asset))?.image ?? null);
-          const img = images.get(asset.id);
+          if (!images.has(asset.id)) images.set(asset.id, await MediaReader.open(asset));
+          const img = images.get(asset.id)?.imageAt(sourceTimeAt(clip, t));
           if (img) held.set(clip.id, img);
         } else if (asset.kind === 'video') {
           let s = streams.get(clip.id);

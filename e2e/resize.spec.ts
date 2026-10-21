@@ -52,7 +52,7 @@ test.describe('phone', () => {
 
 test('a shorter timeline plus narrower side panels gives a bigger preview (LTR and RTL)', async ({ page }) => {
   await page.goto('/');
-  const canvas = page.getByTestId('preview-canvas');
+  const canvas = page.getByTestId('preview-frame');
   const size = async () => (await canvas.boundingBox())!;
   await expect.poll(async () => (await size()).width).toBeGreaterThan(0);
   const start = await size();

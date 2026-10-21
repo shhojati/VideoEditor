@@ -5,6 +5,9 @@ public/models/*
 public/wasm
 public/fonts
 public/spike-data
+public/library/*
+!public/library/README.md
+deploy/library
 *.log
 .npmrc
 test-results

@@ -1,5 +1,6 @@
 // Timeline commands shared by the toolbar and keyboard shortcuts. Each project change is one undo step.
 import {
+  addShapeClip,
   addTextClip,
   copyClips,
   deleteClips,
@@ -10,7 +11,8 @@ import {
   timelineDuration,
   type ClipboardItem,
 } from '../../model/timeline';
-import type { ID, Project } from '../../model/types';
+import { defaultShape } from '../../model/overlays';
+import type { ID, Project, ShapeKind } from '../../model/types';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
 import { findTransition, removeTransitions } from '../../model/transitions';
@@ -146,4 +148,13 @@ export function zoomToFit() {
   const d = p ? timelineDuration(p) : 0;
   if (d <= 0) return;
   useTimelineUi.setState({ pps: clampPps(((viewportWidth - headerWidth) * 0.95) / d), scrollX: 0 });
+}
+
+/** New shape clip at the playhead, selected so the inspector and canvas handles open on it. */
+export function addShape(kind: ShapeKind) {
+  let id = '';
+  edit('ops.addShape', (d) => {
+    id = addShapeClip(d, useTransport.getState().time, defaultShape(kind));
+  });
+  select([id]);
 }

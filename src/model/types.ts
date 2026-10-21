@@ -33,6 +33,9 @@ export interface Project {
 
 export type AssetKind = 'video' | 'audio' | 'image';
 
+/** Server library folders (library/<kind>/…). */
+export type LibraryKind = 'stickers' | 'sounds' | 'overlays';
+
 export interface Asset {
   id: ID;
   kind: AssetKind;
@@ -50,8 +53,11 @@ export interface Asset {
   codecs?: { video?: string; audio?: string };
   /** How to re-open the media: a copy in OPFS, or a File System Access handle stored in IndexedDB. */
   fileRef: { opfsPath?: string; handleKey?: string };
+  /** Set when the file came from the server's library (Stickers / Sound effects / Overlays panes). */
+  library?: { kind: LibraryKind; path: string };
 }
 
+/** 'text' tracks hold overlays: text and shape clips (shown as "Overlay" in the UI). */
 export type TrackKind = 'video' | 'audio' | 'text';
 
 export interface Track {
@@ -138,6 +144,77 @@ export interface TextProps {
   fadeOut: number;
 }
 
+export type ShapeKind = 'rectangle' | 'square' | 'circle' | 'oval' | 'triangle' | 'star' | 'line';
+
+/**
+ * A vector shape, centred on the clip transform's position. Sizes are project pixels at scale 1.
+ * Square and circle keep width = height. A line runs along the width (its angle is the rotation);
+ * its height is ignored.
+ */
+export interface ShapeProps {
+  kind: ShapeKind;
+  width: number;
+  height: number;
+  /** No fill when absent. */
+  fill?: string;
+  /** 0..1, default 1. */
+  fillOpacity?: number;
+  /** No outline when absent (a line always strokes, falling back to white). */
+  stroke?: string;
+  strokeWidth: number;
+  /** 0..1, default 1. */
+  strokeOpacity?: number;
+  dash?: 'solid' | 'dash' | 'dot';
+  /** Rounded corners (px) for rectangle, square and triangle. */
+  cornerRadius?: number;
+  /** Star: number of points (3..20, default 5) and inner radius as a fraction of the outer (default 0.5). */
+  points?: number;
+  innerRadius?: number;
+  /** Line: arrowheads. */
+  arrowStart?: boolean;
+  arrowEnd?: boolean;
+  shadowColor?: string;
+  /** Blur radius in project pixels at scale 1. */
+  shadowBlur?: number;
+  fadeIn: number;
+  fadeOut: number;
+}
+
+/** How a visual clip mixes with the layers below it (After Effects' layer blend modes). */
+export type BlendMode =
+  | 'normal'
+  | 'dissolve'
+  | 'dancingDissolve'
+  | 'darken'
+  | 'multiply'
+  | 'colorBurn'
+  | 'classicColorBurn'
+  | 'linearBurn'
+  | 'darkerColor'
+  | 'add'
+  | 'lighten'
+  | 'screen'
+  | 'colorDodge'
+  | 'classicColorDodge'
+  | 'linearDodge'
+  | 'lighterColor'
+  | 'overlay'
+  | 'softLight'
+  | 'hardLight'
+  | 'linearLight'
+  | 'vividLight'
+  | 'pinLight'
+  | 'hardMix'
+  | 'difference'
+  | 'classicDifference'
+  | 'exclusion'
+  | 'subtract'
+  | 'divide'
+  | 'hue'
+  | 'saturation'
+  | 'color'
+  | 'luminosity';
+
 export interface Clip {
   id: ID;
   assetId?: ID;
@@ -152,6 +229,79 @@ export interface Clip {
   transform: Transform;
   audio: ClipAudio;
   text?: TextProps;
+  shape?: ShapeProps;
+  /** Default 'normal'. */
+  blend?: BlendMode;
+  /** Applied in order to the clip's pixels (see model/effects.ts). */
+  effects?: Effect[];
+  /**
+   * An adjustment layer: draws nothing itself; its effects (and filter) apply to everything below
+   * it while it is on screen, mixed in by its opacity and blend mode.
+   */
+  adjustment?: boolean;
+}
+
+export type EffectKind =
+  | 'gaussianBlur'
+  | 'fastBoxBlur'
+  | 'cameraLensBlur'
+  | 'directionalBlur'
+  | 'sharpen'
+  | 'unsharpMask'
+  | 'lumetri'
+  | 'curves'
+  | 'levels'
+  | 'hueSaturation'
+  | 'tint'
+  | 'tritone'
+  | 'brightnessContrast'
+  | 'transform'
+  | 'warpStabilizer'
+  | 'turbulentDisplace'
+  | 'displacementMap'
+  | 'opticsCompensation'
+  | 'powerPin'
+  | 'fill'
+  | 'gradientRamp'
+  | 'fourColorGradient'
+  | 'grid'
+  | 'lensFlare'
+  | 'stroke'
+  | 'glow'
+  | 'dropShadow'
+  | 'motionTile'
+  | 'roughenEdges'
+  | 'findEdges'
+  | 'posterize'
+  | 'cameraTracker3d'
+  | 'bevelAlpha'
+  | 'sphere'
+  | 'echo'
+  | 'posterizeTime'
+  | 'timewarp'
+  | 'forceMotionBlur'
+  | 'particleWorld'
+  | 'particleSystems'
+  | 'shatter'
+  | 'keylight'
+  | 'linearColorKey'
+  | 'colorRange'
+  | 'linearWipe'
+  | 'radialWipe'
+  | 'venetianBlinds'
+  | 'blockDissolve'
+  | 'gradientWipe'
+  /** A Filters-pane preset (a colour/texture look with an intensity). */
+  | 'look';
+
+/** Parameter values by key; points are stored as `<key>X` / `<key>Y` fractions of the frame. */
+export type EffectParams = Record<string, number | string | boolean>;
+
+export interface Effect {
+  id: ID;
+  kind: EffectKind;
+  enabled: boolean;
+  params: EffectParams;
 }
 
 /**

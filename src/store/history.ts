@@ -22,6 +22,8 @@ export const MERGE_WINDOW_MS = 1000;
 
 export interface EditOptions {
   mergeKey?: string;
+  /** Merge with the previous step of the same key however long ago it was (one pointer gesture). */
+  gesture?: boolean;
   now?: number;
 }
 
@@ -39,7 +41,7 @@ export function edit<T>(h: History<T>, label: string, recipe: (draft: T) => void
   if (patches.length === 0) return h;
   const now = opts.now ?? Date.now();
   const last = h.past[h.past.length - 1];
-  if (opts.mergeKey && last?.mergeKey === opts.mergeKey && now - last.time < MERGE_WINDOW_MS) {
+  if (opts.mergeKey && last?.mergeKey === opts.mergeKey && (opts.gesture || now - last.time < MERGE_WINDOW_MS)) {
     const merged: HistoryEntry = {
       ...last,
       patches: [...last.patches, ...patches],

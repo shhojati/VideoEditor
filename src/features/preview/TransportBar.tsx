@@ -4,6 +4,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { jumpToEdit, stepFrames } from '../timeline/actions';
 import { useTimelineUi } from '../timeline/timelineUi';
+import { stepZoom, usePreviewView, ZOOM_PRESETS, zoomTo, zoomToFit } from './previewView';
 
 /** HH:MM:SS:FF at the project frame rate. */
 export function formatTimecode(t: number, fps: number) {
@@ -15,6 +16,43 @@ export function formatTimecode(t: number, fps: number) {
 }
 
 const iconBtn = 'rounded px-2 py-1 text-sm text-neutral-200 hover:bg-surface-3 disabled:opacity-40';
+
+/** −, a zoom level picker (Fit + presets; shows the current level) and +. */
+function ZoomControls() {
+  const { t } = useTranslation();
+  const k = usePreviewView((s) => s.view.k);
+  const mode = usePreviewView((s) => s.mode);
+  const pct = `${Math.round(k * 100)}%`;
+  const isPreset = ZOOM_PRESETS.some((p) => Math.abs(p - k) < 1e-6);
+  return (
+    <div className="flex items-center gap-0.5">
+      <button className={iconBtn} onClick={() => zoomTo(stepZoom(k, -1))} aria-label={t('preview.zoomOut')} title={`${t('preview.zoomOut')} (Ctrl+wheel)`}>
+        −
+      </button>
+      <select
+        className="rounded bg-surface-2 px-1 py-0.5 text-xs text-neutral-200"
+        aria-label={t('preview.zoom')}
+        data-testid="preview-zoom"
+        value={mode === 'fit' ? 'fit' : isPreset ? String(k) : 'custom'}
+        onChange={(e) => (e.target.value === 'fit' ? zoomToFit() : zoomTo(Number(e.target.value)))}
+      >
+        <option value="fit">
+          {t('preview.fit')}
+          {mode === 'fit' ? ` (${pct})` : ''}
+        </option>
+        {!isPreset && mode !== 'fit' && <option value="custom">{pct}</option>}
+        {ZOOM_PRESETS.map((p) => (
+          <option key={p} value={String(p)}>
+            {Math.round(p * 100)}%
+          </option>
+        ))}
+      </select>
+      <button className={iconBtn} onClick={() => zoomTo(stepZoom(k, 1))} aria-label={t('preview.zoomIn')} title={`${t('preview.zoomIn')} (Ctrl+wheel)`}>
+        +
+      </button>
+    </div>
+  );
+}
 
 export function TransportBar({ fps }: { fps: number }) {
   const { t } = useTranslation();
@@ -86,6 +124,8 @@ export function TransportBar({ fps }: { fps: number }) {
         />
       </label>
       <div className="ms-auto flex gap-1">
+        <ZoomControls />
+        <span className="mx-1 w-px self-stretch bg-line" />
         <button className={iconBtn} disabled={!selection.length} onClick={() => setFit('contain')} title={t('transport.fitHint')}>
           {t('transport.fit')}
         </button>

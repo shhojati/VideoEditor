@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { migrate } from './migrations';
+import { EFFECT_KINDS } from './effects';
+import { BLEND_MODES, SHAPE_KINDS } from './overlays';
 import type { Project } from './types';
 
 const num = z.number().finite();
@@ -25,6 +27,29 @@ const textProps = z.object({
   fadeOut: nonNeg,
 });
 
+const opacity = num.min(0).max(1);
+
+const shapeProps = z.object({
+  kind: z.enum(SHAPE_KINDS),
+  width: num.positive(),
+  height: num.positive(),
+  fill: z.string().optional(),
+  fillOpacity: opacity.optional(),
+  stroke: z.string().optional(),
+  strokeWidth: nonNeg,
+  strokeOpacity: opacity.optional(),
+  dash: z.enum(['solid', 'dash', 'dot']).optional(),
+  cornerRadius: nonNeg.optional(),
+  points: num.int().min(3).max(20).optional(),
+  innerRadius: num.min(0.05).max(1).optional(),
+  arrowStart: z.boolean().optional(),
+  arrowEnd: z.boolean().optional(),
+  shadowColor: z.string().optional(),
+  shadowBlur: nonNeg.optional(),
+  fadeIn: nonNeg,
+  fadeOut: nonNeg,
+});
+
 const clip = z.object({
   id: z.string(),
   assetId: z.string().optional(),
@@ -43,6 +68,19 @@ const clip = z.object({
   }),
   audio: z.object({ volume: nonNeg, fadeIn: nonNeg, fadeOut: nonNeg }),
   text: textProps.optional(),
+  shape: shapeProps.optional(),
+  blend: z.enum(BLEND_MODES).optional(),
+  effects: z
+    .array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(EFFECT_KINDS),
+        enabled: z.boolean(),
+        params: z.record(z.string(), z.union([num, z.string(), z.boolean()])),
+      }),
+    )
+    .optional(),
+  adjustment: z.boolean().optional(),
 });
 
 const track = z.object({
@@ -77,6 +115,7 @@ const asset = z.object({
   mimeType: z.string().optional(),
   codecs: z.object({ video: z.string().optional(), audio: z.string().optional() }).optional(),
   fileRef: z.object({ opfsPath: z.string().optional(), handleKey: z.string().optional() }),
+  library: z.object({ kind: z.enum(['stickers', 'sounds', 'overlays']), path: z.string() }).optional(),
 });
 
 const cue = z

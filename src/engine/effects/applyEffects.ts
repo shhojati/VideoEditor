@@ -258,6 +258,30 @@ export function applyEffects(layer: OffscreenCanvas, effects: readonly Effect[],
         step(run(S.LINEAR_KEY, cur.tex, { u_key: key, u_dominant: [dom === 0 ? 1 : 0, dom === 1 ? 1 : 0, dom === 2 ? 1 : 0], u_tolerance: n('tolerance') / 100, u_softness: n('softness') / 100, u_spill: n('spill') / 100 }));
         break;
       }
+      case 'keylight': {
+        const key = c('keyColor');
+        const dom = key.indexOf(Math.max(...key));
+        let matte = run(S.KEY_MATTE, cur.tex, { u_key: key, u_tolerance: n('tolerance') / 100, u_softness: n('softness') / 100 });
+        // Choke (+) shrinks the kept area, (−) grows it: a min/max filter, one axis at a time.
+        const choke = Math.min(64, px(n('choke')));
+        if (Math.abs(choke) >= 0.5) {
+          for (const dir of [[1, 0], [0, 1]] as [number, number][]) {
+            const next = run(S.KEY_CHOKE, matte.tex, { u_dir: dir, u_radius: Math.abs(choke), u_erode: choke > 0 });
+            g.release(matte);
+            matte = next;
+          }
+        }
+        const feather = px(n('feather'));
+        if (feather > 0.3) {
+          const soft = blur(matte, feather / 2, 'both', true);
+          g.release(matte);
+          matte = soft;
+        }
+        const view = { final: 0, matte: 1, status: 2 }[s('view')] ?? 0;
+        step(run(S.KEY_COMPOSITE, cur.tex, { u_dominant: [dom === 0 ? 1 : 0, dom === 1 ? 1 : 0, dom === 2 ? 1 : 0], u_spill: n('spill') / 100, u_view: view }, { u_map: matte.tex }));
+        g.release(matte);
+        break;
+      }
       case 'colorRange': {
         const [r, gg, bb] = c('keyColor');
         const mx = Math.max(r, gg, bb);

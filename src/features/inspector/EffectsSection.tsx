@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { defaultParams, EFFECT_DEFS, moveEffect, type ParamSpec } from '../../model/effects';
-import type { Clip, Effect } from '../../model/types';
+import type { Asset, Clip, Effect } from '../../model/types';
 import { useSubtitlesUi } from '../subtitles/subtitlesUi';
 import type { SetFn } from './ClipInspector';
 import { ColorField, NumberField, Section, SelectField } from './controls';
+import { FramePicker } from './FramePicker';
+
+/** Effects whose colour is best picked from the clip's own (un-keyed) frame. */
+const KEYING = new Set<Effect['kind']>(['keylight', 'linearColorKey', 'colorRange']);
 
 /** The clip's effect stack, top = applied first: switch, reorder, reset, remove, and settings. */
-export function EffectsSection({ clip, set }: { clip: Clip; set: SetFn }) {
+export function EffectsSection({ clip, asset, set }: { clip: Clip; asset?: Asset; set: SetFn }) {
   const { t } = useTranslation();
   const effects = clip.effects ?? [];
   return (
@@ -22,14 +26,14 @@ export function EffectsSection({ clip, set }: { clip: Clip; set: SetFn }) {
       )}
       <div className="space-y-2" data-testid="effect-stack">
         {effects.map((e, i) => (
-          <EffectCard key={e.id} effect={e} first={i === 0} last={i === effects.length - 1} set={set} />
+          <EffectCard key={e.id} effect={e} first={i === 0} last={i === effects.length - 1} set={set} clip={clip} asset={asset} />
         ))}
       </div>
     </Section>
   );
 }
 
-function EffectCard({ effect, first, last, set }: { effect: Effect; first: boolean; last: boolean; set: SetFn }) {
+function EffectCard({ effect, first, last, set, clip, asset }: { effect: Effect; first: boolean; last: boolean; set: SetFn; clip: Clip; asset?: Asset }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const def = EFFECT_DEFS[effect.kind];
@@ -80,7 +84,7 @@ function EffectCard({ effect, first, last, set }: { effect: Effect; first: boole
       {open && def.params.length > 0 && (
         <div className="space-y-2 border-t border-line px-2 py-2">
           {def.params.map((p) => (
-            <ParamField key={p.key} spec={p} effect={effect} edit={edit} />
+            <ParamField key={p.key} spec={p} effect={effect} edit={edit} picker={KEYING.has(effect.kind) && (asset?.kind === 'video' || asset?.kind === 'image') ? { clip, asset: asset! } : undefined} />
           ))}
         </div>
       )}
@@ -88,8 +92,20 @@ function EffectCard({ effect, first, last, set }: { effect: Effect; first: boole
   );
 }
 
-function ParamField({ spec, effect, edit }: { spec: ParamSpec; effect: Effect; edit: (prop: string, fn: (e: Effect) => void) => void }) {
+function ParamField({
+  spec,
+  effect,
+  edit,
+  picker,
+}: {
+  spec: ParamSpec;
+  effect: Effect;
+  edit: (prop: string, fn: (e: Effect) => void) => void;
+  /** Colours can be picked from this clip's frame. */
+  picker?: { clip: Clip; asset: Asset };
+}) {
   const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
   const label = t(`effects.params.${spec.key}`, { defaultValue: spec.key });
   const value = (key: string, fallback: unknown) => effect.params[key] ?? fallback;
   const setParam = (key: string, v: number | string | boolean) => edit(key, (e) => void (e.params[key] = v));
@@ -99,7 +115,26 @@ function ParamField({ spec, effect, edit }: { spec: ParamSpec; effect: Effect; e
         <NumberField label={label} value={Number(value(spec.key, spec.default))} min={spec.min} max={spec.max} step={spec.step ?? 0.01} unit={spec.unit} onChange={(v) => setParam(spec.key, v)} />
       );
     case 'color':
-      return <ColorField label={label} value={String(value(spec.key, spec.default))} onChange={(v) => setParam(spec.key, v ?? spec.default)} />;
+      return (
+        <>
+          <ColorField label={label} value={String(value(spec.key, spec.default))} onChange={(v) => setParam(spec.key, v ?? spec.default)} />
+          {picker && (
+            <button className={`rounded px-2 py-0.5 text-xs ${picking ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} data-testid="pick-color" aria-pressed={picking} onClick={() => setPicking((p) => !p)}>
+              ⌖ {t('effects.pickFromFrame')}
+            </button>
+          )}
+          {picker && picking && (
+            <FramePicker
+              clip={picker.clip}
+              asset={picker.asset}
+              onPick={(hex) => {
+                setParam(spec.key, hex);
+                setPicking(false);
+              }}
+            />
+          )}
+        </>
+      );
     case 'bool':
       return (
         <label className="flex items-center gap-2 text-xs text-neutral-300">

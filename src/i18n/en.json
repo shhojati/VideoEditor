@@ -925,7 +925,9 @@
       "preset": "Filter",
       "intensity": "Intensity",
       "blockSize": "Block size",
-      "sharpColors": "Sharp colours"
+      "sharpColors": "Sharp colours",
+      "choke": "Choke (+ shrink, − grow)",
+      "view": "View"
     },
     "options": {
       "both": "Horizontal and vertical",
@@ -960,8 +962,13 @@
       "out": "Wipe away at the end",
       "clockwise": "Clockwise",
       "counterclockwise": "Counterclockwise",
-      "noise": "Noise"
-    }
+      "noise": "Noise",
+      "final": "Final result",
+      "matte": "Matte (black and white)",
+      "status": "Status (grey = partly see-through)"
+    },
+    "pickFromFrame": "Pick from the frame",
+    "pickHint": "Click the background colour (the clip at the playhead, before effects)."
   },
   "filters": {
     "label": "Filter",

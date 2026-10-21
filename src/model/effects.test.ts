@@ -11,7 +11,7 @@ describe('effect catalog', () => {
   it("lists After Effects' menu, with the heavy analysis effects marked for later", () => {
     expect(EFFECT_MENU.map((m) => m.kinds.length)).toEqual([6, 7, 6, 6, 7, 4, 4, 3, 3, 5]);
     const later = Object.values(EFFECT_DEFS).filter((d) => d.later).map((d) => d.kind);
-    expect(later.sort()).toEqual(['cameraTracker3d', 'forceMotionBlur', 'keylight', 'shatter', 'timewarp', 'warpStabilizer']);
+    expect(later.sort()).toEqual(['cameraTracker3d', 'forceMotionBlur', 'shatter', 'timewarp', 'warpStabilizer']);
   });
 
   it('every parameter has a valid default and a label; every option and name is translated', () => {

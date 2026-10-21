@@ -511,3 +511,18 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - Keep pitch at extreme speeds sounds grainy (a hint says so).
 - A freeze frame drops trackers and tracked-mask links (masks keep their shape at that moment).
 - The reversed copy is a second file in the browser's storage (removed with the asset).
+
+## Post-MVP 15 — Chroma key (Keylight) ✅ (2026-10-21)
+
+### Done
+- **Keylight (1.2)** is now a real effect (it was listed as "soon"): key colour, tolerance, softness, spill suppression, **choke** (−20…+20 px: + shrinks the kept area, − grows it), **feather** (0–50 px) and **view** (final result / matte / status).
+- **Passes** (`engine/effects/shaders.ts`, `applyEffects.ts`): matte from the chroma distance in YCbCr relative to the key's own saturation (so dark and grey pixels are never keyed), then an erode/dilate min-max filter one axis at a time, a Gaussian feather, and the composite: alpha × matte with despill (the key's channel limited to the average of the other two). Matte view shows the matte in black and white; status view shows fully kept (white), fully keyed (black) and partly see-through (grey).
+- **Pick from the frame** (`features/inspector/FramePicker.tsx`): for Keylight, Linear Color Key and Color Range on video or image clips, a button shows the clip's own frame at the playhead, decoded straight from the source before any effect, and a click picks its colour (3×3 average against compression noise).
+
+### Verified
+- Effect catalogue tests updated (Keylight no longer "soon"; strings in both languages).
+- **E2E `e2e/chroma.spec.ts`**: a green screen with a red square over a blue clip; Keylight added from the Effects pane; the key picked from the frame is #00ff01; the centre stays red (255,1,0) and the corner shows the blue clip below (1,0,255); matte view is white in the middle and black at the corner; **preview = export** at both points.
+
+### Known issues / not done
+- Choke is limited to 64 px at the output resolution.
+- No "screen balance" or garbage matte controls (use a mask for garbage mattes).

@@ -113,7 +113,19 @@ const defs: EffectDef[] = [
   },
   { kind: 'shatter', name: 'Shatter', params: [], later: true },
   // Keying
-  { kind: 'keylight', name: 'Keylight (1.2)', params: [], later: true },
+  {
+    kind: 'keylight',
+    name: 'Keylight (1.2)',
+    params: [
+      color('keyColor', '#00ff00'),
+      num('tolerance', 40, 0, 100, 1, '%'),
+      num('softness', 20, 0, 100, 1, '%'),
+      num('spill', 60, 0, 100, 1, '%'),
+      num('choke', 0, -20, 20, 0.5, 'px'),
+      num('feather', 1, 0, 50, 0.5, 'px'),
+      select('view', 'final', ['final', 'matte', 'status']),
+    ],
+  },
   { kind: 'linearColorKey', name: 'Linear Color Key', params: [color('keyColor', '#00ff00'), num('tolerance', 20, 0, 100, 1, '%'), num('softness', 10, 0, 100, 1, '%'), num('spill', 50, 0, 100, 1, '%')] },
   { kind: 'colorRange', name: 'Color Range', params: [color('keyColor', '#00ff00'), num('hueRange', 30, 0, 180, 1, '°'), num('minSaturation', 25, 0, 100, 1, '%'), num('minLightness', 10, 0, 100, 1, '%'), num('maxLightness', 95, 0, 100, 1, '%'), num('softness', 10, 0, 100, 1, '%')] },
   // Transition

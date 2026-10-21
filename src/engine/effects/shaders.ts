@@ -419,6 +419,46 @@ void main() {
   o = pre(rgb, c.a * a);
 }`);
 
+// Keylight: chroma distance in YCbCr → matte (in .r), then choke, feather, and the composite.
+export const KEY_MATTE = fs(`uniform vec3 u_key; uniform float u_tolerance, u_softness;
+vec2 cbcr(vec3 c) { return vec2(-0.168736 * c.r - 0.331264 * c.g + 0.5 * c.b, 0.5 * c.r - 0.418688 * c.g - 0.081312 * c.b); }
+void main() {
+  vec3 rgb = unpre(at(gl_FragCoord.xy));
+  vec2 k = cbcr(u_key);
+  // Distance in chroma relative to the key's own saturation: 0 at the key, 1 at grey (and black).
+  float d = length(cbcr(rgb) - k) / max(length(k), 0.05);
+  float a = smoothstep(u_tolerance, u_tolerance + u_softness + 1e-4, d);
+  o = vec4(vec3(a), 1.0);
+}`);
+
+/** Erode (choke in) or dilate (spread out) the matte along one axis; radius up to 64 px. */
+export const KEY_CHOKE = fs(`uniform vec2 u_dir; uniform float u_radius; uniform bool u_erode;
+void main() {
+  float v = at(gl_FragCoord.xy).r;
+  for (int i = -64; i <= 64; i++) {
+    if (abs(float(i)) > u_radius) continue;
+    float s = at(gl_FragCoord.xy + u_dir * float(i)).r;
+    v = u_erode ? min(v, s) : max(v, s);
+  }
+  o = vec4(vec3(v), 1.0);
+}`);
+
+/** The layer through the matte (u_map), with spill pulled out; or the matte itself to check it. */
+export const KEY_COMPOSITE = fs(`uniform sampler2D u_map; uniform vec3 u_dominant; uniform float u_spill, u_view;
+void main() {
+  vec4 c = at(gl_FragCoord.xy);
+  float m = sampleOf(u_map, gl_FragCoord.xy).r;
+  if (u_view > 1.5) { float s = m < 0.02 ? 0.0 : m > 0.98 ? 1.0 : 0.5; o = vec4(vec3(s) * c.a, c.a); return; }
+  if (u_view > 0.5) { o = vec4(vec3(m) * c.a, c.a); return; }
+  // Despill: limit the key's channel to the average of the other two.
+  vec3 rgb = unpre(c);
+  float dom = dot(rgb, u_dominant);
+  vec3 rest = rgb * (1.0 - u_dominant);
+  float limit = (rest.r + rest.g + rest.b) * 0.5;
+  rgb -= u_dominant * max(dom - limit, 0.0) * u_spill;
+  o = pre(rgb, c.a * m);
+}`);
+
 export const COLOR_RANGE = fs(`uniform float u_hue, u_hueRange, u_minSat, u_minL, u_maxL, u_softness;
 void main() {
   vec4 c = at(gl_FragCoord.xy); vec3 h = rgb2hsl(unpre(c));

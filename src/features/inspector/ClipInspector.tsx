@@ -141,7 +141,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {visual && <MotionSection project={project} clip={clip} />}
       {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
       {visual && <BlendSection clip={clip} set={set} />}
-      {visual && <EffectsSection clip={shown} set={set} />}
+      {visual && <EffectsSection clip={shown} asset={asset} set={set} />}
 
       {audible && (
         <Section title={t('inspector.audio')}>

@@ -59,7 +59,7 @@ import { getMediaFile } from '../lib/opfs';
 import { ZipWriter } from '../lib/zip';
 import { timelineDuration } from '../model/timeline';
 import type { ID, Project } from '../model/types';
-import type { DuckPlan } from '../engine/audio/ducking';
+import type { AudioAux } from '../engine/audio/audioAux';
 
 export type ExportRequest =
   | {
@@ -69,8 +69,8 @@ export type ExportRequest =
       file?: FileSystemFileHandle;
       /** Free plan (features/account/policy.ts). */
       watermark?: WatermarkSpec;
-      /** Auto-ducking plan, made on the main thread from the waveforms (engine/audio/ducking.ts). */
-      duck?: DuckPlan;
+      /** Duck plan and noise profiles, made on the main thread (engine/audio/audioAux.ts). */
+      aux?: AudioAux;
     }
   | { type: 'cancel' };
 
@@ -187,7 +187,7 @@ async function decodeRange(opfsPath: string, from: number, to: number): Promise<
   return { channels: out, rate, start };
 }
 
-async function mixAudio(project: Project, duration: number, duck: DuckPlan): Promise<[Float32Array, Float32Array] | null> {
+async function mixAudio(project: Project, duration: number, aux: AudioAux): Promise<[Float32Array, Float32Array] | null> {
   const clips = audibleClips(project);
   if (!clips.length) return null;
   const n = Math.ceil(duration * AUDIO_RATE);
@@ -198,14 +198,14 @@ async function mixAudio(project: Project, duration: number, duck: DuckPlan): Pro
       clip,
       track,
       (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined),
-      duck[clip.id],
+      aux.duck?.[clip.id],
     );
     const range = await decodeRange(
       opfsPath,
       Math.max(0, sourceTimeAt(clip, env.start)),
       sourceTimeAt(clip, env.end),
     );
-    if (range) mixClip(mix, AUDIO_RATE, clip, range, env);
+    if (range) mixClip(mix, AUDIO_RATE, clip, range, env, clip.assetId ? aux.noise?.[clip.assetId] : undefined);
     post({ type: 'progress', phase: 'audio', done: i + 1, total: clips.length });
   }
   limit(mix);
@@ -629,7 +629,7 @@ async function run(
   input: ExportSettings,
   file?: FileSystemFileHandle,
   watermark?: WatermarkSpec,
-  duck: DuckPlan = {},
+  aux: AudioAux = {},
 ) {
   const t0 = performance.now();
   const settings = fitToFormat(input);
@@ -648,7 +648,7 @@ async function run(
   if (settings.format !== 'mp3')
     await Promise.all([...fonts].map((f) => ensureFont(f.split('|')[0], Number(f.split('|')[1]))));
 
-  const audio = hasAudio(settings) ? await mixAudio(project, duration, duck) : null;
+  const audio = hasAudio(settings) ? await mixAudio(project, duration, aux) : null;
   checkCancel();
 
   const writable = file ? await file.createWritable() : null;
@@ -680,7 +680,7 @@ self.onmessage = async (e: MessageEvent<ExportRequest>) => {
   }
   cancelled = false;
   try {
-    await run(e.data.project, e.data.settings, e.data.file, e.data.watermark, e.data.duck);
+    await run(e.data.project, e.data.settings, e.data.file, e.data.watermark, e.data.aux);
   } catch (err) {
     if (err instanceof Cancelled) post({ type: 'cancelled' });
     else post({ type: 'error', message: err instanceof Error ? err.message : String(err) });

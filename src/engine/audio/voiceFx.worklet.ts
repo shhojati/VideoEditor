@@ -1,8 +1,9 @@
 // AudioWorklet that runs a clip's voice or space chain (engine/audio/voiceDsp.ts) during preview.
 // Settings come in once with the node; values over time (keyframes, the tail fade) are computed
 // from the context clock, the same way export computes them from the sample position.
-import { spaceMixAt, SPACE_TAIL, voiceParamsAt } from '../../model/voiceFx';
+import { hasVoiceStage, spaceMixAt, SPACE_TAIL, voiceParamsAt } from '../../model/voiceFx';
 import type { Clip } from '../../model/types';
+import { CleanChain, hasCleanStage, type NoiseProfile } from './cleanDsp';
 import { SpaceChain, VoiceChain } from './voiceDsp';
 
 // AudioWorkletGlobalScope (not in the DOM typings).
@@ -20,21 +21,24 @@ export interface VoiceFxOptions {
   t0: number;
   /** Timeline time the clip's audio ends (transitions included). */
   end: number;
+  /** The asset's noise profile, for noise reduction (voice mode). */
+  noise?: NoiseProfile;
 }
 
 class VoiceFxProcessor extends AudioWorkletProcessor {
   private readonly o: VoiceFxOptions;
-  private readonly chain: VoiceChain | SpaceChain;
+  private readonly chain?: VoiceChain | SpaceChain;
+  private readonly clean?: CleanChain;
   private readonly buf: [Float32Array, Float32Array] = [new Float32Array(128), new Float32Array(128)];
 
   constructor({ processorOptions: o }: { processorOptions: VoiceFxOptions }) {
     super();
     this.o = o;
     const clip = o.clip as Clip;
-    this.chain =
-      o.mode === 'voice'
-        ? new VoiceChain(clip.audio.voice?.kind, sampleRate, (t) => voiceParamsAt(clip, t))
-        : new SpaceChain(clip.audio.space!, sampleRate, (t) => spaceMixAt(clip, t, o.end));
+    // Voice mode = cleanup (if any) then the voice effect (if any), as in export.
+    if (o.mode === 'voice' && hasCleanStage(clip)) this.clean = new CleanChain(clip.audio.clean!, sampleRate, o.noise);
+    if (o.mode === 'space') this.chain = new SpaceChain(clip.audio.space!, sampleRate, (t) => spaceMixAt(clip, t, o.end));
+    else if (hasVoiceStage(clip)) this.chain = new VoiceChain(clip.audio.voice?.kind, sampleRate, (t) => voiceParamsAt(clip, t));
   }
 
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
@@ -51,7 +55,8 @@ class VoiceFxProcessor extends AudioWorkletProcessor {
       l.fill(0, 0, n);
       r.fill(0, 0, n);
     }
-    this.chain.process(this.buf, n, t);
+    this.clean?.process(this.buf, n);
+    this.chain?.process(this.buf, n, t);
     out[0].set(l.subarray(0, n));
     out[1]?.set(r.subarray(0, n));
     // The voice stage stops with the clip; the space one rings on for its tail.

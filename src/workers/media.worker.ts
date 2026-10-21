@@ -5,6 +5,7 @@ import { ALL_FORMATS, AudioSampleSink, BlobSource, CanvasSink, Input } from 'med
 import { getMediaFile } from '../lib/opfs';
 import { PeakBuilder } from '../lib/peaks';
 import { BinAccumulator, STT_RATE } from '../engine/stt/audio16k';
+import { LoudnessMeter, measureNoiseProfile } from '../engine/audio/cleanDsp';
 import { exposeRpc } from './rpc';
 
 const JPEG = { type: 'image/jpeg', quality: 0.72 } as const;
@@ -131,6 +132,65 @@ async function mixdown16k({ items, duration }: { items: MixItem[]; duration: num
   return { result: { pcm: mix }, transfer: [mix.buffer] };
 }
 
-const handlers = { thumbnails, waveform, mixdown16k };
+/** Seconds of audio the noise profile looks at (enough to find the quiet parts of long files). */
+const PROFILE_SECONDS = 180;
+
+/** Background noise spectrum of an asset (first channel), for noise reduction. */
+async function noiseProfile({ opfsPath }: { opfsPath: string }) {
+  const file = await openFile(opfsPath);
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const track = await input.getPrimaryAudioTrack();
+    if (!track) throw new Error('no audio track');
+    const parts: Float32Array[] = [];
+    let rate = 48_000;
+    let total = 0;
+    for await (const sample of new AudioSampleSink(track).samples(0, PROFILE_SECONDS)) {
+      const buf = new Float32Array(sample.numberOfFrames);
+      sample.copyTo(buf, { planeIndex: 0, format: 'f32-planar' });
+      rate = sample.sampleRate;
+      parts.push(buf);
+      total += buf.length;
+      sample.close();
+    }
+    const mono = new Float32Array(total);
+    let o = 0;
+    for (const p of parts) {
+      mono.set(p, o);
+      o += p.length;
+    }
+    const profile = measureNoiseProfile(mono, rate);
+    return { result: { profile }, transfer: [profile.buffer] };
+  } finally {
+    input.dispose();
+  }
+}
+
+/** Integrated loudness (LUFS) of a source range, for Normalize. */
+async function loudness({ opfsPath, from, to }: { opfsPath: string; from: number; to: number }) {
+  const file = await openFile(opfsPath);
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const track = await input.getPrimaryAudioTrack();
+    if (!track) throw new Error('no audio track');
+    let meter: LoudnessMeter | null = null;
+    let scratch: Float32Array[] = [];
+    for await (const sample of new AudioSampleSink(track).samples(from, to)) {
+      const n = sample.numberOfFrames;
+      if (scratch.length !== sample.numberOfChannels || scratch[0].length !== n)
+        scratch = Array.from({ length: sample.numberOfChannels }, () => new Float32Array(n));
+      for (let c = 0; c < sample.numberOfChannels; c++) sample.copyTo(scratch[c], { planeIndex: c, format: 'f32-planar' });
+      // Mono counts as one channel, stereo as two (BS.1770 channel weights 1).
+      meter ??= new LoudnessMeter(sample.sampleRate);
+      meter.push(scratch, n);
+      sample.close();
+    }
+    return { result: { lufs: meter ? meter.result() : -Infinity } };
+  } finally {
+    input.dispose();
+  }
+}
+
+const handlers = { thumbnails, waveform, mixdown16k, noiseProfile, loudness };
 export type MediaWorkerApi = typeof handlers;
 exposeRpc(handlers);

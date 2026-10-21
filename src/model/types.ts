@@ -130,6 +130,17 @@ export interface ClipAudio {
   keepPitch?: boolean;
   /** Gets quieter while other clips have speech (music under a voiceover); see engine/audio/ducking.ts. */
   duck?: ClipDuck;
+  /** Noise reduction and voice enhance; see engine/audio/cleanDsp.ts. */
+  clean?: ClipClean;
+  /** Extra gain in dB, set by Normalize. */
+  gainDb?: number;
+}
+
+export interface ClipClean {
+  /** Noise reduction strength 0..1 (0 = off). */
+  denoise: number;
+  /** Clearer speech: rumble cut, presence, gentle compression (and some noise reduction). */
+  enhance?: boolean;
 }
 
 export interface ClipDuck {

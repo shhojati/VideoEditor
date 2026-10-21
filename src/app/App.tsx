@@ -4,6 +4,7 @@ import { playbackEngine } from '../engine/playback/engine';
 import { ExportDialog } from '../features/export/ExportDialog';
 import { RecordDialog } from '../features/record/RecordDialog';
 import { projectDuckPlan } from '../features/media-bin/speechActivity';
+import { readyNoiseProfiles } from '../features/media-bin/audioAnalysis';
 import { Inspector } from '../features/inspector/Inspector';
 import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
@@ -53,7 +54,7 @@ function Editor() {
   useEffect(() => {
     const stopAutosave = startAutosave();
     const stopMedia = startMediaWatcher();
-    playbackEngine.duckPlan = projectDuckPlan;
+    playbackEngine.audioAux = (p) => ({ duck: projectDuckPlan(p), noise: readyNoiseProfiles(p) });
     const stopPlayback = playbackEngine.init();
     void bootstrap(t('app.untitled'));
     return () => {

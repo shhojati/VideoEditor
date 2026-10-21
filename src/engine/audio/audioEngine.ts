@@ -12,7 +12,8 @@ import { sourceTimeAt } from '../render/renderFrame';
 import { voiceLatency } from './voiceDsp';
 import workletUrl from './voiceFx.worklet.ts?worker&url';
 import type { VoiceFxOptions } from './voiceFx.worklet';
-import type { DuckPlan } from './ducking';
+import type { AudioAux } from './audioAux';
+import { cleanLatency, hasCleanStage, type NoiseProfile } from './cleanDsp';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
 const SCHEDULE_AHEAD = 2;
@@ -55,7 +56,7 @@ export class AudioEngine {
   }
 
   /** Start playing the project from timeline time t0. Returns once the clock is anchored. */
-  async start(project: Project, t0: number, volume: number, duck: DuckPlan = {}) {
+  async start(project: Project, t0: number, volume: number, aux: AudioAux = {}) {
     this.stop();
     const ctx = this.context;
     if (ctx.state !== 'running') await ctx.resume();
@@ -67,11 +68,11 @@ export class AudioEngine {
     for (const track of project.tracks) {
       if (track.muted || track.kind === 'text') continue;
       for (const clip of track.clips) {
-        const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined), duck[clip.id]);
+        const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined), aux.duck?.[clip.id]);
         if (env.end <= t0 || peakVolume(clip) <= 0) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;
-        void this.playClip(clip, env, asset, gen, fx);
+        void this.playClip(clip, env, asset, gen, fx, aux.noise?.[asset.id]);
       }
     }
   }
@@ -89,7 +90,14 @@ export class AudioEngine {
     return this.ctxStart + (t - this.t0);
   }
 
-  private async playClip(clip: Clip, env: AudioEnvelope, asset: NonNullable<Project['assets'][string]>, gen: number, fx: boolean) {
+  private async playClip(
+    clip: Clip,
+    env: AudioEnvelope,
+    asset: NonNullable<Project['assets'][string]>,
+    gen: number,
+    fx: boolean,
+    noise: NoiseProfile | undefined,
+  ) {
     const ctx = this.ctx!;
     // Transitions extend the audible range past the clip's own edges.
     const from = Math.max(this.t0, env.start);
@@ -103,14 +111,15 @@ export class AudioEngine {
     const gain = ctx.createGain();
     this.graph.push(gain);
     scheduleEnvelope(gain.gain, env, from, end, (t) => this.toCtx(t));
-    // source → [voice] → gain → [space] → master
+    // source → [cleanup + voice] → gain → [space] → master
     let input: AudioNode = gain;
     let lead = 0;
-    if (fx && hasVoiceStage(clip)) {
-      input = this.fxNode('voice', clip, end);
+    if (fx && (hasVoiceStage(clip) || hasCleanStage(clip))) {
+      input = this.fxNode('voice', clip, end, noise);
       input.connect(gain);
-      // The voice stage delays its output; feed it that much early.
-      lead = voiceLatency(ctx.sampleRate) / ctx.sampleRate;
+      // The cleanup and voice stages delay their output; feed them that much early.
+      const delay = (hasVoiceStage(clip) ? voiceLatency(ctx.sampleRate) : 0) + (clip.audio.clean ? cleanLatency(clip.audio.clean, noise) : 0);
+      lead = delay / ctx.sampleRate;
     }
     if (fx && clip.audio.space) {
       const space = this.fxNode('space', clip, end);
@@ -169,9 +178,9 @@ export class AudioEngine {
     for (const g of this.graph.splice(0)) g.disconnect();
   }
 
-  private fxNode(mode: VoiceFxOptions['mode'], clip: Clip, end: number) {
+  private fxNode(mode: VoiceFxOptions['mode'], clip: Clip, end: number, noise?: NoiseProfile) {
     const { start, duration, inPoint, speed, audio, keyframes } = clip;
-    const processorOptions: VoiceFxOptions = { mode, clip: { start, duration, inPoint, speed, audio, keyframes }, ctxStart: this.ctxStart, t0: this.t0, end };
+    const processorOptions: VoiceFxOptions = { mode, clip: { start, duration, inPoint, speed, audio, keyframes }, ctxStart: this.ctxStart, t0: this.t0, end, noise };
     const node = new AudioWorkletNode(this.ctx!, 'voice-fx', {
       numberOfInputs: 1,
       numberOfOutputs: 1,

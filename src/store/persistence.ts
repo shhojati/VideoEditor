@@ -19,6 +19,8 @@ export interface DerivedMedia {
   thumbs?: { times: number[]; blobs: Blob[]; width: number; height: number };
   /** Min/max pairs, see lib/peaks.ts. */
   waveform?: { peaksPerSecond: number; peaks: Float32Array };
+  /** Background noise spectrum for noise reduction (engine/audio/cleanDsp.ts), made on demand. */
+  noise?: Float32Array;
 }
 
 interface EditorDB extends DBSchema {

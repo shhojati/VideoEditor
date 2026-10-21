@@ -19,6 +19,7 @@ import { keyedEdit, playheadIn } from '../keyframes/keyframeService';
 import { KeyframesSection } from '../keyframes/KeyframesSection';
 import { setKeepPitch } from '../../model/voiceFx';
 import { VoiceSection } from './VoiceSection';
+import { CleanupSection } from './CleanupSection';
 import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 
 /**
@@ -202,6 +203,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
           )}
         </Section>
       )}
+      {audible && <CleanupSection project={project} clip={clip} set={set} />}
       {audible && <VoiceSection clip={shown} set={set} />}
     </fieldset>
   );

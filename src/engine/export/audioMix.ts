@@ -5,6 +5,7 @@
 import { peakVolume } from '../../model/keyframes';
 import type { Clip, Project, Track } from '../../model/types';
 import { hasVoiceStage, SPACE_TAIL, spaceMixAt, voiceParamsAt } from '../../model/voiceFx';
+import { CleanChain, hasCleanStage, type NoiseProfile } from '../audio/cleanDsp';
 import { SpaceChain, VoiceChain, voiceLatency } from '../audio/voiceDsp';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
 
@@ -18,8 +19,8 @@ export interface DecodedRange {
 
 /**
  * Add one clip into the stereo mix (`out[0]`, `out[1]` at `outRate`, index 0 = timeline 0 s) over its
- * audible range, shaped by its gain envelope (fades, transition crossfades), with its voice effects
- * (a space effect rings on past the range).
+ * audible range, shaped by its gain envelope (fades, transition crossfades), with its cleanup and
+ * voice effects (a space effect rings on past the range). `noise` = the asset's noise profile.
  */
 export function mixClip(
   out: [Float32Array, Float32Array],
@@ -27,9 +28,10 @@ export function mixClip(
   clip: Clip,
   src: DecodedRange,
   env: AudioEnvelope = audioEnvelope(clip),
+  noise?: NoiseProfile,
 ) {
-  if (hasVoiceStage(clip) || clip.audio.space) {
-    mixClipFx(out, outRate, clip, src, env);
+  if (hasVoiceStage(clip) || hasCleanStage(clip) || clip.audio.space) {
+    mixClipFx(out, outRate, clip, src, env, noise);
     return;
   }
   const first = Math.max(0, Math.floor(env.start * outRate));
@@ -54,12 +56,20 @@ export function mixClip(
 /** Samples per chunk of the effects path (keeps memory flat on long clips). */
 const CHUNK = 8192;
 
-function mixClipFx(out: [Float32Array, Float32Array], outRate: number, clip: Clip, src: DecodedRange, env: AudioEnvelope) {
-  const { space, voice } = clip.audio;
+function mixClipFx(
+  out: [Float32Array, Float32Array],
+  outRate: number,
+  clip: Clip,
+  src: DecodedRange,
+  env: AudioEnvelope,
+  noise: NoiseProfile | undefined,
+) {
+  const { space, voice, clean } = clip.audio;
+  const cleanChain = hasCleanStage(clip) ? new CleanChain(clean!, outRate, noise) : undefined;
   const voiceChain = hasVoiceStage(clip) ? new VoiceChain(voice?.kind, outRate, (t) => voiceParamsAt(clip, t)) : undefined;
   const spaceChain = space ? new SpaceChain(space, outRate, (t) => spaceMixAt(clip, t, env.end)) : undefined;
-  // The voice stage delays its output: feed it that many samples ahead.
-  const lead = voiceChain ? voiceLatency(outRate) : 0;
+  // The cleanup and voice stages delay their output: feed them that many samples ahead.
+  const lead = (voiceChain ? voiceLatency(outRate) : 0) + (cleanChain?.latency ?? 0);
   const first = Math.floor(env.start * outRate);
   const last = Math.min(out[0].length, Math.ceil((env.end + (space ? SPACE_TAIL : 0)) * outRate));
   const left = src.channels[0];
@@ -81,6 +91,7 @@ function mixClipFx(out: [Float32Array, Float32Array], outRate: number, clip: Cli
       buf[1][j] = right[k] + (right[k1] - right[k]) * f;
     }
     // From here on, buf[*][j] is timeline sample i0 + j.
+    cleanChain?.process(buf, len);
     voiceChain?.process(buf, len, i0 / outRate);
     for (let j = 0; j < len; j++) {
       const g = env.gainAt((i0 + j) / outRate);

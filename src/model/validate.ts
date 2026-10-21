@@ -94,6 +94,8 @@ const clip = z.object({
     space: z.object({ kind: z.enum(SPACE_KINDS), mix: unit, size: unit }).optional(),
     keepPitch: z.boolean().optional(),
     duck: z.object({ amount: num.min(-40).max(0), attack: num.min(0.05).max(3), release: num.min(0.05).max(3) }).optional(),
+    clean: z.object({ denoise: unit, enhance: z.boolean().optional() }).optional(),
+    gainDb: num.min(-40).max(40).optional(),
   }),
   text: textProps.optional(),
   shape: shapeProps.optional(),

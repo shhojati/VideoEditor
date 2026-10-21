@@ -3,6 +3,7 @@ import { FORMATS, outputMime, outputName, type ExportSettings } from '../../engi
 import type { Project } from '../../model/types';
 import type { ExportMessage, ExportRequest } from '../../workers/export.worker';
 import { projectDuckPlan } from '../media-bin/speechActivity';
+import { allNoiseProfiles } from '../media-bin/audioAnalysis';
 import { exportSubtitleFile } from '../subtitles/subtitleActions';
 import type { WatermarkSpec } from '../../engine/render/watermark';
 import { loadWatermark, watermarkImageUrl } from '../../lib/appConfig';
@@ -124,8 +125,8 @@ export async function startExport(project: Project, settings: ExportSettings, po
       useExport.setState({ stage: 'error', error: data.message });
     }
   };
-  const duck = projectDuckPlan(project);
-  w.postMessage({ type: 'start', project, settings, file: fileHandle ?? undefined, watermark, duck } satisfies ExportRequest);
+  const aux = { duck: projectDuckPlan(project), noise: await allNoiseProfiles(project) };
+  w.postMessage({ type: 'start', project, settings, file: fileHandle ?? undefined, watermark, aux } satisfies ExportRequest);
 }
 
 export function cancelExport() {

@@ -455,3 +455,22 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Speech detection is level based: any sound on a non-ducked clip (sound effects too) ducks the music. Choosing which clips count as voice is not offered yet.
 - Waveforms are made after import; until then a new clip does not duck others.
+
+## Post-MVP 12 — Audio cleanup: noise reduction, enhance voice, normalize ✅ (2026-10-21)
+
+### Done
+- **Clean up** section for audible clips (`Clip.audio.clean`, `Clip.audio.gainDb`):
+  - **Noise reduction** 0–100 %: a spectral gate (`engine/audio/cleanDsp.ts`; 1024-sample STFT, 50 % overlap, sqrt-Hann in and out) turns each frequency down where it is close to the recording's **noise profile**. Gains open at once and close gently (less "musical noise"), and both channels share them so the stereo image stays put. Strength sets the over-subtraction (1–4×) and the floor (−6 … −30 dB).
+  - **Noise profile**: the average spectrum of the quietest 15 % of frames in the first 3 minutes (digital silence ignored), made in the media worker when cleanup is first turned on and cached in IndexedDB. It is stored on a fixed 0–24 kHz grid, so it works at any sample rate.
+  - **Enhance voice**: rumble cut (80 Hz high-pass), −2 dB at 250 Hz, +3 dB presence at 3.5 kHz, gentle compressor (−24 dB, 3:1, +4 dB), plus at least 40 % noise reduction.
+  - **Normalize**: measures the clip's integrated loudness (ITU-R BS.1770-4: K-weighting, 400 ms blocks, −70 LUFS absolute and −10 LU relative gates, streamed so long clips use little memory) and sets a gain to −16 LUFS (±20 dB at most), shown as "+6.3 dB" with a reset button.
+- **Same chain in both places**: cleanup runs before the voice effect, in the preview's voice worklet and in the export mix. Noise reduction adds 1024 samples of delay, which both hosts compensate. Noise profiles reach the export worker with the duck plan (`engine/audio/audioAux.ts`); export waits for any missing profile. The normalize gain is part of the shared gain envelope.
+
+### Verified
+- Unit tests: FFT round trip; the denoiser is transparent without noise and removes > 16 dB of white noise while keeping a 440 Hz tone; the profile uses the quiet frames and skips digital silence; compressor ratio; Enhance cuts 30 Hz rumble; loudness of a 1 kHz sine at 0 dBFS = −3.01 LUFS, −23.01 at −20 dBFS, stereo +3 dB, the same at 44.1 kHz and fed in pieces; silence gated; normalize gain limits.
+- **E2E `e2e/cleanup.spec.ts`**: a WAV with hiss throughout and a 440 Hz tone from 3 s; Noise reduction 100 % and Normalize (−1.8 dB) set in the inspector; the preview plays through the worklet without errors. In the export the hiss falls from 0.029 to **0.0019 RMS (−22 dB)**, and the tone is 0.172 RMS (0.212 × the normalize gain).
+
+### Known issues / not done
+- The noise profile is per asset (its quietest parts), not per clip; a file whose background changes a lot is cleaned with an average.
+- Preview starts the cleanup fresh at the playhead, so its first ~20 ms can differ from the export.
+- Normalize is measured once (before cleanup); trimming the clip afterwards keeps the gain.

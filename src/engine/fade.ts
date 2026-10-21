@@ -79,6 +79,7 @@ export function audioEnvelope(
       if (t > outWin![0]) g *= Math.cos(((t - outWin![0]) / (outWin![1] - outWin![0])) * (Math.PI / 2));
     } else if (!tr.out && clip.audio.fadeOut > 0) g *= Math.max(0, Math.min(1, (e - t) / clip.audio.fadeOut));
     if (duckSettings) g *= duckGainAt(duck!, duckSettings, t);
+    if (clip.audio.gainDb) g *= 10 ** (clip.audio.gainDb / 20);
     return Math.max(0, g);
   };
 

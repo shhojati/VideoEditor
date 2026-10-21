@@ -109,7 +109,8 @@
     "cutText": "Cut words",
     "removePauses": "Remove pauses and fillers",
     "transcribe": "Transcribe",
-    "translate": "Translate subtitles"
+    "translate": "Translate subtitles",
+    "addTemplate": "Add template"
   },
   "panels": {
     "media": "Media",
@@ -129,7 +130,8 @@
     "fx": "Effects",
     "effects": "Effects",
     "filters": "Filters",
-    "transcript": "Text"
+    "transcript": "Text",
+    "templates": "Templates"
   },
   "settings": {
     "title": "Project settings",
@@ -1394,5 +1396,36 @@
       "missingModel": "The translation model is not installed. Put it in public/models with scripts/fetch-models.mjs translate.",
       "failed": "Translation failed."
     }
+  },
+  "textAnim": {
+    "in": "Animation in",
+    "out": "Animation out",
+    "duration": "Animation length",
+    "kinds": {
+      "none": "None",
+      "fade": "Fade",
+      "slideUp": "Slide up",
+      "slideDown": "Slide down",
+      "slideLeft": "Slide left",
+      "slideRight": "Slide right",
+      "pop": "Pop",
+      "zoom": "Zoom",
+      "typewriter": "Typewriter",
+      "wordByWord": "Word by word",
+      "blurIn": "Blur",
+      "wipe": "Wipe"
+    }
+  },
+  "templates": {
+    "hint": "Click to add at the playhead (on new graphics tracks on top). Then edit the texts in the inspector.",
+    "itemHint": "Add at the playhead",
+    "categories": {
+      "title": "Titles",
+      "intro": "Intros",
+      "lowerThird": "Lower thirds",
+      "social": "Social",
+      "outro": "Outros"
+    },
+    "invalid": "Not valid templates (check the format): {{files}}"
   }
 }

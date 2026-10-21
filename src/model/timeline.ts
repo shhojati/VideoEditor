@@ -294,7 +294,7 @@ export function cueBoundaries(p: Project): number[] {
 export const TEXT_DEFAULT_DURATION = 3;
 
 /** A clip that draws itself (text or shape): no media, default transform slightly below centre for text. */
-function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects'>): Clip {
+export function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects'>): Clip {
   return {
     id: newId(),
     start,

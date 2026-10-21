@@ -596,3 +596,18 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Machine translation makes mistakes: M2M100 sometimes leaves a stray foreign word (the test's third line ended in «… Merci»). The hint asks to check the text.
 - Only English → Persian for now (other languages later, as agreed).
+
+## Post-MVP 20 — Templates and text animations ✅ (2026-10-21)
+
+### Done
+- **Text animations** (inspector → Text: Animation in / out / length; `TextProps.anim`, `model/textAnim.ts`): fade, slide up/down/left/right, pop (with a little overshoot), zoom, typewriter (character by character), word by word, blur and wipe (in reading direction, so right to left for Persian). In and out combine; each lasts up to half the clip. Typewriter and word-by-word draw part of each line where the whole line starts, so the text does not drift (a Persian word reshapes as it is "typed", like real typing). Drawn in `drawTextClip`, so preview = export.
+- **Templates pane** (🧩, in the library group on phones): 15 built-in templates in five groups — Titles (big title, typewriter, chapter), Intros (welcome, minimal, countdown 3-2-1), Lower thirds (classic, pill, breaking news bar, location tag), Social (subscribe button, follow @username, quote), Outros (thanks for watching, end card). Thumbnails are drawn by the real compositor at the project's aspect and language. A click inserts the template at the playhead on **new graphics tracks on top** (one per layer), so it never collides with existing clips; one undo step; then the texts are edited in the inspector. In Persian the placeholders are Persian (`contentFa`) and right to left.
+- **Server templates**: JSON files in `library/templates/` (same format, checked with a zod schema; invalid files are named in the pane) appear after the built-ins. The deploy job creates the folder; `docs/DEPLOY.md` documents the format with an example.
+
+### Verified
+- Unit tests: animation states in, out and capped; character/word reveal (an emoji is never cut); every built-in passes the server schema and inserts on new tracks without overlaps; Persian placeholders.
+- **E2E `e2e/templates.spec.ts`**: the pane shows thumbnails; Welcome intro inserted at 0 s on two new graphics tracks; **preview = export** at the purple panel (124,58,237) and the white title (255,255,255 vs 255,254,255). Screenshot of the pane checked.
+
+### Known issues / not done
+- "Save my selection as a template" was not part of this step (built-in + server folder, as chosen).
+- Templates with media (e.g. a background video) are not supported yet: text, shapes and effects only.

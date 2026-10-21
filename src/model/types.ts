@@ -54,7 +54,7 @@ export interface Marker {
 export type AssetKind = 'video' | 'audio' | 'image';
 
 /** Server library folders (library/<kind>/…). */
-export type LibraryKind = 'stickers' | 'sounds' | 'overlays';
+export type LibraryKind = 'stickers' | 'sounds' | 'overlays' | 'templates';
 
 export interface Asset {
   id: ID;
@@ -228,7 +228,11 @@ export interface TextProps {
   maxWidth?: number;
   fadeIn: number;
   fadeOut: number;
+  /** In/out animations (model/textAnim.ts); `duration` is each one's length in seconds. */
+  anim?: { in?: TextAnimKind; out?: TextAnimKind; duration?: number };
 }
+
+export type TextAnimKind = 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'slideRight' | 'pop' | 'zoom' | 'typewriter' | 'wordByWord' | 'blurIn' | 'wipe';
 
 export type ShapeKind = 'rectangle' | 'square' | 'circle' | 'oval' | 'triangle' | 'star' | 'line';
 

@@ -4,7 +4,8 @@ import { detectRtl } from '../../engine/render/textLayout';
 import { DEFAULT_TEXT_MAX_WIDTH } from '../../engine/render/text';
 import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
 import { findClip, moveClips, trimClip } from '../../model/timeline';
-import type { BlendMode, Clip, ID, Project, TextProps, Transform } from '../../model/types';
+import type { BlendMode, Clip, ID, Project, TextAnimKind, TextProps, Transform } from '../../model/types';
+import { DEFAULT_ANIM_DURATION, TEXT_ANIMS } from '../../model/textAnim';
 import { useProjectStore } from '../../store/projectStore';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
 import { ShapeSection } from './ShapeSection';
@@ -348,6 +349,34 @@ function TextSection({ text, set }: { text: TextProps; set: SetFn }) {
       />
       <NumberField label={t('inspector.fadeIn')} value={text.fadeIn} min={0} max={3} step={0.1} unit="s" onChange={(v) => setText('fadeIn', v)} />
       <NumberField label={t('inspector.fadeOut')} value={text.fadeOut} min={0} max={3} step={0.1} unit="s" onChange={(v) => setText('fadeOut', v)} />
+      {(['in', 'out'] as const).map((side) => (
+        <SelectField
+          key={side}
+          label={t(`textAnim.${side}`)}
+          value={text.anim?.[side] ?? 'none'}
+          options={[{ value: 'none', label: t('textAnim.kinds.none') }, ...TEXT_ANIMS.map((k) => ({ value: k, label: t(`textAnim.kinds.${k}`) }))]}
+          onChange={(v) =>
+            set(`text.anim.${side}`, (c) => {
+              const anim = { ...c.text!.anim };
+              if (v === 'none') delete anim[side];
+              else anim[side] = v as TextAnimKind;
+              if (anim.in || anim.out) c.text!.anim = anim;
+              else delete c.text!.anim;
+            })
+          }
+        />
+      ))}
+      {(text.anim?.in || text.anim?.out) && (
+        <NumberField
+          label={t('textAnim.duration')}
+          value={text.anim.duration ?? DEFAULT_ANIM_DURATION}
+          min={0.1}
+          max={3}
+          step={0.1}
+          unit="s"
+          onChange={(v) => set('text.anim.duration', (c) => void (c.text!.anim = { ...c.text!.anim, duration: v }))}
+        />
+      )}
     </Section>
   );
 }

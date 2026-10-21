@@ -4,7 +4,8 @@ import { EFFECT_KINDS } from './effects';
 import { KEY_EASES } from './keyframes';
 import { BLEND_MODES, SHAPE_KINDS } from './overlays';
 import { PITCH_RANGE, SPACE_KINDS, VOICE_KINDS } from './voiceFx';
-import type { Project } from './types';
+import type { Project, TextAnimKind } from './types';
+import { TEXT_ANIMS } from './textAnim';
 
 const num = z.number().finite();
 const nonNeg = num.min(0);
@@ -28,6 +29,13 @@ const textProps = z.object({
   maxWidth: num.min(0.05).max(1).optional(),
   fadeIn: nonNeg,
   fadeOut: nonNeg,
+  anim: z
+    .object({
+      in: z.enum(TEXT_ANIMS as [TextAnimKind, ...TextAnimKind[]]).optional(),
+      out: z.enum(TEXT_ANIMS as [TextAnimKind, ...TextAnimKind[]]).optional(),
+      duration: num.positive().max(10).optional(),
+    })
+    .optional(),
 });
 
 const opacity = num.min(0).max(1);

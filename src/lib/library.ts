@@ -9,6 +9,7 @@ export const LIBRARY_EXTENSIONS: Record<LibraryKind, string[]> = {
   stickers: ['png', 'gif'],
   sounds: ['ogg', 'mp3'],
   overlays: ['mp4', 'webm', 'mov'],
+  templates: ['json'],
 };
 
 export const LIBRARY_MIME: Record<string, string> = {
@@ -19,6 +20,7 @@ export const LIBRARY_MIME: Record<string, string> = {
   mp4: 'video/mp4',
   webm: 'video/webm',
   mov: 'video/quicktime',
+  json: 'application/json',
 };
 
 export interface LibraryItem {

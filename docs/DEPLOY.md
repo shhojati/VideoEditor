@@ -25,7 +25,7 @@ editor.example.com {
 
 The app container already sends the COOP/COEP headers and MIME types; the proxy passes them through unchanged.
 
-### Media library (Stickers, Sound effects, Overlays panes)
+### Media library (Stickers, Sound effects, Overlays, Templates panes)
 
 The library panes list files from `/srv/video-editor/library`, mounted read-only into the container at `/library` (`deploy/docker-compose.yml`). nginx lists each folder as JSON (`autoindex_format json`), so adding a file is all it takes; there is no manifest. One level of subfolders becomes categories in the pane.
 
@@ -34,12 +34,30 @@ The library panes list files from `/srv/video-editor/library`, mounted read-only
   stickers/    .png .gif (animated GIFs play and loop)    e.g. stickers/emoji/smile.gif
   sounds/      .ogg .mp3                                  e.g. sounds/whoosh/fast.mp3
   overlays/    .mp4 .webm .mov (short clips; added with blend mode Screen, so shoot them on black)
+  templates/   .json (titles, lower thirds… in the format below; shown after the built-in ones)
 ```
 
 ```bash
-mkdir -p /srv/video-editor/library/{stickers,sounds,overlays}
+mkdir -p /srv/video-editor/library/{stickers,sounds,overlays,templates}
 docker compose up -d   # once, after the volume was added to docker-compose.yml
 ```
+
+A **template** is a JSON file (checked when the pane opens; invalid files are listed in the pane):
+
+```json
+{
+  "id": "my-lower-third",
+  "name": { "en": "My lower third", "fa": "زیرنویس نام من" },
+  "category": "lowerThird",
+  "duration": 5,
+  "clips": [
+    { "layer": 0, "start": 0, "duration": 5, "shape": { "kind": "rectangle", "width": 700, "height": 140, "fill": "#111827", "cornerRadius": 8 }, "transform": { "x": -0.2, "y": 0.33 } },
+    { "layer": 1, "start": 0.3, "duration": 4.7, "text": { "content": "Full Name", "contentFa": "نام", "fontSize": 54, "fontWeight": 800, "anim": { "in": "slideRight", "out": "fade" } }, "transform": { "x": -0.2, "y": 0.31 } }
+  ]
+}
+```
+
+`category` is one of `title`, `intro`, `lowerThird`, `social`, `outro`. Each clip goes on new graphics track number `layer` (0 = lowest), at `start` seconds from the playhead. `text` takes any text setting (`fontFamily`, `fontSize`, `color`, `strokeColor`, `bgColor`, `align`…) and `anim` (`in`/`out`: fade, slideUp, slideDown, slideLeft, slideRight, pop, zoom, typewriter, wordByWord, blurIn, wipe); `contentFa` is used when the editor is in Persian. `shape` takes any shape setting; `transform` takes `x`, `y` (fractions of the frame from its centre), `scale`, `rotation`, `opacity`; `effects` is a list of `{ "kind": "dropShadow", "params": {} }`. The built-in templates in `src/model/templates.ts` are examples of the same format.
 
 Files must be readable by the container (`chmod -R a+rX library`). Names may contain spaces and Persian letters. Users see new files after reopening the pane (⟳). A file is downloaded into the user's browser the first time it is used in a project.
 

@@ -109,7 +109,8 @@
     "cutText": "بریدن کلمه‌ها",
     "removePauses": "حذف مکث‌ها و پرکننده‌ها",
     "transcribe": "استخراج متن",
-    "translate": "ترجمه‌ی زیرنویس"
+    "translate": "ترجمه‌ی زیرنویس",
+    "addTemplate": "افزودن قالب"
   },
   "panels": {
     "media": "رسانه‌ها",
@@ -129,7 +130,8 @@
     "fx": "جلوه‌ها",
     "effects": "جلوه‌ها",
     "filters": "فیلترها",
-    "transcript": "متن"
+    "transcript": "متن",
+    "templates": "قالب‌ها"
   },
   "settings": {
     "title": "تنظیمات پروژه",
@@ -1394,5 +1396,36 @@
       "missingModel": "مدل ترجمه نصب نیست. آن را با scripts/fetch-models.mjs translate در public/models قرار دهید.",
       "failed": "ترجمه ناموفق بود."
     }
+  },
+  "textAnim": {
+    "in": "انیمیشن ورود",
+    "out": "انیمیشن خروج",
+    "duration": "مدت انیمیشن",
+    "kinds": {
+      "none": "هیچ",
+      "fade": "محو",
+      "slideUp": "لغزش به بالا",
+      "slideDown": "لغزش به پایین",
+      "slideLeft": "لغزش به چپ",
+      "slideRight": "لغزش به راست",
+      "pop": "پرش",
+      "zoom": "بزرگ‌نمایی",
+      "typewriter": "ماشین‌تحریر",
+      "wordByWord": "کلمه به کلمه",
+      "blurIn": "تار",
+      "wipe": "پرده"
+    }
+  },
+  "templates": {
+    "hint": "برای افزودن در محل نشانگر پخش کلیک کنید (روی ترک‌های گرافیکی تازه در بالا). سپس متن‌ها را در بازرس ویرایش کنید.",
+    "itemHint": "افزودن در محل نشانگر پخش",
+    "categories": {
+      "title": "تیترها",
+      "intro": "شروع‌ها",
+      "lowerThird": "زیرنویس نام",
+      "social": "شبکه‌های اجتماعی",
+      "outro": "پایان‌ها"
+    },
+    "invalid": "قالب معتبر نیستند (قالب‌بندی را بررسی کنید): {{files}}"
   }
 }

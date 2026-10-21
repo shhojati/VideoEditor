@@ -35,3 +35,15 @@ it('source files contain no literal invisible characters', () => {
   }
   expect(offenders).toEqual([]);
 });
+
+// A local npm mirror may write its own URLs into the lockfile; CI cannot reach it and `npm ci` fails.
+// Fix with: sed -i 's#https://<mirror>/.../npm/#https://registry.npmjs.org/#' package-lock.json
+it('the lockfile only points at the public npm registry', () => {
+  const { packages } = JSON.parse(readFileSync('package-lock.json', 'utf8')) as {
+    packages: Record<string, { resolved?: string }>;
+  };
+  const elsewhere = Object.entries(packages)
+    .filter(([, p]) => p.resolved && !p.resolved.startsWith('https://registry.npmjs.org/'))
+    .map(([name, p]) => `${name}: ${p.resolved}`);
+  expect(elsewhere).toEqual([]);
+});

@@ -200,6 +200,38 @@
     "add": "متن",
     "default": "متن خود را بنویسید"
   },
+  "voiceFx": {
+    "title": "افکت صدا",
+    "voice": "صدا",
+    "space": "فضا",
+    "none": "هیچ",
+    "pitch": "زیر و بمی",
+    "amount": "شدت",
+    "mix": "میزان",
+    "size": "اندازه",
+    "names": {
+      "chipmunk": "سنجابی",
+      "helium": "هلیوم",
+      "child": "بچه",
+      "deep": "کلفت",
+      "giant": "غول",
+      "monster": "هیولا",
+      "robot": "ربات",
+      "alien": "بیگانه",
+      "underwater": "زیر آب",
+      "vibrato": "لرزش",
+      "telephone": "تلفن",
+      "radio": "رادیو",
+      "megaphone": "بلندگو",
+      "walkie": "بی‌سیم"
+    },
+    "spaces": {
+      "echo": "اکو",
+      "cave": "غار",
+      "hall": "سالن",
+      "room": "اتاق"
+    }
+  },
   "inspector": {
     "textClip": "کلیپ متن",
     "locked": "ترک قفل است",
@@ -225,6 +257,7 @@
     "volume": "بلندی",
     "fadeIn": "محو ورود",
     "fadeOut": "محو خروج",
+    "keepPitch": "حفظ زیر و بمی صدا",
     "text": "متن",
     "content": "متن",
     "font": "قلم",

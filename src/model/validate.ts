@@ -3,10 +3,12 @@ import { migrate } from './migrations';
 import { EFFECT_KINDS } from './effects';
 import { KEY_EASES } from './keyframes';
 import { BLEND_MODES, SHAPE_KINDS } from './overlays';
+import { PITCH_RANGE, SPACE_KINDS, VOICE_KINDS } from './voiceFx';
 import type { Project } from './types';
 
 const num = z.number().finite();
 const nonNeg = num.min(0);
+const unit = num.min(0).max(1);
 
 const rect = z.object({ x: num, y: num, width: nonNeg, height: nonNeg });
 
@@ -84,7 +86,14 @@ const clip = z.object({
     crop: rect.optional(),
     fit: z.enum(['contain', 'cover']).optional(),
   }),
-  audio: z.object({ volume: nonNeg, fadeIn: nonNeg, fadeOut: nonNeg }),
+  audio: z.object({
+    volume: nonNeg,
+    fadeIn: nonNeg,
+    fadeOut: nonNeg,
+    voice: z.object({ kind: z.enum(VOICE_KINDS), pitch: num.min(PITCH_RANGE.min).max(PITCH_RANGE.max), amount: unit }).optional(),
+    space: z.object({ kind: z.enum(SPACE_KINDS), mix: unit, size: unit }).optional(),
+    keepPitch: z.boolean().optional(),
+  }),
   text: textProps.optional(),
   shape: shapeProps.optional(),
   blend: z.enum(BLEND_MODES).optional(),

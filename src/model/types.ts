@@ -122,6 +122,46 @@ export interface ClipAudio {
   volume: number;
   fadeIn: number;
   fadeOut: number;
+  /** Changes the voice itself (pitch, robot, telephone…); see model/voiceFx.ts. */
+  voice?: VoiceFx;
+  /** Places the sound in a space (echo, reverb); its tail rings past the clip's end. */
+  space?: SpaceFx;
+  /** Speed changes keep the original pitch. */
+  keepPitch?: boolean;
+}
+
+export type VoiceKind =
+  | 'chipmunk'
+  | 'helium'
+  | 'child'
+  | 'deep'
+  | 'giant'
+  | 'monster'
+  | 'robot'
+  | 'alien'
+  | 'underwater'
+  | 'vibrato'
+  | 'telephone'
+  | 'radio'
+  | 'megaphone'
+  | 'walkie';
+
+export interface VoiceFx {
+  kind: VoiceKind;
+  /** Semitones, -12..12. */
+  pitch: number;
+  /** 0..1: how much of the preset's character (filters, robot, drive…) is mixed in. */
+  amount: number;
+}
+
+export type SpaceKind = 'echo' | 'cave' | 'hall' | 'room';
+
+export interface SpaceFx {
+  kind: SpaceKind;
+  /** 0..1 wet level. */
+  mix: number;
+  /** 0..1: echo time or room size. */
+  size: number;
 }
 
 export interface TextProps {
@@ -258,7 +298,8 @@ export type KeyEase = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'hold';
 /**
  * A snapshot of a clip's animatable values at source time `t` (like tracker samples, so trims and
  * splits keep it). Values by property: x, y, scale, rotation, opacity, volume, shape.width,
- * shape.height and fx.<effectId>.<param> for numeric effect settings. A property missing from a
+ * shape.height, voice.pitch, voice.amount, space.mix and fx.<effectId>.<param> for numeric effect
+ * settings. A property missing from a
  * keyframe is interpolated from the keyframes that have it.
  */
 export interface ClipKeyframe {

@@ -17,6 +17,8 @@ import { keyedClip } from '../../model/keyframes';
 import { useTransport } from '../../store/transport';
 import { keyedEdit, playheadIn } from '../keyframes/keyframeService';
 import { KeyframesSection } from '../keyframes/KeyframesSection';
+import { setKeepPitch } from '../../model/voiceFx';
+import { VoiceSection } from './VoiceSection';
 
 /**
  * Edit one property of one clip, as it looks at the playhead (on an animated clip the change lands
@@ -112,6 +114,20 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
               options={[0.5, 1, 1.5, 2].map((s) => ({ value: s, label: `${s}×` }))}
               onChange={(v) => set('speed', (c, p) => void setClipSpeed(p, c.id, v))}
             />
+            {audible && (
+              <label className="flex items-center gap-2 text-xs text-neutral-300">
+                <input
+                  type="checkbox"
+                  data-testid="keep-pitch"
+                  checked={!!clip.audio.keepPitch}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    set('keepPitch', (c) => setKeepPitch(c, on));
+                  }}
+                />
+                {t('inspector.keepPitch')}
+              </label>
+            )}
           </>
         )}
       </Section>
@@ -162,6 +178,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
           <NumberField label={t('inspector.fadeOut')} value={clip.audio.fadeOut} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeOut', (c) => void (c.audio.fadeOut = v))} />
         </Section>
       )}
+      {audible && <VoiceSection clip={shown} set={set} />}
     </fieldset>
   );
 }

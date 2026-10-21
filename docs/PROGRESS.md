@@ -98,7 +98,7 @@ Decision: ship tiny / base / small, with **small as the default for Persian**, a
 
 ### Decisions
 - **Decoding runs on the main thread, not in a worker** (plan §4.4 said worker). WebCodecs already decodes on its own threads; only demuxing is JS, and measurements above show no frame loss. `VideoFrames` is the only consumer, so moving it into a worker later (transferring `VideoFrame`s) stays contained if real 1080p camera footage needs it.
-- Speed changes use `playbackRate`, so audio pitch shifts with speed. Pitch-preserving speed is post-MVP.
+- Speed changes use `playbackRate`, so audio pitch shifts with speed. Pitch-preserving speed: the "Keep pitch" toggle (Post-MVP 8).
 
 ### Deferred / known issues
 - Measured with generated 960×540 H.264; long-GOP 1080p camera files will seek slower (decode from the previous keyframe).
@@ -390,3 +390,21 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - Keyframes are edited one moment at a time: no copy/paste of keyframes, no multi-select of diamonds.
 - Detaching a clip from a tracker keeps it where it is drawn only when it has no keyframes; with keyframes it falls back to its own animation.
 - Rotation values stay within −180…180° (canvas handle and inspector), so two keyframes turn a clip at most one full circle; multi-turn spins are not possible yet.
+
+## Post-MVP 8 — Voice effects ✅ (2026-10-21)
+
+### Done
+- **Voice** (one per clip, `Clip.audio.voice`, `model/voiceFx.ts`): Chipmunk (+12 st), Helium (+7), Child (+4), Deep (−4), Giant (−8), Monster (−12 + drive); Robot (ring mod + metallic comb), Alien, Underwater, Vibrato; Telephone, Radio, Megaphone, Walkie-talkie (band-pass, drive, hiss). Sliders: **Pitch** (−12…+12 semitones; every preset starts from its own) and **Intensity** (how much of the non-pitch character is mixed in; hidden for pure pitch presets). Pitch changes keep the clip's timing.
+- **Space** (one per clip, `Clip.audio.space`): Echo, Cave, Hall, Room, with **Amount** and **Size** (echo time / room size). The tail rings up to 3 s past the clip (after its fade-out), fading over the last half second.
+- **Keep pitch** (Timing section) for speed-changed clips: the pitch shifter cancels the speed's pitch change.
+- **Keyframes**: `voice.pitch`, `voice.amount` and `space.mix` animate with the one-diamond model (e.g. a voice that slowly gets deeper).
+- **One DSP, two hosts** (`engine/audio/voiceDsp.ts`, no DOM): granular pitch shifter (two Hann-faded heads, 60 ms grain, 30 ms latency compensated in both paths), RBJ biquads, tanh drive, ring mod, vibrato, feedback echo, Freeverb. The preview runs it in an AudioWorklet (`voiceFx.worklet.ts`: source → voice → clip gain → space → master); the export worker runs it in the mix (`mixClip`, same order, 8192-sample chunks). Fixed 128-sample sub-blocks with settings read per sub-block make the output independent of how audio is sliced. Speech-to-text hears the original voice.
+
+### Verified
+- Unit tests: +12/−12 st double/halve a 440 Hz tone with the length kept; ratio 1 is a pure delay; telephone band; echo taps; reverb decays; 128 vs 4800-sample slicing bit-identical; every preset finite; presets, keep-pitch ratio, keyframed pitch, tail fade, save/load validation; export mix: chipmunk doubles the pitch in place, echo rings past the clip.
+- **E2E `e2e/voice-fx.spec.ts`**: Chipmunk + Echo picked in the inspector; preview plays through two worklets; the exported 440 Hz test tone measures ≈873 Hz, duration unchanged. Production smoke test plays a Chipmunk clip without errors (worklet bundled).
+
+### Known issues / not done
+- The granular shifter is tuned for fun voices: large shifts (±12 st, or keep-pitch at 0.5×/2×) sound slightly grainy; no formant preservation.
+- Echo/reverb Size is not animatable (Amount is).
+- Preview starts the effect fresh at the playhead, so an echo from before the playhead is not heard when starting mid-clip (export renders it).

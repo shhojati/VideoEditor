@@ -1,12 +1,17 @@
 // Web Audio playback. Every audible clip decodes its source range progressively (Mediabunny
 // AudioBufferSink) and schedules AudioBufferSourceNodes a couple of seconds ahead on the context
-// clock, through a per-clip gain (volume + fades) into the master gain. The context's output clock
-// is the master clock for the whole player (plan §4.4).
+// clock, through a per-clip gain (volume + fades) into the master gain. Voice effects add a worklet
+// before the gain (voice) and/or after it (space). The context's output clock is the master clock
+// for the whole player (plan §4.4).
 import { peakVolume } from '../../model/keyframes';
+import { hasVoiceStage } from '../../model/voiceFx';
 import type { Clip, Project } from '../../model/types';
 import { readers } from '../decode/mediaReader';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
 import { sourceTimeAt } from '../render/renderFrame';
+import { voiceLatency } from './voiceDsp';
+import workletUrl from './voiceFx.worklet.ts?worker&url';
+import type { VoiceFxOptions } from './voiceFx.worklet';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
 const SCHEDULE_AHEAD = 2;
@@ -18,7 +23,10 @@ export class AudioEngine {
   private master: GainNode | null = null;
   private generation = 0;
   private nodes: AudioScheduledSourceNode[] = [];
-  private gains: GainNode[] = [];
+  /** Per-clip gains and effect worklets. */
+  private graph: AudioNode[] = [];
+  /** Voice effects are available once the worklet module has loaded (false if it failed). */
+  private fxReady: Promise<boolean> | null = null;
   /** Context time that corresponds to timeline time t0. */
   private ctxStart = 0;
   private t0 = 0;
@@ -30,6 +38,13 @@ export class AudioEngine {
       this.ctx = new AudioContext({ latencyHint: 'interactive' });
       this.master = this.ctx.createGain();
       this.master.connect(this.ctx.destination);
+      this.fxReady = this.ctx.audioWorklet.addModule(workletUrl).then(
+        () => true,
+        (e) => {
+          console.warn('voice effects unavailable', e);
+          return false;
+        },
+      );
     }
     return this.ctx;
   }
@@ -43,6 +58,7 @@ export class AudioEngine {
     this.stop();
     const ctx = this.context;
     if (ctx.state !== 'running') await ctx.resume();
+    const fx = await this.fxReady!;
     this.master!.gain.value = volume;
     const gen = ++this.generation;
     this.t0 = t0;
@@ -54,7 +70,7 @@ export class AudioEngine {
         if (env.end <= t0 || peakVolume(clip) <= 0) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;
-        void this.playClip(clip, env, asset, gen);
+        void this.playClip(clip, env, asset, gen, fx);
       }
     }
   }
@@ -72,7 +88,7 @@ export class AudioEngine {
     return this.ctxStart + (t - this.t0);
   }
 
-  private async playClip(clip: Clip, env: AudioEnvelope, asset: NonNullable<Project['assets'][string]>, gen: number) {
+  private async playClip(clip: Clip, env: AudioEnvelope, asset: NonNullable<Project['assets'][string]>, gen: number, fx: boolean) {
     const ctx = this.ctx!;
     // Transitions extend the audible range past the clip's own edges.
     const from = Math.max(this.t0, env.start);
@@ -84,9 +100,22 @@ export class AudioEngine {
     if (!reader?.audio || gen !== this.generation) return;
 
     const gain = ctx.createGain();
-    gain.connect(this.master!);
-    this.gains.push(gain);
+    this.graph.push(gain);
     scheduleEnvelope(gain.gain, env, from, end, (t) => this.toCtx(t));
+    // source → [voice] → gain → [space] → master
+    let input: AudioNode = gain;
+    let lead = 0;
+    if (fx && hasVoiceStage(clip)) {
+      input = this.fxNode('voice', clip, end);
+      input.connect(gain);
+      // The voice stage delays its output; feed it that much early.
+      lead = voiceLatency(ctx.sampleRate) / ctx.sampleRate;
+    }
+    if (fx && clip.audio.space) {
+      const space = this.fxNode('space', clip, end);
+      gain.connect(space);
+      space.connect(this.master!);
+    } else gain.connect(this.master!);
 
     // Before the source starts there is nothing to play (silence), so clamp to 0.
     const srcFrom = Math.max(0, sourceTimeAt(clip, from));
@@ -98,7 +127,7 @@ export class AudioEngine {
         const offset = Math.max(0, srcFrom - timestamp);
         const length = Math.min(buffer.duration, srcTo - timestamp) - offset;
         if (length <= 0) continue;
-        let when = this.toCtx(clip.start + (timestamp + offset - clip.inPoint) / clip.speed);
+        let when = this.toCtx(clip.start + (timestamp + offset - clip.inPoint) / clip.speed) - lead;
         let skip = 0;
         this.stats.buffers++;
         if (when < ctx.currentTime) {
@@ -111,7 +140,7 @@ export class AudioEngine {
           const node = ctx.createBufferSource();
           node.buffer = buffer;
           node.playbackRate.value = clip.speed;
-          node.connect(gain);
+          node.connect(input);
           node.start(when, offset + skip, length - skip);
           this.nodes.push(node);
           node.onended = () => {
@@ -136,7 +165,22 @@ export class AudioEngine {
       }
       n.disconnect();
     }
-    for (const g of this.gains.splice(0)) g.disconnect();
+    for (const g of this.graph.splice(0)) g.disconnect();
+  }
+
+  private fxNode(mode: VoiceFxOptions['mode'], clip: Clip, end: number) {
+    const { start, duration, inPoint, speed, audio, keyframes } = clip;
+    const processorOptions: VoiceFxOptions = { mode, clip: { start, duration, inPoint, speed, audio, keyframes }, ctxStart: this.ctxStart, t0: this.t0, end };
+    const node = new AudioWorkletNode(this.ctx!, 'voice-fx', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      channelCount: 2,
+      channelCountMode: 'explicit',
+      processorOptions,
+    });
+    this.graph.push(node);
+    return node;
   }
 }
 

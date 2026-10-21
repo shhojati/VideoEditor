@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test('new user: sample project → split → edit subtitle → export MP4, no console errors', async ({ page }) => {
   const errors: string[] = [];
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  page.on('console', (m) => (m.type() === 'error' || m.text().includes('voice effects unavailable')) && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(String(e)));
 
   await page.goto('/');
@@ -29,6 +29,14 @@ test('new user: sample project → split → edit subtitle → export MP4, no co
   await page.locator('[data-testid=track][data-track-kind=video] [data-testid=clip]').click({ position: { x: 10, y: 10 } });
   await page.keyboard.press('s');
   await expect(page.locator('[data-testid=track][data-track-kind=video] [data-testid=clip]')).toHaveCount(2);
+
+  // A voice effect: its worklet loads from the bundle on the first play (a failed load logs
+  // "voice effects unavailable", caught with the errors below; worklet fetches aren't page requests).
+  await page.locator('[data-testid=track][data-track-kind=video] [data-testid=clip]').first().click({ position: { x: 10, y: 10 } });
+  await page.locator('[data-testid=voice-preset][data-kind=chipmunk]').click();
+  await page.getByTestId('play').click();
+  await page.waitForTimeout(1000);
+  await page.getByTestId('play').click();
 
   // Edit a subtitle in the Subtitles tab.
   await page.getByTestId('tab-subtitles').click();

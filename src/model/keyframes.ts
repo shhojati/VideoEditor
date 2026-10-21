@@ -1,5 +1,5 @@
 // Clip keyframes, InShot style: each keyframe is a snapshot of the clip's animatable values
-// (position, scale, rotation, opacity, volume, shape size, numeric effect settings) at a source
+// (position, scale, rotation, opacity, volume, shape size, voice effect, numeric effect settings) at a source
 // time; in between, values travel with the earlier keyframe's ease. Once a clip has keyframes,
 // every edit at the playhead lands in a keyframe there (added when missing). Pure.
 import { EFFECT_DEFS, defaultParams } from './effects';
@@ -38,6 +38,12 @@ export function readProps(clip: Clip): KeyValues {
     v['shape.width'] = clip.shape.width;
     v['shape.height'] = clip.shape.height;
   }
+  const { voice, space } = clip.audio;
+  if (voice) {
+    v['voice.pitch'] = voice.pitch;
+    v['voice.amount'] = voice.amount;
+  }
+  if (space) v['space.mix'] = space.mix;
   for (const e of clip.effects ?? [])
     for (const [k, x] of Object.entries({ ...defaultParams(e.kind), ...e.params })) if (typeof x === 'number') v[fxProp(e.id, k)] = x;
   return v;
@@ -67,6 +73,15 @@ export function writeProp(clip: Clip, prop: string, v: number) {
       return;
     case 'shape.height':
       if (clip.shape) clip.shape.height = v;
+      return;
+    case 'voice.pitch':
+      if (clip.audio.voice) clip.audio.voice.pitch = v;
+      return;
+    case 'voice.amount':
+      if (clip.audio.voice) clip.audio.voice.amount = v;
+      return;
+    case 'space.mix':
+      if (clip.audio.space) clip.audio.space.mix = v;
       return;
   }
   if (!prop.startsWith('fx.')) return;
@@ -122,7 +137,7 @@ export function keyedClip(clip: Clip, t: number): Clip {
   const out: Clip = {
     ...clip,
     transform: { ...clip.transform },
-    audio: { ...clip.audio },
+    audio: { ...clip.audio, ...(clip.audio.voice && { voice: { ...clip.audio.voice } }), ...(clip.audio.space && { space: { ...clip.audio.space } }) },
     shape: clip.shape && { ...clip.shape },
     effects: clip.effects?.map((e) => ({ ...e, params: { ...e.params } })),
   };

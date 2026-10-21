@@ -200,6 +200,38 @@
     "add": "Text",
     "default": "Type your text"
   },
+  "voiceFx": {
+    "title": "Voice effects",
+    "voice": "Voice",
+    "space": "Space",
+    "none": "None",
+    "pitch": "Pitch",
+    "amount": "Intensity",
+    "mix": "Amount",
+    "size": "Size",
+    "names": {
+      "chipmunk": "Chipmunk",
+      "helium": "Helium",
+      "child": "Child",
+      "deep": "Deep",
+      "giant": "Giant",
+      "monster": "Monster",
+      "robot": "Robot",
+      "alien": "Alien",
+      "underwater": "Underwater",
+      "vibrato": "Vibrato",
+      "telephone": "Telephone",
+      "radio": "Radio",
+      "megaphone": "Megaphone",
+      "walkie": "Walkie-talkie"
+    },
+    "spaces": {
+      "echo": "Echo",
+      "cave": "Cave",
+      "hall": "Hall",
+      "room": "Room"
+    }
+  },
   "inspector": {
     "textClip": "Text clip",
     "locked": "track is locked",
@@ -225,6 +257,7 @@
     "volume": "Volume",
     "fadeIn": "Fade in",
     "fadeOut": "Fade out",
+    "keepPitch": "Keep pitch",
     "text": "Text",
     "content": "Text",
     "font": "Font",

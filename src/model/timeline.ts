@@ -326,8 +326,8 @@ export const addAdjustmentClip = (p: Project, time: number, effects: Effect[] = 
 export const ADJUSTMENT_DEFAULT_DURATION = 5;
 
 /** An adjustment layer over the given time range, on a graphics track above `trackIndex`. */
-export const addAdjustmentClipAbove = (p: Project, trackIndex: number, start: number, duration: number, props: Pick<Clip, 'effects' | 'mask' | 'transform'>): ID =>
-  addOverlayClip(p, { ...createOverlayClip(Math.max(0, start), { adjustment: true, effects: props.effects }), duration, mask: props.mask, transform: props.transform }, trackIndex);
+export const addAdjustmentClipAbove = (p: Project, trackIndex: number, start: number, duration: number, props: Pick<Clip, 'effects' | 'masks' | 'transform'>): ID =>
+  addOverlayClip(p, { ...createOverlayClip(Math.max(0, start), { adjustment: true, effects: props.effects }), duration, masks: props.masks, transform: props.transform }, trackIndex);
 
 export const SPEED_RANGE: Range = { min: 0.5, max: 2 };
 

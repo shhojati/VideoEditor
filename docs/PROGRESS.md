@@ -346,3 +346,25 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - Fixing a bad stretch means moving the box at a frame and re-tracking from there; there is no per-frame keyframe editing (keyframes are a separate, later feature).
 - Stabilize does not zoom automatically to hide the moving edges; raise the clip's scale.
 - Tracking samples raw per-frame poses (no smoothing option yet).
+
+## Post-MVP 6 — Rotoscoping: pen masks ✅ (2026-10-21)
+
+### Done
+- **Roto masks on every visual clip** (`Clip.masks`, `model/masks.ts`, `engine/render/masks.ts`): closed Bézier paths in the clip's own units — source pixels for video and images, project pixels around the position for text, shapes and adjustment layers — so a mask moves, scales and turns with its clip (and with its motion link). On a clip a mask cuts it out; on an adjustment layer it limits where the effects show (this replaces the old rectangle/ellipse `Clip.mask`; project version 2 migrates it). A clip is cut out before its effects, so a glow or shadow follows the cut-out edge.
+- **Several masks per clip**, combined top to bottom as in After Effects: **Add / Subtract / Intersect / Difference** (a first Subtract or Intersect works on the whole layer), each with **Invert**, **Feather**, **Expansion** (grow/shrink the edge), **Mask opacity**, on/off, rename and reorder.
+- **Drawing**: the **Pen** (inspector ✎ or **G**) — click to add points, drag to pull out curve handles, click the first point or Enter to close, Backspace removes the last point, Esc cancels. Or start from a **rectangle, ellipse or polygon** that is converted to editable points.
+- **Editing on the canvas** (the selected mask of the selected clip): drag points (Shift-click selects several), drag a handle (Alt: only that side), drag inside to move the whole mask, click the outline to add a point (it keeps the curve), Alt-click a point for corner ↔ smooth, Delete removes points (at least three stay). Each drag is one undo step; Esc cancels it.
+- **Keyframes for masks only** (general keyframes stay a later feature): the path, feather, expansion and opacity each have a stopwatch ◷; when on, every edit at the playhead sets a keyframe there (linear in between), ◀ ◆ ▶ jump to / add-remove keyframes. Keys are in source time like tracker samples, so trims and splits keep them. ◆ diamonds and a ◐ badge show on the timeline clip.
+- **Tracking a mask**: "Track mask ◀ / ▶" turns the box around the mask at the playhead into a tracker on the clip and runs it; the mask follows its position, rotation and scale (toggles), and path keyframes become corrections on top. A mask can also follow any existing tracker of the same media (e.g. on the original under a copy used for a cut-out). Changing or removing the link never makes the mask jump.
+- Rendering is shared by preview and export: each mask is filled, grown/shrunk with a round-joined stroke, feathered with the canvas-shadow blur (works in workers), inverted and combined in an alpha layer that is applied with `destination-in`.
+
+### Verified
+- 238 unit tests (adds: presets, curve-preserving point insertion, removal/corner-smooth, hit tests, keyframe set/stopwatch/toggle/interpolation, all keys kept in step, migration of old masks and validation; layer space for media and overlays, tracker carry identity at the reference and with position/rotation/scale, trackers on a copy of the media, resolved masks at source time, adjustment-layer canvas box from its masks).
+- **E2E `e2e/masks.spec.ts`**: a rectangle drawn with the pen on a red clip lands within a pixel; inside red, outside black; Invert flips it; dragging inside moves it (undoable); path keyframes at 0 s and 2 s put it halfway at 1 s and show two diamonds; a centred ellipse in Subtract at 50 % halves the red. **Preview = export** at 1 s: (255,1,0)/(255,1,0), (127,0,0)/(126,0,1), (0,0,0)/(0,0,0). A pen mask around a moving object, tracked with "Track mask ▶", is carried to the object 2 s later and leaves its old place cut. Tracking spec updated for the new adjustment-layer mask.
+- In the browser: feathered ellipse (smooth 100 px ramp at feather 60), curved pen mask, point editor with the other masks dimmed.
+
+### Known issues / not done
+- **AI smart cut-out** (click the subject, segment every frame) is the next phase; it should produce the same `RotoMask` paths.
+- Linear keyframes only (no easing, no hold); no motion blur on the mask edge; no per-point feather.
+- Mask points are edited one keyframe at a time; there is no box-select or free-transform (scale/rotate) of a whole mask yet.
+- Tracking a mask uses the same box tracker as Motion tracking: good for a solid object, not for shapes that change (add path keyframes there).

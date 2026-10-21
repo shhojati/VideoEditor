@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Asset, Clip, Track } from '../../model/types';
 import { useMedia } from '../media-bin/mediaService';
 import { SHAPE_ICONS } from '../shapes/shapesUi';
+import { clipKeyTimes } from '../../model/masks';
 import { applyFx, canDropFx, fxDrag } from '../effects/effectActions';
 import { useProjectStore } from '../../store/projectStore';
 import { beginClipDrag } from './interactions';
@@ -122,6 +123,28 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
           ⌖
         </span>
       )}
+      {!!clip.masks?.length && (
+        <span
+          data-testid="mask-badge"
+          className="pointer-events-none absolute top-0.5 rounded bg-yellow-300/90 px-1 text-[10px] font-semibold text-black"
+          style={{ insetInlineEnd: clip.trackers?.length || clip.motion ? 20 : 4 }}
+          title={t('masks.title')}
+        >
+          ◐
+        </span>
+      )}
+      {clipKeyTimes(clip).map((s) => {
+        const x = ((s - clip.inPoint) / clip.speed) * pps;
+        if (x < 0 || x > width) return null;
+        return (
+          <span
+            key={s}
+            data-testid="mask-keyframe"
+            className="pointer-events-none absolute bottom-1 size-2 rotate-45 border border-black/60 bg-yellow-300"
+            style={{ left: x - 4 }}
+          />
+        );
+      })}
       {clip.blend && clip.blend !== 'normal' && (
         <span
           data-testid="blend-badge"

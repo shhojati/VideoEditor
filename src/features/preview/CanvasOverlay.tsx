@@ -24,6 +24,7 @@ import {
 } from './canvasGeometry';
 import { usePreviewView, type View } from './previewView';
 import { TrackerOverlay } from './TrackerOverlay';
+import { MaskOverlay } from '../masks/MaskOverlay';
 
 /** Screen px: handle size, rotate-handle distance, drag threshold, snap distance, hit slack. */
 const HANDLE = 9;
@@ -87,7 +88,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
     for (const { clip } of active) {
       // Where it is drawn now: clips following a tracker move with it.
       const moved = withMotion(project, clip, time);
-      const box = clipBox(project, moved, measure());
+      const box = clipBox(project, moved, measure(), time);
       if (box) m.set(clip.id, { clip: moved, box });
     }
     return m;
@@ -284,6 +285,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
       ))}
       {handles}
       <TrackerOverlay project={project} time={time} />
+      <MaskOverlay project={project} time={time} />
     </svg>
   );
 }

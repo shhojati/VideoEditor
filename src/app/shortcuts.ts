@@ -11,7 +11,8 @@ import {
   stepFrames,
   zoomBy,
 } from '../features/timeline/actions';
-import { select } from '../features/timeline/timelineUi';
+import { select, useTimelineUi } from '../features/timeline/timelineUi';
+import { startPen } from '../features/masks/maskService';
 import { spaceDown } from '../features/preview/spaceHand';
 import { useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
@@ -45,6 +46,11 @@ const PLAIN: Record<string, Handler> = {
   Home: () => useTransport.getState().seek(0),
   End: seekToEnd,
   Escape: () => select([]),
+  // The mask pen on the selected clip (After Effects' G).
+  KeyG: () => {
+    const sel = useTimelineUi.getState().selection;
+    if (sel.length === 1) startPen(sel[0]);
+  },
   // '?' (Shift + /); the same physical key gives '؟' on a Persian layout.
   Slash: (e) => e.shiftKey && useShortcutSheet.setState({ open: true }),
 };

@@ -1,12 +1,42 @@
 // Versioned migrations for stored project JSON. Bump CURRENT_VERSION and add a step whenever the
 // shape of `Project` changes in a way old documents would not satisfy.
+import { ellipsePath, rectPath } from './masks';
 
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 
 /** migrations[n] upgrades a version-n document to version n+1. */
 export type MigrationTable = Record<number, (doc: Record<string, unknown>) => Record<string, unknown>>;
 
-export const MIGRATIONS: MigrationTable = {};
+type Doc = Record<string, unknown>;
+
+/** Every clip of a stored document. */
+const clipsOf = (doc: Doc): Doc[] =>
+  Array.isArray(doc.tracks) ? doc.tracks.flatMap((t: Doc) => (Array.isArray(t?.clips) ? (t.clips as Doc[]) : [])) : [];
+
+export const MIGRATIONS: MigrationTable = {
+  // 1 → 2: an adjustment layer's rectangle/ellipse `mask` becomes a roto mask path (`masks`).
+  1: (stored) => {
+    const doc = structuredClone(stored);
+    for (const clip of clipsOf(doc)) {
+      const m = clip.mask as { kind?: string; width?: number; height?: number; feather?: number } | undefined;
+      delete clip.mask;
+      if (!m || !m.width || !m.height) continue;
+      const path = m.kind === 'ellipse' ? ellipsePath(0, 0, m.width, m.height) : rectPath(0, 0, m.width, m.height);
+      clip.masks = [
+        {
+          id: `${String(clip.id)}-mask`,
+          name: 'Mask 1',
+          mode: 'add',
+          path: { value: path },
+          feather: { value: m.feather ?? 0 },
+          expansion: { value: 0 },
+          opacity: { value: 1 },
+        },
+      ];
+    }
+    return doc;
+  },
+};
 
 export class MigrationError extends Error {}
 

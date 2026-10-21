@@ -86,7 +86,15 @@
     "motionLink": "Change motion link",
     "detachTracker": "Detach from tracker",
     "coverObject": "Cover object",
-    "mask": "Change mask"
+    "addMask": "Add mask",
+    "deleteMask": "Delete mask",
+    "reorderMask": "Reorder masks",
+    "renameMask": "Rename mask",
+    "maskProp": "Change mask",
+    "maskPath": "Edit mask path",
+    "maskKey": "Mask keyframe",
+    "maskTrack": "Mask tracking",
+    "trackMask": "Track mask"
   },
   "panels": {
     "media": "Media",
@@ -472,7 +480,8 @@
       "help": "Show this list",
       "previewPan": "Pan the zoomed preview",
       "previewShift": "Preview: move on one axis, keep proportions, rotate in 15° steps",
-      "previewAlt": "Preview: resize from the centre / move without snapping"
+      "previewAlt": "Preview: resize from the centre / move without snapping",
+      "maskPen": "Draw a mask on the selected clip (pen)"
     }
   },
   "transitions": {
@@ -954,14 +963,51 @@
     "stabilizeHint": "Edges may show: raise the scale to hide them.",
     "followHint": "Position, scale and rotation in Transform are relative to the object."
   },
-  "mask": {
-    "title": "Mask",
-    "shape": "Shape",
-    "none": "None",
-    "rectangle": "Rectangle",
-    "ellipse": "Ellipse",
-    "width": "Width",
-    "height": "Height",
-    "feather": "Feather"
+  "masks": {
+    "title": "Masks (roto)",
+    "intro": "Cut the clip out with a mask: draw one with the pen (G) or start from a shape, then animate or track it.",
+    "introAdjustment": "Limit this adjustment layer to a mask: draw one with the pen (G) or start from a shape.",
+    "pen": "Pen",
+    "penTitle": "Draw a mask with the pen (G)",
+    "penHint": "Click to add points, drag to curve them. Click the first point or press Enter to close; Backspace removes the last point, Esc cancels.",
+    "close": "Close path",
+    "cancel": "Cancel",
+    "presets": {
+      "rectangle": "Rectangle mask",
+      "ellipse": "Ellipse mask",
+      "polygon": "Polygon mask"
+    },
+    "nameN": "Mask {{n}}",
+    "select": "Edit this mask on the canvas",
+    "on": "Mask on",
+    "name": "Mask name",
+    "up": "Move up",
+    "down": "Move down",
+    "delete": "Delete mask",
+    "mode": "Mode",
+    "modes": {
+      "add": "Add",
+      "subtract": "Subtract",
+      "intersect": "Intersect",
+      "difference": "Difference"
+    },
+    "invert": "Invert",
+    "path": "Path",
+    "feather": "Feather",
+    "expansion": "Expansion",
+    "opacity": "Mask opacity",
+    "animate": "Animate (keyframes)",
+    "stopAnimating": "Stop animating (keeps the value at the playhead)",
+    "addKey": "Add keyframe at the playhead",
+    "removeKey": "Remove keyframe at the playhead",
+    "prevKey": "Previous keyframe",
+    "nextKey": "Next keyframe",
+    "editHint": "Drag points or inside the mask to move it; click the outline to add a point; Alt-click a point: corner/smooth; Shift-click: select several; Delete removes points. With ◷ on, every edit sets a keyframe at the playhead.",
+    "follow": "Follow a tracker",
+    "followNone": "None",
+    "trackerName": "{{name}} tracker",
+    "trackBack": "◀ Track mask",
+    "trackForward": "Track mask ▶",
+    "trackHint": "Tracking moves the mask with the object; fix shape changes with path keyframes. Works best on one solid object."
   }
 }

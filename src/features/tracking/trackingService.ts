@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { mergeSamples, motionTransform, sampleAt, trackerBox } from '../../engine/render/motion';
 import { createEffect } from '../../model/effects';
+import { createMask, ellipsePath } from '../../model/masks';
 import { newId } from '../../model/factories';
 import { addAdjustmentClipAbove, findClip } from '../../model/timeline';
 import type { Clip, ID, MotionLink, Project, Tracker, TrackSample } from '../../model/types';
@@ -214,7 +215,7 @@ export function detach(clipId: ID) {
 }
 
 /** An adjustment layer masked to the object (ellipse), blurring or pixelating what is below, following it. */
-export function coverObject(clipId: ID, trackerId: ID, kind: 'blur' | 'pixelate') {
+export function coverObject(clipId: ID, trackerId: ID, kind: 'blur' | 'pixelate', maskName: string) {
   const p = project();
   const ref = p && findClip(p, clipId);
   const tracker = ref?.clip.trackers?.find((x) => x.id === trackerId);
@@ -230,7 +231,7 @@ export function coverObject(clipId: ID, trackerId: ID, kind: 'blur' | 'pixelate'
     id = addAdjustmentClipAbove(d, trackIndex, clip.start, clip.duration, {
       effects: [kind === 'blur' ? createEffect('gaussianBlur', { blurriness: 40, repeatEdge: true }) : createEffect('mosaic', { blockSize: 24 })],
       // A little larger than the box, soft-edged.
-      mask: { kind: 'ellipse', width: box.w * 1.15, height: box.h * 1.15, feather: Math.min(box.w, box.h) * 0.08 },
+      masks: [createMask(maskName, ellipsePath(0, 0, box.w * 1.15, box.h * 1.15), { feather: Math.min(box.w, box.h) * 0.08 })],
       transform: { x: (box.cx - W / 2) / W, y: (box.cy - H / 2) / H, scale: 1, rotation: (box.rotation * 180) / Math.PI, opacity: 1 },
     });
     const c = findClip(d, id)?.clip;

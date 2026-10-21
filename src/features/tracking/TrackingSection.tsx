@@ -150,10 +150,10 @@ function UseMotion({ project, clip, tracker }: { project: Project; clip: Clip; t
         <button className={btn} data-testid="tracker-stabilize" disabled={stabilized} onClick={() => stabilize(clip.id, tracker.id)}>
           {t('tracking.stabilize')}
         </button>
-        <button className={btn} data-testid="tracker-blur" onClick={() => coverObject(clip.id, tracker.id, 'blur')}>
+        <button className={btn} data-testid="tracker-blur" onClick={() => coverObject(clip.id, tracker.id, 'blur', t('masks.nameN', { n: 1 }))}>
           {t('tracking.blur')}
         </button>
-        <button className={btn} data-testid="tracker-pixelate" onClick={() => coverObject(clip.id, tracker.id, 'pixelate')}>
+        <button className={btn} data-testid="tracker-pixelate" onClick={() => coverObject(clip.id, tracker.id, 'pixelate', t('masks.nameN', { n: 1 }))}>
           {t('tracking.pixelate')}
         </button>
       </div>

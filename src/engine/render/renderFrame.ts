@@ -5,6 +5,7 @@ import type { Clip, Project, Track, Transition } from '../../model/types';
 import { isOverlay } from '../../model/overlays';
 import { applyEffects, hasLiveEffects, type FxEnv } from '../effects/applyEffects';
 import { drawBlended, seedOf } from './blend';
+import { applyMasks, resolveMasks, type Affine, type ResolvedMasks } from './masks';
 import { withMotion } from './motion';
 import { placeMedia } from './placement';
 import { drawShapeClip } from './shapes';
@@ -90,74 +91,47 @@ function effectEnv(ctx: Ctx2D, clip: Clip, t: number, width: number, height: num
   };
 }
 
+const matrixOf = (m: DOMMatrix): Affine => [m.a, m.b, m.c, m.d, m.e, m.f];
+
 /**
- * Draw one clip as it looks at time t, with its effects and blend mode. The context's
+ * Draw one clip as it looks at time t, with its masks, effects and blend mode. The context's
  * alpha/transform/filter are respected. An adjustment layer applies its effects to what has been
- * drawn so far instead.
+ * drawn so far instead (limited to its masks).
  */
-export function drawClip(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number) {
+export function drawClip(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number, masks?: ResolvedMasks) {
   // Dancing Dissolve re-rolls its pattern 30 times a second; Dissolve keeps one per clip.
   const seed = clip.blend === 'dancingDissolve' ? seedOf(clip.id) ^ Math.floor(t * 30) : seedOf(clip.id);
   const effects = clip.effects;
-  const post = hasLiveEffects(effects) ? (layer: OffscreenCanvas) => void applyEffects(layer, effects!, effectEnv(ctx, clip, t, width, height)) : undefined;
+  const fx = hasLiveEffects(effects) ? (layer: OffscreenCanvas) => void applyEffects(layer, effects!, effectEnv(ctx, clip, t, width, height)) : undefined;
+  const view = masks && matrixOf(ctx.getTransform());
+  const cut = masks && ((layer: OffscreenCanvas) => applyMasks(layer, masks, view!));
   if (clip.adjustment) {
-    if (!post || clip.transform.opacity <= 0) return;
+    if (!fx || clip.transform.opacity <= 0) return;
     const copyBelow = (c: Ctx2D) => {
       c.save();
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.drawImage(ctx.canvas, 0, 0);
       c.restore();
     };
-    const view = ctx.getTransform();
-    const masked = clip.mask
+    // The effects run on the whole picture below, then the masks limit where they show.
+    const post = cut
       ? (layer: OffscreenCanvas) => {
-          post(layer);
-          maskLayer(layer, clip, view, width, height);
+          fx(layer);
+          cut(layer);
         }
-      : post;
-    drawBlended(ctx, clip.blend, copyBelow, { seed, post: masked, alpha: clip.transform.opacity });
+      : fx;
+    drawBlended(ctx, clip.blend, copyBelow, { seed, post, alpha: clip.transform.opacity });
     return;
   }
+  // A clip is cut out first, so its effects (glow, shadow…) follow the cut-out's edge.
+  const post =
+    cut && fx
+      ? (layer: OffscreenCanvas) => {
+          cut(layer);
+          fx(layer);
+        }
+      : (cut ?? fx);
   drawBlended(ctx, clip.blend, (c) => drawClipPixels(c, clip, t, lookup, width, height), { seed, post });
-}
-
-let maskCanvas: OffscreenCanvas | null = null;
-
-/**
- * Keep only the part of `layer` inside the clip's mask (placed by its transform; `view` maps project
- * pixels to the layer). A soft edge is drawn as the shadow of a shape moved out of sight, which
- * blurs the same way everywhere (unlike ctx.filter, it works in every browser and in workers).
- */
-function maskLayer(layer: OffscreenCanvas, clip: Clip, view: DOMMatrix, width: number, height: number) {
-  const mask = clip.mask!;
-  const tr = clip.transform;
-  if (!maskCanvas || maskCanvas.width !== layer.width || maskCanvas.height !== layer.height) maskCanvas = new OffscreenCanvas(layer.width, layer.height);
-  const m = maskCanvas.getContext('2d')!;
-  m.setTransform(1, 0, 0, 1, 0, 0);
-  m.clearRect(0, 0, layer.width, layer.height);
-  const feather = mask.feather * tr.scale * Math.hypot(view.a, view.b);
-  const off = feather > 0.5 ? layer.width + layer.height + 4 * feather : 0;
-  m.setTransform(view.a, view.b, view.c, view.d, view.e - off, view.f);
-  m.translate(width / 2 + tr.x * width, height / 2 + tr.y * height);
-  m.rotate((tr.rotation * Math.PI) / 180);
-  m.scale(tr.scale, tr.scale);
-  m.beginPath();
-  if (mask.kind === 'ellipse') m.ellipse(0, 0, mask.width / 2, mask.height / 2, 0, 0, 2 * Math.PI);
-  else m.rect(-mask.width / 2, -mask.height / 2, mask.width, mask.height);
-  m.fillStyle = '#000';
-  if (off) {
-    m.shadowColor = '#000';
-    m.shadowBlur = feather;
-    m.shadowOffsetX = off;
-  }
-  m.fill();
-  m.shadowColor = 'transparent';
-  const c = layer.getContext('2d')!;
-  c.save();
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.globalCompositeOperation = 'destination-in';
-  c.drawImage(maskCanvas, 0, 0);
-  c.restore();
 }
 
 function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number) {
@@ -195,14 +169,17 @@ export function renderFrame(project: Project, t: number, ctx: Ctx2D, lookup: Fra
   ctx.save();
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, width, height);
-  // Clips linked to a tracker are drawn where the tracked object takes them.
-  const moved = (clip: Clip) => withMotion(project, clip, t);
+  // Clips linked to a tracker are drawn where the tracked object takes them; masks move with them.
+  const draw = (clip: Clip) => {
+    const moved = withMotion(project, clip, t);
+    drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, clip, t, moved));
+  };
   for (const item of drawPlanAt(project, t)) {
-    if (item.kind === 'clip') drawClip(ctx, moved(item.clip), t, lookup, width, height);
+    if (item.kind === 'clip') draw(item.clip);
     else
       drawTransition(ctx, item.transition.kind, item.progress, width, height,
-        () => drawClip(ctx, moved(item.from), t, lookup, width, height),
-        () => drawClip(ctx, moved(item.to), t, lookup, width, height),
+        () => draw(item.from),
+        () => draw(item.to),
       );
   }
   if (opts.subtitles !== false) drawSubtitles(ctx, project, t, width, height);

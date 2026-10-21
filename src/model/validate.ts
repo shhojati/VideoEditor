@@ -50,6 +50,23 @@ const shapeProps = z.object({
   fadeOut: nonNeg,
 });
 
+const animated = <T extends z.ZodType>(v: T) => z.object({ value: v, keys: z.array(z.object({ t: num, v })).optional() });
+
+const maskPath = z.array(z.tuple([num, num, num, num, num, num]));
+
+const rotoMask = z.object({
+  id: z.string(),
+  name: z.string(),
+  mode: z.enum(['add', 'subtract', 'intersect', 'difference']),
+  inverted: z.boolean().optional(),
+  off: z.boolean().optional(),
+  path: animated(maskPath),
+  feather: animated(nonNeg),
+  expansion: animated(num),
+  opacity: animated(opacity),
+  track: z.object({ trackerId: z.string(), position: z.boolean(), rotation: z.boolean(), scale: z.boolean(), ref: num }).optional(),
+});
+
 const clip = z.object({
   id: z.string(),
   assetId: z.string().optional(),
@@ -81,7 +98,7 @@ const clip = z.object({
     )
     .optional(),
   adjustment: z.boolean().optional(),
-  mask: z.object({ kind: z.enum(['rectangle', 'ellipse']), width: num.positive(), height: num.positive(), feather: nonNeg }).optional(),
+  masks: z.array(rotoMask).optional(),
   trackers: z
     .array(
       z.object({

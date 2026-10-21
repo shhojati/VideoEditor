@@ -239,21 +239,64 @@ export interface Clip {
    * it while it is on screen, mixed in by its opacity and blend mode.
    */
   adjustment?: boolean;
-  /** Adjustment layers only: limit the effect to this shape, placed by the clip's transform. */
-  mask?: Mask;
+  /**
+   * Roto masks, applied top to bottom: on a clip they cut it out; on an adjustment layer they limit
+   * where its effects apply. See model/masks.ts.
+   */
+  masks?: RotoMask[];
   /** Video clips: objects tracked in the clip's media (see model/motion.ts). */
   trackers?: Tracker[];
   /** Move with a tracked object (or, on the tracked clip itself, against it: stabilize). */
   motion?: MotionLink;
 }
 
-/** Sizes in project pixels at scale 1, centred on the clip's position. */
-export interface Mask {
-  kind: 'rectangle' | 'ellipse';
-  width: number;
-  height: number;
-  /** Soft edge, project pixels. */
-  feather: number;
+/** A keyframe: source time of the clip (s), like tracker samples, so trims and splits keep it. */
+export interface Keyframe<T> {
+  t: number;
+  v: T;
+}
+
+/** A value that may be animated: `keys` (sorted, linear in between) when present, else `value`. */
+export interface Animated<T> {
+  value: T;
+  keys?: Keyframe<T>[];
+}
+
+/**
+ * One point of a mask path and its Bézier handles (relative to the point), in the clip's layer
+ * units: source pixels for video and images (origin at the top-left of the uncropped picture),
+ * otherwise project pixels at scale 1 around the clip's position.
+ */
+export type MaskVertex = [x: number, y: number, inX: number, inY: number, outX: number, outY: number];
+
+export type MaskMode = 'add' | 'subtract' | 'intersect' | 'difference';
+
+/** A closed path that cuts out (or, on adjustment layers, limits) a clip. */
+export interface RotoMask {
+  id: ID;
+  name: string;
+  mode: MaskMode;
+  inverted?: boolean;
+  /** Switched off: kept but not applied. */
+  off?: boolean;
+  /** Every keyframe has the same number of vertices. */
+  path: Animated<MaskVertex[]>;
+  /** Soft edge and grow (+) / shrink (−) of the edge, in layer units. */
+  feather: Animated<number>;
+  expansion: Animated<number>;
+  /** 0..1 */
+  opacity: Animated<number>;
+  /** Video clips: carried by a tracker of the same media; keyframes are relative to its pose at `ref`. */
+  track?: MaskTrack;
+}
+
+export interface MaskTrack {
+  trackerId: ID;
+  position: boolean;
+  rotation: boolean;
+  scale: boolean;
+  /** Source time at which the path is drawn exactly as stored. */
+  ref: number;
 }
 
 /**

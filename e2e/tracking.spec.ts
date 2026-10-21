@@ -73,7 +73,7 @@ async function importMoving(page: Page) {
 }
 
 type Sample = [number, number, number, number, number];
-type Clip = { id: string; shape?: { fill?: string; width: number; height: number }; adjustment?: boolean; mask?: unknown; motion?: { mode: string; position: boolean }; transform: { x: number; y: number }; trackers?: { samples: Sample[] }[] };
+type Clip = { id: string; shape?: { fill?: string; width: number; height: number }; adjustment?: boolean; masks?: { mode: string }[]; motion?: { mode: string; position: boolean }; transform: { x: number; y: number }; trackers?: { samples: Sample[] }[] };
 type W = {
   __stores: {
     project: { getState: () => { history: { present: { tracks: { clips: Clip[] }[] } }; edit: (l: string, r: (p: { tracks: { clips: Clip[] }[] }) => void) => void; undo: () => void; redo: () => void } };
@@ -188,7 +188,7 @@ test('track a box, follow it with a shape, stabilize, pixelate; preview = export
   await selectVideo(page);
   await page.getByTestId('tracker-pixelate').click();
   const patch = (await clips(page)).find((c) => c.adjustment)!;
-  expect(patch.mask).toMatchObject({ kind: 'ellipse' });
+  expect(patch.masks).toMatchObject([{ mode: 'add' }]);
   expect(patch.motion).toMatchObject({ mode: 'follow', position: true });
 
   // Export: the worker renders the same stabilized picture with the square on the object.

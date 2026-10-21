@@ -7,7 +7,7 @@
 //   node scripts/fetch-models.mjs translate       # just the English→Persian translator, 8-bit (~630 MB)
 //   node scripts/fetch-models.mjs translate-fp16  # its higher-precision 16-bit version (~1.2 GB, for WebGPU)
 //   HF_ENDPOINT=https://my-mirror node scripts/fetch-models.mjs   # use a mirror
-import { mkdirSync, existsSync, statSync, createWriteStream } from 'node:fs';
+import { mkdirSync, existsSync, statSync, createWriteStream, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -29,15 +29,73 @@ const META = [
 // encoder fp32 + decoder q8 (WASM) and q4 (WebGPU). Must match DTYPES in src/engine/stt.
 const WEIGHTS = ['onnx/encoder_model.onnx', 'onnx/decoder_model_merged_quantized.onnx', 'onnx/decoder_model_merged_q4.onnx'];
 
+const TRIES = 10;
+const sizeOf = (f) => (existsSync(f) ? statSync(f).size : 0);
+// Sizes are compared byte for byte, so ask for files as they are (not gzipped).
+const PLAIN = { 'Accept-Encoding': 'identity' };
+const pause = (s) => new Promise((r) => setTimeout(r, s * 1000));
+
+/** The file's size on the server (0 if unknown), or null if it doesn't exist there. */
+async function remoteSize(url) {
+  for (let i = 1; ; i++) {
+    try {
+      const res = await fetch(url, { method: 'HEAD', headers: PLAIN });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (res.headers.get('content-encoding')) return 0; // size of the compressed form: unknown
+      return Number(res.headers.get('content-length')) || 0;
+    } catch (e) {
+      if (i >= TRIES) throw e;
+      console.warn('retry', url, e.message);
+      await pause(Math.min(30, 2 ** i));
+    }
+  }
+}
+
+/**
+ * Download into `<dest>.part`, continuing from where a broken connection (or an earlier run) left
+ * off, and move it into place only once it has the server's full size.
+ */
+async function download(url, dest, total) {
+  const part = dest + '.part';
+  for (let i = 1; ; i++) {
+    try {
+      const have = sizeOf(part);
+      if (total && have === total) break;
+      const res = await fetch(url, { headers: have ? { ...PLAIN, Range: `bytes=${have}-` } : PLAIN });
+      if (res.status === 416) break; // already complete
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const append = have > 0 && res.status === 206; // a 200 means the server sent it all again
+      await pipeline(Readable.fromWeb(res.body), createWriteStream(part, { flags: append ? 'a' : 'w' }));
+      if (!total || sizeOf(part) === total) break;
+      throw new Error(`got ${sizeOf(part)} of ${total} bytes`);
+    } catch (e) {
+      if (i >= TRIES) throw new Error(`${url}: ${e.message} (run the command again to continue)`);
+      console.warn(`retry ${i}/${TRIES - 1}`, dest.split('/models/')[1] ?? dest, `${(sizeOf(part) / 1e6).toFixed(1)} MB so far:`, e.message);
+      await pause(Math.min(30, 2 ** i));
+    }
+  }
+  if (total && sizeOf(part) !== total) throw new Error(`${url}: got ${sizeOf(part)} of ${total} bytes`);
+  renameSync(part, dest);
+}
+
 async function fetchRepo(repo, files) {
   for (const file of files) {
     const dest = join(root, 'public/models', repo, file);
-    if (existsSync(dest) && statSync(dest).size > 0) { console.log('skip', repo, file); continue; }
+    const url = `${endpoint}/${repo}/resolve/main/${file}`;
+    const total = await remoteSize(url);
+    if (total === null) { console.warn('missing', repo, file); continue; }
+    const have = sizeOf(dest);
+    if (have && (!total || have === total)) { console.log('skip', repo, file); continue; }
     mkdirSync(dirname(dest), { recursive: true });
-    const res = await fetch(`${endpoint}/${repo}/resolve/main/${file}`);
-    if (!res.ok) { console.warn('missing', repo, file, res.status); continue; }
-    await pipeline(Readable.fromWeb(res.body), createWriteStream(dest));
-    console.log('ok  ', repo, file, (statSync(dest).size / 1e6).toFixed(1) + 'MB');
+    // A file cut short by an older version of this script: continue it instead of keeping it.
+    if (have) {
+      console.warn('incomplete', repo, file, `${(have / 1e6).toFixed(1)} of ${(total / 1e6).toFixed(1)} MB`);
+      if (have < total && !existsSync(dest + '.part')) renameSync(dest, dest + '.part');
+      else rmSync(dest);
+    }
+    await download(url, dest, total);
+    console.log('ok  ', repo, file, (sizeOf(dest) / 1e6).toFixed(1) + 'MB');
   }
 }
 

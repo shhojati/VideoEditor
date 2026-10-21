@@ -15,7 +15,7 @@ declare class AudioWorkletProcessor {}
 export interface VoiceFxOptions {
   mode: 'voice' | 'space';
   /** The clip's timing, audio settings and keyframes. */
-  clip: Pick<Clip, 'start' | 'duration' | 'inPoint' | 'speed' | 'audio' | 'keyframes'>;
+  clip: Pick<Clip, 'start' | 'duration' | 'inPoint' | 'speed' | 'speedCurve' | 'freeze' | 'audio' | 'keyframes'>;
   /** Context time that corresponds to timeline time t0. */
   ctxStart: number;
   t0: number;

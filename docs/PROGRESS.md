@@ -490,3 +490,24 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Music without a steady pulse (rubato, ambient) can give an unhelpful grid; there is no manual tap-tempo or beat nudge yet.
 - Marker labels, colours and a marker list come with step 13.
+
+## Post-MVP 14 — Speed: 0.1–10×, ramps, custom curve, reverse, freeze frame ✅ (2026-10-21)
+
+### Done
+- **One time map** (`model/remap.ts`, its own refactor commit first): timeline time → source time and back, speed at a moment, source ranges, handles, split/trim re-timing, and the key clock. Render, preview audio, export audio, keyframes, masks, tracking, timeline edits, ducking, beats and speech-to-text all call it instead of ~25 copies of `inPoint + (t − start) · speed`; output for plain clips is bit-identical.
+- **Speed** (inspector → Speed): 0.1–10× (was 0.5–2×) with 0.25/0.5/1/2/4× buttons.
+- **Ramps**: Montage, Hero, Bullet, Flash in, Flash out, Jump cut and Custom, plus a **curve editor** (log speed scale, drag points, ends move up/down only, double-click adds or removes a point). A curve is absolute speeds at points of normalized clip time, linear in between (`Clip.speedCurve`); source advance is its integral, with a closed-form inverse. Ramping keeps the source range, so the clip's length follows the average speed (cut short by the next clip). Split and trim give each part its own exact sub-curve, so no frame moves.
+- **Ramped audio**: export resamples per sample through the time map; the preview lays the source out the same way in 2 s chunks (`remapAudio`, shared) and plays it at normal rate, so preview = export. **Keep pitch** follows the speed moment by moment (pitch-shift ratio 1/speed(t), range widened to 0.1–10).
+- **Reverse**: makes a reversed copy of the media (the whole file up to 180 s, otherwise the clip's range ± 2 s) in the media worker (`engine/reverse/reverseMedia.ts`): video decoded one keyframe group at a time from the end (≤ 60 frames held), re-encoded backwards (H.264, else VP9; 0.5 s keyframes) into MOV with PCM audio (WAV for audio clips). It is imported as "name (reversed)" (`Asset.reverseOf`) and the clip is pointed at it; every stored source time (in-point, keyframes, mask keys, tracker samples, other clips' motion links to its trackers) flips as t → end − t, so animations stay put and the ramp still applies. Reverse again goes back to the original. A copy that already covers the range is reused. Because a reversed clip is an ordinary forward clip, preview, export and audio need nothing special.
+- **Freeze frame** (video clips): splits at the playhead and inserts a 2 s still of that frame (`Clip.freeze`: constant source time, silent, unlimited handles, key clock = local time), pushing the rest of the track later. The still keeps the clip's look at that moment with its keyframes and mask animation baked in. Trim it to change the hold.
+- Schema version 3 (`speedCurve`, `speedPreset`, `freeze`, `Asset.reverseOf`; identity migration so older app versions refuse these documents instead of dropping fields).
+
+### Verified
+- Unit tests: plain clips match the old formulas exactly; curve integral and inverse round trip; split/outward trim keep every frame; ramps keep the source range and respect the next clip; curve normalization; reverse flip shows the mirrored frame at every moment and flips keyframes, trackers and motion links (and back); freeze split/ripple/bake; `remapAudio` follows a ramp.
+- **E2E `e2e/speed.spec.ts`**: red→green→blue video; Flash in shortens it, undo restores; Reverse makes the copy and the preview shows blue at 0.3 s and red at 2.7 s; Freeze at 1.5 s holds green; **preview = export** at 0.3 / 2.5 / 4.7 s (blue, green, red). A 440 Hz clip with Hero + Keep pitch plays through the worklet in preview and exports at its new 2.77 s length with the tone present.
+
+### Known issues / not done
+- Very high speeds (above ~4×) can drop preview frames on long-GOP footage; export is exact.
+- Keep pitch at extreme speeds sounds grainy (a hint says so).
+- A freeze frame drops trackers and tracked-mask links (masks keep their shape at that moment).
+- The reversed copy is a second file in the browser's storage (removed with the asset).

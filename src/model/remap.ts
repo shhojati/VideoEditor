@@ -1,14 +1,14 @@
 // Time remapping: where in its source a clip is at a timeline time, and back. The one place that
-// knows about speed, speed curves, reverse and freeze frames; everything else (render, audio,
-// export, keyframes, masks, tracking, timeline edits) asks here.
+// knows about speed, speed curves and freeze frames; everything else (render, audio, export,
+// keyframes, masks, tracking, timeline edits) asks here. (Reverse is a reversed copy of the media,
+// played forward: see model/speed.ts.)
 //
 // A clip plays the source range [inPoint, inPoint + L]. Its speed is `speed`, or `speedCurve`:
 // absolute speeds at points of normalized clip time u = (t - start) / duration, linear in between.
-// Source advanced after u is duration · E(u), E(u) = ∫₀ᵘ v. Reversed clips play the range from
-// its end; freeze clips hold the frame at inPoint.
+// Source advanced after u is duration · E(u), E(u) = ∫₀ᵘ v. Freeze clips hold the frame at inPoint.
 import type { Clip, SpeedPoint } from './types';
 
-export type Timing = Pick<Clip, 'start' | 'duration' | 'inPoint' | 'speed' | 'speedCurve' | 'reversed' | 'freeze'>;
+export type Timing = Pick<Clip, 'start' | 'duration' | 'inPoint' | 'speed' | 'speedCurve' | 'freeze'>;
 
 export const SPEED_RANGE = { min: 0.1, max: 10 } as const;
 
@@ -88,37 +88,28 @@ export const meanSpeed = (c: Pick<Clip, 'speed' | 'speedCurve'>) => (c.speedCurv
 export const sourceLength = (c: Timing) => (c.freeze ? 0 : c.speedCurve ? c.duration * meanSpeed(c) : c.duration * c.speed);
 
 /** True for a plain clip: forward at one constant speed (most clips; the old fast paths). */
-export const isLinear = (c: Timing) => !c.speedCurve && !c.reversed && !c.freeze;
+export const isLinear = (c: Timing) => !c.speedCurve && !c.freeze;
 
 /** Source time shown at timeline time t (extrapolated past the clip's edges, for handles). */
 export function mediaTimeAt(c: Timing, t: number): number {
   if (c.freeze) return c.inPoint;
-  if (!c.speedCurve) {
-    if (!c.reversed) return c.inPoint + (t - c.start) * c.speed;
-    return c.inPoint + (c.start + c.duration - t) * c.speed;
-  }
+  if (!c.speedCurve) return c.inPoint + (t - c.start) * c.speed;
   const D = c.duration;
-  const advanced = D * integral(c, D > 0 ? (t - c.start) / D : 0);
-  return c.reversed ? c.inPoint + sourceLength(c) - advanced : c.inPoint + advanced;
+  return c.inPoint + D * integral(c, D > 0 ? (t - c.start) / D : 0);
 }
 
 /** Timeline time at which source time s is shown (a freeze frame: its start). */
 export function timelineTimeAt(c: Timing, s: number): number {
   if (c.freeze) return c.start;
-  if (!c.speedCurve) {
-    if (!c.reversed) return c.start + (s - c.inPoint) / c.speed;
-    return c.start + c.duration - (s - c.inPoint) / c.speed;
-  }
+  if (!c.speedCurve) return c.start + (s - c.inPoint) / c.speed;
   const D = c.duration;
-  const advanced = c.reversed ? c.inPoint + sourceLength(c) - s : s - c.inPoint;
-  return c.start + D * inverseIntegral(c, D > 0 ? advanced / D : 0);
+  return c.start + D * inverseIntegral(c, D > 0 ? (s - c.inPoint) / D : 0);
 }
 
-/** Signed source speed at t (ds/dt): negative when reversed, 0 for a freeze frame. */
+/** Source speed at t (ds/dt): 0 for a freeze frame. */
 export function speedAt(c: Timing, t: number): number {
   if (c.freeze) return 0;
-  const v = speedAtU(c, c.duration > 0 ? (t - c.start) / c.duration : 0);
-  return c.reversed ? -v : v;
+  return speedAtU(c, c.duration > 0 ? (t - c.start) / c.duration : 0);
 }
 
 /** Source range shown between timeline times t0 ≤ t1. */
@@ -138,7 +129,7 @@ export function handles(c: Timing, mediaDuration: number | undefined): { before:
   const endEdge = speedAtU(c, 1);
   const head = c.inPoint;
   const tail = mediaDuration === undefined ? Infinity : Math.max(0, mediaDuration - (c.inPoint + sourceLength(c)));
-  return c.reversed ? { before: tail / startEdge, after: head / endEdge } : { before: head / startEdge, after: tail / endEdge };
+  return { before: head / startEdge, after: tail / endEdge };
 }
 
 /**

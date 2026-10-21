@@ -54,6 +54,29 @@ export function mixClip(
   }
 }
 
+/**
+ * A clip's source audio laid out on the timeline window [t0, t1) at `rate`, following its time map
+ * (speed ramps): the same per-sample interpolation as mixClip, so the preview of a ramped
+ * clip sounds like its export. Stereo out.
+ */
+export function remapAudio(clip: Clip, src: DecodedRange, t0: number, t1: number, rate: number): [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>] {
+  const len = Math.max(0, Math.ceil((t1 - t0) * rate));
+  const out: [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>] = [new Float32Array(len), new Float32Array(len)];
+  const left = src.channels[0];
+  const right = src.channels[1] ?? left;
+  const n = left.length;
+  for (let j = 0; j < len; j++) {
+    const pos = (mediaTimeAt(clip, t0 + j / rate) - src.start) * src.rate;
+    const k = Math.floor(pos);
+    if (k < 0 || k >= n) continue;
+    const f = pos - k;
+    const k1 = Math.min(n - 1, k + 1);
+    out[0][j] = left[k] + (left[k1] - left[k]) * f;
+    out[1][j] = right[k] + (right[k1] - right[k]) * f;
+  }
+  return out;
+}
+
 /** Samples per chunk of the effects path (keeps memory flat on long clips). */
 const CHUNK = 8192;
 

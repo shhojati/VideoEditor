@@ -4,7 +4,7 @@
 import { newId } from './factories';
 import { isOverlay } from './overlays';
 import type { Asset, AssetKind, Clip, Effect, ID, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
-import { handles, isLinear, retime, sourceLength } from './remap';
+import { handles, isLinear, retime, sourceLength, SPEED_RANGE } from './remap';
 
 /** Shortest clip a trim or split may leave behind (s). */
 export const MIN_CLIP_DURATION = 0.1;
@@ -13,7 +13,7 @@ export const IMAGE_DEFAULT_DURATION = 5;
 const EPS = 1e-6;
 
 /** Deep copy that also works on Immer drafts (structuredClone rejects Proxies). */
-const cloneClip = (c: Clip): Clip => JSON.parse(JSON.stringify(c));
+export const cloneClip = (c: Clip): Clip => JSON.parse(JSON.stringify(c));
 
 export const clipEnd = (c: Pick<Clip, 'start' | 'duration'>) => c.start + c.duration;
 
@@ -163,7 +163,7 @@ export function trimClip(p: Project, clipId: ID, edge: 'start' | 'end', time: nu
   const t = clamp(time, trimLimits(p, clipId, edge));
   const { clip } = ref;
   if (!isLinear(clip)) {
-    // Curves are in normalized clip time and reversed clips play from their end: re-derive both.
+    // Curves are in normalized clip time: the remaining part gets its own curve.
     Object.assign(clip, edge === 'start' ? retime(clip, t, clipEnd(clip)) : retime(clip, clip.start, t));
   } else if (edge === 'start') {
     const delta = t - clip.start;
@@ -339,7 +339,6 @@ export const ADJUSTMENT_DEFAULT_DURATION = 5;
 export const addAdjustmentClipAbove = (p: Project, trackIndex: number, start: number, duration: number, props: Pick<Clip, 'effects' | 'masks' | 'transform'>): ID =>
   addOverlayClip(p, { ...createOverlayClip(Math.max(0, start), { adjustment: true, effects: props.effects }), duration, masks: props.masks, transform: props.transform }, trackIndex);
 
-export const SPEED_RANGE: Range = { min: 0.5, max: 2 };
 
 /**
  * Change playback speed keeping the same source range, so the clip gets shorter/longer on the

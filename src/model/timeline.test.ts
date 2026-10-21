@@ -197,7 +197,8 @@ describe('text clips and speed', () => {
 
   it('slowing down is limited by the next clip and the allowed range', () => {
     const p = setup();
-    expect(setClipSpeed(p, 'a', 0.1)).toBe(0.5); // clamped
-    expect(clip(p, 'a').duration).toBe(6); // would be 8, next clip starts at 6
+    expect(setClipSpeed(p, 'a', 0.01)).toBe(0.1); // clamped
+    expect(clip(p, 'a').duration).toBe(6); // would be 40, next clip starts at 6
+    expect(setClipSpeed(p, 'a', 50)).toBe(10);
   });
 });

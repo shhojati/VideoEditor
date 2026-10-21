@@ -67,6 +67,8 @@ export interface Asset {
   library?: { kind: LibraryKind; path: string };
   /** Detected tempo and beats (music), see engine/audio/beats.ts. */
   beats?: { bpm: number; times: number[] };
+  /** A reversed copy of another asset's range [from, to] (made by Reverse, model/speed.ts). */
+  reverseOf?: { assetId: ID; from: number; to: number };
 }
 
 /** 'text' tracks hold overlays: text and shape clips (shown as "Overlay" in the UI). */
@@ -304,8 +306,6 @@ export interface Clip {
   speedCurve?: SpeedPoint[];
   /** Which ramp preset the curve came from (for the picker). */
   speedPreset?: SpeedPreset;
-  /** Plays the source range backwards. */
-  reversed?: boolean;
   /** Holds the frame at inPoint (a freeze frame clip; silent). */
   freeze?: true;
   transform: Transform;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { handles, keyTimeAt, keyToTimeline, mediaTimeAt, meanSpeed, retime, sourceLength, sourceRangeFor, speedAt, timelineTimeAt, type Timing } from './remap';
+import { handles, keyTimeAt, keyToTimeline, mediaTimeAt, meanSpeed, retime, sourceLength, speedAt, timelineTimeAt, type Timing } from './remap';
 import type { SpeedPoint } from './types';
 
 const base: Timing = { start: 10, duration: 4, inPoint: 2, speed: 1.5 };
@@ -20,16 +20,6 @@ describe('linear clips', () => {
     expect(sourceLength(base)).toBe(6);
     expect(speedAt(base, 12)).toBe(1.5);
     expect(handles(base, 20)).toEqual({ before: 2 / 1.5, after: (20 - 8) / 1.5 });
-  });
-
-  it('reverse plays the same range from its end', () => {
-    const r = { ...base, reversed: true };
-    expect(mediaTimeAt(r, 10)).toBe(8);
-    expect(mediaTimeAt(r, 14)).toBe(2);
-    expect(speedAt(r, 12)).toBe(-1.5);
-    expect(timelineTimeAt(r, 5)).toBeCloseTo(12);
-    expect(sourceRangeFor(r, 10, 12)).toEqual({ from: 5, to: 8 });
-    expect(handles(r, 20)).toEqual({ before: 12 / 1.5, after: 2 / 1.5 });
   });
 
   it('freeze holds one frame and keys run on local time', () => {
@@ -53,17 +43,13 @@ describe('speed curves', () => {
     expect(mediaTimeAt(c, 10)).toBe(2);
     expect(mediaTimeAt(c, 14)).toBeCloseTo(8.4, 12);
     for (let t = 9; t <= 15; t += 0.137) expect(timelineTimeAt(c, mediaTimeAt(c, t))).toBeCloseTo(t, 9);
-    const r = { ...c, reversed: true };
-    for (let t = 9; t <= 15; t += 0.137) expect(timelineTimeAt(r, mediaTimeAt(r, t))).toBeCloseTo(t, 9);
-    expect(mediaTimeAt(r, 10)).toBeCloseTo(8.4, 12);
     // Speed at a knot and between knots.
     expect(speedAt(c, 11)).toBeCloseTo(4);
     expect(speedAt(c, 10.5)).toBeCloseTo(2.5);
-    expect(speedAt(r, 11)).toBeCloseTo(-4);
   });
 
   it('split and trim keep every frame where it was', () => {
-    for (const clip of [c, { ...c, reversed: true }, base, { ...base, reversed: true }]) {
+    for (const clip of [c, base]) {
       const cut = 11.7;
       const left = { ...clip, ...retime(clip, clip.start, cut) };
       const right = { ...clip, ...retime(clip, cut, clip.start + clip.duration) };

@@ -7,6 +7,7 @@ import { PeakBuilder } from '../lib/peaks';
 import { BinAccumulator, STT_RATE } from '../engine/stt/audio16k';
 import { LoudnessMeter, measureNoiseProfile } from '../engine/audio/cleanDsp';
 import { detectBeats } from '../engine/audio/beats';
+import { reverseMedia } from '../engine/reverse/reverseMedia';
 import { exposeRpc } from './rpc';
 import { sourceLength, timelineTimeAt, type Timing } from '../model/remap';
 
@@ -227,6 +228,11 @@ async function beats({ opfsPath }: { opfsPath: string }) {
   }
 }
 
-const handlers = { thumbnails, waveform, mixdown16k, noiseProfile, loudness, beats };
+/** Reversed copy of a source range, for Reverse (engine/reverse/reverseMedia.ts). */
+async function reverse({ opfsPath, from, to }: { opfsPath: string; from: number; to: number }) {
+  return { result: await reverseMedia(await openFile(opfsPath), from, to) };
+}
+
+const handlers = { thumbnails, waveform, mixdown16k, noiseProfile, loudness, beats, reverse };
 export type MediaWorkerApi = typeof handlers;
 exposeRpc(handlers);

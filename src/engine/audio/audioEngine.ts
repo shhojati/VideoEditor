@@ -13,10 +13,14 @@ import workletUrl from './voiceFx.worklet.ts?worker&url';
 import type { VoiceFxOptions } from './voiceFx.worklet';
 import type { AudioAux } from './audioAux';
 import { cleanLatency, hasCleanStage, type NoiseProfile } from './cleanDsp';
-import { sourceRangeFor, timelineTimeAt } from '../../model/remap';
+import { isLinear, sourceRangeFor, timelineTimeAt } from '../../model/remap';
+import { remapAudio } from '../export/audioMix';
+import type { AudioBufferSink } from 'mediabunny';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
 const SCHEDULE_AHEAD = 2;
+/** Timeline seconds per chunk when laying out a ramped clip's audio. */
+const REMAP_CHUNK = 2;
 /** Delay between pressing play and the first sample, so the first buffers can be scheduled (s). */
 export const START_LEAD = 0.12;
 
@@ -127,6 +131,10 @@ export class AudioEngine {
       space.connect(this.master!);
     } else gain.connect(this.master!);
 
+    if (!isLinear(clip)) {
+      await this.playRemapped(clip, reader.audio, from, end, input, lead, gen);
+      return;
+    }
     // Before the source starts there is nothing to play (silence), so clamp to 0.
     const range = sourceRangeFor(clip, from, end);
     const srcFrom = Math.max(0, range.from);
@@ -166,6 +174,64 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Ramped clips: decode the source a couple of seconds at a time, lay it out on the
+   * timeline with the export's resampler (remapAudio), and play the result at normal rate.
+   */
+  private async playRemapped(clip: Clip, audio: AudioBufferSink, from: number, end: number, input: AudioNode, lead: number, gen: number) {
+    const ctx = this.ctx!;
+    try {
+      for (let c0 = from; c0 < end - 1e-4 && gen === this.generation; c0 += REMAP_CHUNK) {
+        const c1 = Math.min(end, c0 + REMAP_CHUNK);
+        while (gen === this.generation && this.toCtx(c0) - ctx.currentTime > SCHEDULE_AHEAD) await sleep(100);
+        const { from: s0, to: s1 } = sourceRangeFor(clip, c0, c1);
+        const parts: AudioBuffer[] = [];
+        let start = 0;
+        for await (const { buffer, timestamp } of audio.buffers(Math.max(0, s0 - 0.02), s1 + 0.02)) {
+          if (gen !== this.generation) return;
+          if (!parts.length) start = timestamp;
+          parts.push(buffer);
+        }
+        if (!parts.length || gen !== this.generation) continue;
+        const channels = Array.from({ length: Math.min(2, parts[0].numberOfChannels) }, (_, c) => {
+          const out = new Float32Array(parts.reduce((n, b) => n + b.length, 0));
+          let o = 0;
+          for (const b of parts) {
+            out.set(b.getChannelData(Math.min(c, b.numberOfChannels - 1)), o);
+            o += b.length;
+          }
+          return out;
+        });
+        const [l, r] = remapAudio(clip, { channels, rate: parts[0].sampleRate, start }, c0, c1, ctx.sampleRate);
+        if (!l.length) continue;
+        const buffer = ctx.createBuffer(2, l.length, ctx.sampleRate);
+        buffer.copyToChannel(l, 0);
+        buffer.copyToChannel(r, 1);
+        let when = this.toCtx(c0) - lead;
+        let skip = 0;
+        this.stats.buffers++;
+        if (when < ctx.currentTime) {
+          this.stats.lateBuffers++;
+          this.stats.maxLate = Math.max(this.stats.maxLate, ctx.currentTime - when);
+          skip = ctx.currentTime - when;
+          when = ctx.currentTime;
+        }
+        if (skip >= buffer.duration) continue;
+        const node = ctx.createBufferSource();
+        node.buffer = buffer;
+        node.connect(input);
+        node.start(when, skip);
+        this.nodes.push(node);
+        node.onended = () => {
+          const i = this.nodes.indexOf(node);
+          if (i >= 0) this.nodes.splice(i, 1);
+        };
+      }
+    } catch (e) {
+      if (gen === this.generation) console.warn('audio decode failed', e);
+    }
+  }
+
   stop() {
     this.generation++;
     for (const n of this.nodes.splice(0)) {
@@ -180,8 +246,8 @@ export class AudioEngine {
   }
 
   private fxNode(mode: VoiceFxOptions['mode'], clip: Clip, end: number, noise?: NoiseProfile) {
-    const { start, duration, inPoint, speed, audio, keyframes } = clip;
-    const processorOptions: VoiceFxOptions = { mode, clip: { start, duration, inPoint, speed, audio, keyframes }, ctxStart: this.ctxStart, t0: this.t0, end, noise };
+    const { start, duration, inPoint, speed, speedCurve, freeze, audio, keyframes } = clip;
+    const processorOptions: VoiceFxOptions = { mode, clip: { start, duration, inPoint, speed, speedCurve, freeze, audio, keyframes }, ctxStart: this.ctxStart, t0: this.t0, end, noise };
     const node = new AudioWorkletNode(this.ctx!, 'voice-fx', {
       numberOfInputs: 1,
       numberOfOutputs: 1,

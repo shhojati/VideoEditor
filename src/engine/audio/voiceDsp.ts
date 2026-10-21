@@ -13,7 +13,7 @@ import type { SpaceFx, VoiceKind } from '../../model/types';
 export const BLOCK = 128;
 /** Pitch shifter grain (s): long enough for deep voices, short enough to keep words crisp. */
 const GRAIN = 0.06;
-const RATIO_RANGE = [0.25, 4] as const;
+const RATIO_RANGE = [0.1, 10] as const;
 
 /** Delay (in samples) the voice stage adds; hosts feed it this much early. */
 export const voiceLatency = (rate: number) => Math.round(GRAIN * rate) >> 1;

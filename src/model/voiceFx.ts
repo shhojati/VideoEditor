@@ -3,6 +3,7 @@
 // the processing lives in engine/audio/voiceDsp.ts and runs the same in preview and export. Pure.
 import { keyedValue, srcTime } from './keyframes';
 import type { Clip, SpaceFx, SpaceKind, VoiceFx, VoiceKind } from './types';
+import { speedAt } from './remap';
 
 /** How a voice preset sounds. Frequencies in Hz, times in seconds. */
 export interface VoiceRecipe {
@@ -100,7 +101,7 @@ export function setKeepPitch(clip: Clip, on: boolean) {
 }
 
 /** The clip needs the voice stage: a voice preset, or speed that must keep its pitch. */
-export const hasVoiceStage = (clip: Clip) => !!clip.audio.voice || (!!clip.audio.keepPitch && clip.speed !== 1);
+export const hasVoiceStage = (clip: Clip) => !!clip.audio.voice || (!!clip.audio.keepPitch && (!!clip.speedCurve || clip.speed !== 1));
 
 export interface VoiceParams {
   /** Pitch-shift ratio (1 = unchanged), speed compensation included. */
@@ -117,7 +118,8 @@ function keyed(clip: Clip, prop: string, t: number, fallback: number) {
 export function voiceParamsAt(clip: Clip, t: number): VoiceParams {
   const v = clip.audio.voice;
   const pitch = v ? keyed(clip, 'voice.pitch', t, v.pitch) : 0;
-  const speed = clip.audio.keepPitch ? clip.speed : 1;
+  // Keep pitch undoes the speed's pitch change, moment by moment for a speed ramp.
+  const speed = clip.audio.keepPitch ? Math.max(0.1, Math.abs(speedAt(clip, t))) : 1;
   return { ratio: 2 ** (pitch / 12) / speed, amount: v ? keyed(clip, 'voice.amount', t, v.amount) : 0 };
 }
 

@@ -2,7 +2,7 @@
 // shape of `Project` changes in a way old documents would not satisfy.
 import { ellipsePath, rectPath } from './masks';
 
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 
 /** migrations[n] upgrades a version-n document to version n+1. */
 export type MigrationTable = Record<number, (doc: Record<string, unknown>) => Record<string, unknown>>;
@@ -36,6 +36,9 @@ export const MIGRATIONS: MigrationTable = {
     }
     return doc;
   },
+  // 2 → 3: speed curves, reverse and freeze frames. Nothing to convert; the bump makes older app
+  // versions refuse these documents instead of silently dropping the new fields.
+  2: (stored) => structuredClone(stored),
 };
 
 export class MigrationError extends Error {}

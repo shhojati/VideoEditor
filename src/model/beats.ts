@@ -14,8 +14,7 @@ export function clipBeats(p: Project, clip: Clip): number[] {
   if (!grid) return [];
   if (clip.freeze) return [];
   const srcEnd = clip.inPoint + sourceLength(clip);
-  const times = grid.times.filter((s) => s >= clip.inPoint - EPS && s <= srcEnd + EPS).map((s) => timelineTimeAt(clip, s));
-  return clip.reversed ? times.reverse() : times;
+  return grid.times.filter((s) => s >= clip.inPoint - EPS && s <= srcEnd + EPS).map((s) => timelineTimeAt(clip, s));
 }
 
 /** Every beat on the timeline from clips on unmuted tracks, ascending (optionally skipping some clips). */

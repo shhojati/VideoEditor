@@ -86,7 +86,7 @@ function mixItems(project: Project, selectedOnly: boolean): MixItem[] {
       if (selectedOnly && !selected.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
       // Reversed speech cannot be transcribed; a freeze frame is silent.
-      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || clip.reversed || clip.freeze) continue;
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || asset.reverseOf || clip.freeze) continue;
       if (!(asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio))) continue;
       items.push({
         opfsPath: asset.fileRef.opfsPath,

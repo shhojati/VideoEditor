@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { detectRtl } from '../../engine/render/textLayout';
 import { DEFAULT_TEXT_MAX_WIDTH } from '../../engine/render/text';
 import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
-import { findClip, moveClips, SPEED_RANGE, setClipSpeed, trimClip } from '../../model/timeline';
+import { findClip, moveClips, trimClip } from '../../model/timeline';
 import type { BlendMode, Clip, ID, Project, TextProps, Transform } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
@@ -17,10 +17,10 @@ import { keyedClip } from '../../model/keyframes';
 import { useTransport } from '../../store/transport';
 import { keyedEdit, playheadIn } from '../keyframes/keyframeService';
 import { KeyframesSection } from '../keyframes/KeyframesSection';
-import { setKeepPitch } from '../../model/voiceFx';
 import { VoiceSection } from './VoiceSection';
 import { CleanupSection } from './CleanupSection';
 import { BeatsSection } from './BeatsSection';
+import { SpeedSection } from './SpeedSection';
 import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
 
 /**
@@ -100,40 +100,9 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
           unit="s"
           onChange={(v) => set('duration', (c, p) => void trimClip(p, c.id, 'end', c.start + v))}
         />
-        {timed && (
-          <>
-            <NumberField
-              label={t('inspector.speed')}
-              value={clip.speed}
-              min={SPEED_RANGE.min}
-              max={SPEED_RANGE.max}
-              step={0.05}
-              unit="×"
-              onChange={(v) => set('speed', (c, p) => void setClipSpeed(p, c.id, v))}
-            />
-            <Segmented
-              label=""
-              value={clip.speed}
-              options={[0.5, 1, 1.5, 2].map((s) => ({ value: s, label: `${s}×` }))}
-              onChange={(v) => set('speed', (c, p) => void setClipSpeed(p, c.id, v))}
-            />
-            {audible && (
-              <label className="flex items-center gap-2 text-xs text-neutral-300">
-                <input
-                  type="checkbox"
-                  data-testid="keep-pitch"
-                  checked={!!clip.audio.keepPitch}
-                  onChange={(e) => {
-                    const on = e.target.checked;
-                    set('keepPitch', (c) => setKeepPitch(c, on));
-                  }}
-                />
-                {t('inspector.keepPitch')}
-              </label>
-            )}
-          </>
-        )}
+        {clip.freeze && <p className="text-[11px] text-sky-300" data-testid="freeze-note">❄ {t('speed.freezeNote')}</p>}
       </Section>
+      {timed && asset && !clip.freeze && <SpeedSection clip={clip} asset={asset} audible={!!audible} set={set} />}
 
       {isText && <TextSection text={clip.text!} set={set} />}
       {clip.shape && <ShapeSection shape={shown.shape!} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}

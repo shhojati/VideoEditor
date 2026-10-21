@@ -102,7 +102,9 @@
     "clearKeyframes": "Remove all keyframes",
     "detectBeats": "Detect beats",
     "marker": "Marker",
-    "cutToBeat": "Cut to beat"
+    "cutToBeat": "Cut to beat",
+    "reverse": "Reverse",
+    "freeze": "Freeze frame"
   },
   "panels": {
     "media": "Media",
@@ -1261,6 +1263,32 @@
       "noClips": "Select video or photo clips on one track first.",
       "noBeats": "Detect the beats of a music clip first (inspector → Beats).",
       "blocked": "Not enough room: another clip on the track is in the way."
+    }
+  },
+  "speed": {
+    "title": "Speed",
+    "ramps": "Speed ramp",
+    "curve": "Speed curve: drag the points, double-click to add or remove one",
+    "presets": {
+      "none": "None",
+      "montage": "Montage",
+      "hero": "Hero",
+      "bullet": "Bullet",
+      "flashIn": "Flash in",
+      "flashOut": "Flash out",
+      "jumpCut": "Jump cut",
+      "custom": "Custom"
+    },
+    "reverse": "Reverse",
+    "reversing": "Reversing…",
+    "freeze": "Freeze frame",
+    "freezeHint": "Hold the frame at the playhead for 2 seconds (the rest of the track moves later)",
+    "freezeNote": "Freeze frame: a still of one frame. Trim it to change how long it holds.",
+    "extremePitch": "Keeping the pitch at very low or high speeds sounds grainy.",
+    "errors": {
+      "tooLong": "Reverse works on up to {{max}} seconds of the source. Trim the clip first.",
+      "missing": "The original media of this reversed clip was removed.",
+      "failed": "Could not reverse this media."
     }
   }
 }

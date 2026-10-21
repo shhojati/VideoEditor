@@ -77,6 +77,14 @@ const clip = z.object({
   duration: num.positive(),
   inPoint: nonNeg,
   speed: num.positive(),
+  speedCurve: z
+    .array(z.tuple([num.min(0).max(1), num.min(0.1).max(10)]))
+    .min(2)
+    .max(32)
+    .refine((c) => c[0][0] === 0 && c[c.length - 1][0] === 1 && c.every((p, i) => i === 0 || p[0] > c[i - 1][0]), 'speed curve must run from 0 to 1')
+    .optional(),
+  speedPreset: z.enum(['montage', 'hero', 'bullet', 'flashIn', 'flashOut', 'jumpCut', 'custom']).optional(),
+  freeze: z.literal(true).optional(),
   transform: z.object({
     x: num,
     y: num,
@@ -175,6 +183,7 @@ const asset = z.object({
   fileRef: z.object({ opfsPath: z.string().optional(), handleKey: z.string().optional() }),
   library: z.object({ kind: z.enum(['stickers', 'sounds', 'overlays']), path: z.string() }).optional(),
   beats: z.object({ bpm: nonNeg, times: z.array(nonNeg) }).optional(),
+  reverseOf: z.object({ assetId: z.string(), from: nonNeg, to: nonNeg }).optional(),
 });
 
 const cueWord = z.object({ text: z.string(), start: nonNeg, end: nonNeg });

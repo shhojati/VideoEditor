@@ -632,3 +632,21 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 - A compound has no speed change, reverse or freeze of its own (its clips inside can), and no masks or tracking on the compound as a whole.
 - Compound clips show a teal bar with their name on the timeline, not thumbnails of their insides.
 - Inside a compound there are no subtitles or markers (they belong to the main timeline).
+
+## Post-MVP 22 — Layouts: picture-in-picture, split screens, creative shapes ✅ (2026-10-21)
+
+### Done
+- **Layouts tab** (▦, left panel; on phones under ✨ Effects): 13 layouts with thumbnails drawn for the project's aspect (16:9, 9:16, 1:1 all work):
+  - **Picture in picture**: the four corners — the second clip small with rounded corners, a white border and a shadow over the first.
+  - **Split screen**: 2 side by side, 2 stacked, 3 side by side, 3 stacked, 2 × 2 (8 px gaps).
+  - **Creative**: diagonal split, circle window (border + shadow), collages 1 + 2 and 1 + 3.
+- **Applying** (`model/layouts.ts` `applyLayout`, one undo step): select video/photo clips on the timeline, click a layout. As many clips as the layout has cells are used, in timeline order (bottom track first); each moves to its own new video track above the highest of them, all starting where the earliest starts. With fewer clips than cells, splits fill from the first cell, while picture-in-picture and circle (a full-frame background cell) fill the inner cells: one selected clip becomes the small picture over whatever is below it. Tracks left empty are removed, so trying layout after layout on the same clips doesn't pile up tracks.
+- **Fitting a clip into its cell** (`fitToCell`): the source is cropped to the cell's shape around its middle, then scaled and placed so its visible part covers the cell exactly; circle, diagonal and rounded cells get a mask over the visible part; borders and shadows are Stroke and Drop Shadow effects (marked as the layout's, so another layout replaces them and keeps the clip's own effects). Everything is plain clip settings (transform, crop, masks, effects), so preview and export needed nothing new and every part stays editable in the inspector afterwards.
+
+### Verified
+- Unit tests: every cell of every layout is covered exactly (canvas rectangle from `placeMedia`) for wide and tall sources at 16:9, 9:16 and 1:1; centred crop, no crop for an exact fit; the circle mask spans the visible part; another layout drops the old mask and effects; rounded-corner path stays inside; stacking, track clean-up, timeline order, cell count, non-visual clips, one clip into a picture-in-picture becomes the small picture.
+- **E2E `e2e/layouts.spec.ts`**: red + blue one after the other → 2 side by side: both at 0 s, red left, blue right, dark gap; then the circle layout on the same clips: blue in the circle, red outside it in the circle's square and in the corner, still two video tracks; **preview = export** for both (identical pixels). Checked by hand in the browser at phone width in English and Persian: the tab, thumbnails, and one clip → top-right picture-in-picture with mask, border and shadow.
+
+### Known issues / not done
+- Compound clips, text and shapes are not placed by layouts (only video and photo clips).
+- A layout is applied once: changing a clip's crop or position afterwards is by hand in the inspector (there is no "layout" object that remembers the arrangement).

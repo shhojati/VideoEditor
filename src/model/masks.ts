@@ -10,7 +10,7 @@ export interface Pt {
 }
 
 /** Bézier handle length for a quarter circle. */
-const KAPPA = 0.5522847498;
+export const KAPPA = 0.5522847498;
 
 /** Clockwise from the top-left corner. */
 export function rectPath(cx: number, cy: number, w: number, h: number): MaskVertex[] {

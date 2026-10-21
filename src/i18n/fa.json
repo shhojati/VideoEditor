@@ -113,7 +113,8 @@
     "addTemplate": "افزودن قالب",
     "makeCompound": "ساخت کلیپ ترکیبی",
     "breakApart": "جدا کردن کلیپ ترکیبی",
-    "renameCompound": "تغییر نام کلیپ ترکیبی"
+    "renameCompound": "تغییر نام کلیپ ترکیبی",
+    "applyLayout": "اعمال چیدمان"
   },
   "panels": {
     "media": "رسانه‌ها",
@@ -134,7 +135,8 @@
     "effects": "جلوه‌ها",
     "filters": "فیلترها",
     "transcript": "متن",
-    "templates": "قالب‌ها"
+    "templates": "قالب‌ها",
+    "layouts": "چیدمان"
   },
   "settings": {
     "title": "تنظیمات پروژه",
@@ -1451,5 +1453,33 @@
     "label": "نام",
     "color": "رنگ",
     "remove": "حذف نشانه"
+  },
+  "layouts": {
+    "hint": "کلیپ‌های ویدیو یا عکس را در تایم‌لاین انتخاب کنید و یک چیدمان بزنید: همزمان پخش می‌شوند و هر کدام در بخشی از کادر. هر کدام را در بازرس تنظیم کنید.",
+    "selected_one": "{{count}} کلیپ انتخاب شده",
+    "selected_other": "{{count}} کلیپ انتخاب شده",
+    "none": "اول یک یا چند کلیپ ویدیو یا عکس انتخاب کنید.",
+    "itemHint_one": "با {{count}} کلیپ",
+    "itemHint_other": "تا {{count}} کلیپ",
+    "categories": {
+      "pip": "تصویر در تصویر",
+      "split": "صفحهٔ چندبخشی",
+      "creative": "خلاقانه"
+    },
+    "names": {
+      "pipTopLeft": "بالا چپ",
+      "pipTopRight": "بالا راست",
+      "pipBottomLeft": "پایین چپ",
+      "pipBottomRight": "پایین راست",
+      "split2h": "۲ کنار هم",
+      "split2v": "۲ روی هم",
+      "split3h": "۳ کنار هم",
+      "split3v": "۳ روی هم",
+      "split4": "۲ × ۲",
+      "diagonal": "مورب",
+      "circle": "دایره",
+      "collage1plus2": "۱ + ۲",
+      "collage1plus3": "۱ + ۳"
+    }
   }
 }

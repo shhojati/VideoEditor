@@ -113,7 +113,8 @@
     "addTemplate": "Add template",
     "makeCompound": "Make compound clip",
     "breakApart": "Break apart compound clip",
-    "renameCompound": "Rename compound clip"
+    "renameCompound": "Rename compound clip",
+    "applyLayout": "Apply layout"
   },
   "panels": {
     "media": "Media",
@@ -134,7 +135,8 @@
     "effects": "Effects",
     "filters": "Filters",
     "transcript": "Text",
-    "templates": "Templates"
+    "templates": "Templates",
+    "layouts": "Layouts"
   },
   "settings": {
     "title": "Project settings",
@@ -1451,5 +1453,33 @@
     "label": "Name",
     "color": "Colour",
     "remove": "Remove marker"
+  },
+  "layouts": {
+    "hint": "Select video or photo clips on the timeline, then pick a layout: they play together, each in its own part of the frame. Fine-tune each one in the inspector.",
+    "selected_one": "{{count}} clip selected",
+    "selected_other": "{{count}} clips selected",
+    "none": "Select one or more video or photo clips first.",
+    "itemHint_one": "Uses {{count}} clip",
+    "itemHint_other": "Uses up to {{count}} clips",
+    "categories": {
+      "pip": "Picture in picture",
+      "split": "Split screen",
+      "creative": "Creative"
+    },
+    "names": {
+      "pipTopLeft": "Top left",
+      "pipTopRight": "Top right",
+      "pipBottomLeft": "Bottom left",
+      "pipBottomRight": "Bottom right",
+      "split2h": "2 side by side",
+      "split2v": "2 stacked",
+      "split3h": "3 side by side",
+      "split3v": "3 stacked",
+      "split4": "2 × 2",
+      "diagonal": "Diagonal",
+      "circle": "Circle",
+      "collage1plus2": "1 + 2",
+      "collage1plus3": "1 + 3"
+    }
   }
 }

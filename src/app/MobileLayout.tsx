@@ -17,7 +17,7 @@ const NAV: { id: NavId; icon: string; label: string; tabs?: PanelTab[] }[] = [
   { id: 'media', icon: '🎞', label: 'panels.media', tabs: ['media'] },
   { id: 'subtitles', icon: '💬', label: 'panels.subtitles', tabs: ['subtitles', 'transcript'] },
   { id: 'library', icon: '🌟', label: 'panels.library', tabs: ['stickers', 'sounds', 'overlays', 'templates'] },
-  { id: 'fx', icon: '✨', label: 'panels.fx', tabs: ['transitions', 'effects', 'filters'] },
+  { id: 'fx', icon: '✨', label: 'panels.fx', tabs: ['layouts', 'transitions', 'effects', 'filters'] },
   { id: 'inspector', icon: '⚙', label: 'panels.inspector' },
 ];
 const navOf = (tab: PanelTab) => NAV.find((n) => n.tabs?.includes(tab))!.id;

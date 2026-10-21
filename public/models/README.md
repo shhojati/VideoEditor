@@ -12,3 +12,5 @@ The `_timestamped` exports give word timings (animated captions). Older installs
 
 Auto reframe uses `public/models/Xenova/yolos-tiny/{config.json,preprocessor_config.json,onnx/model_quantized.onnx}`
 (`node scripts/fetch-models.mjs detect` fetches just that).
+Translation (English→Persian) uses `public/models/Xenova/m2m100_418M/` (`fetch-models.mjs translate`, ~630 MB;
+`translate-fp16` adds the 16-bit version, ~1.2 GB).

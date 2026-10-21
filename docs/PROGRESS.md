@@ -580,3 +580,19 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - The cut follows word timings from Whisper, which can be off by ~0.1 s: a cut can clip the edge of a word. Undo is one step.
 - Words that Whisper merges or splits differently from how they sound are cut as Whisper wrote them.
+
+## Post-MVP 19 — English → Persian subtitle translation (Pro) ✅ (2026-10-21)
+
+### Done
+- **Translate to Persian** (Subtitles tab, on an English track): translates every cue into a **new Persian track** with the same timing (right to left, Persian digits, the source track's style; word timings do not carry over). The panel switches to the new track. Progress, cancel, and clear errors (model missing / failed).
+- **Model**: **M2M100-418M** (MIT) through transformers.js in `workers/translate.worker.ts`, served from our own `/models/` like the other models; batches of 8 cues. **NLLB was ruled out** because its licence (CC-BY-NC) does not allow commercial use.
+- **Choice in the UI** (as asked): **Standard** (8-bit, ~630 MB, runs on WASM) or **Higher precision** (16-bit, ~1.2 GB, on WebGPU when available). No larger M2M100 (1.2B) ONNX export exists for the browser, so the choice is between the two precisions of the 418M model; versions that are not installed are greyed out. `scripts/fetch-models.mjs` downloads the 8-bit one by default (`translate-fp16` for the other).
+- **Pro**: Free users are asked to log in or upgrade; nothing runs.
+
+### Verified
+- Unit tests (fake worker): batches, line breaks joined, empty cues skipped, the new track's language/direction/digits/timing; Free users are stopped before the model loads.
+- Opt-in **`TRANSLATE_E2E=1` `e2e/translate.spec.ts`** with the real 8-bit model: "Hello, my friends." → «سلام دوستان من», "Today we will talk about video editing." → «امروز در مورد ویرایش ویدئو صحبت خواهیم کرد.», times kept (17.6 s including model load).
+
+### Known issues / not done
+- Machine translation makes mistakes: M2M100 sometimes leaves a stray foreign word (the test's third line ended in «… Merci»). The hint asks to check the text.
+- Only English → Persian for now (other languages later, as agreed).

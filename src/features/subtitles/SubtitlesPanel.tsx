@@ -8,6 +8,7 @@ import { useTransport } from '../../store/transport';
 import { formatTimecode } from '../preview/TransportBar';
 import { select, useTimelineUi } from '../timeline/timelineUi';
 import { AutoSubtitles } from './AutoSubtitles';
+import { TranslateBox } from './TranslateBox';
 import {
   addSubtitleTrack,
   exportSubtitleFile,
@@ -106,6 +107,7 @@ export function SubtitlesPanel({ project }: { project: Project }) {
       )}
 
       <AutoSubtitles project={project} />
+      {track?.language === 'en' && <TranslateBox track={track} />}
 
       {track ? <CueList track={track} /> : <p className="p-4 text-center text-neutral-400">{t('subtitles.empty')}</p>}
       <p className="mt-auto pt-2 text-[11px] text-neutral-400">{t('media.privacy')}</p>

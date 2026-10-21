@@ -108,7 +108,8 @@
     "reframe": "Auto reframe",
     "cutText": "Cut words",
     "removePauses": "Remove pauses and fillers",
-    "transcribe": "Transcribe"
+    "transcribe": "Transcribe",
+    "translate": "Translate subtitles"
   },
   "panels": {
     "media": "Media",
@@ -1376,5 +1377,22 @@
     "remove_one": "Remove {{count}}",
     "remove_other": "Remove {{count}}",
     "close": "Close"
+  },
+  "translate": {
+    "title": "Translate to Persian",
+    "quality": "Model",
+    "qualities": {
+      "standard": "Standard (8-bit)",
+      "precise": "Higher precision (16-bit, best with a GPU)"
+    },
+    "start": "Translate into a new Persian track",
+    "loading": "Loading model…",
+    "running": "Translating… {{pct}}%",
+    "done": "Done: a new Persian subtitle track with the same timing.",
+    "hint": "Runs on this device (M2M100 model, offline). Check the Persian text: machine translation makes mistakes.",
+    "errors": {
+      "missingModel": "The translation model is not installed. Put it in public/models with scripts/fetch-models.mjs translate.",
+      "failed": "Translation failed."
+    }
   }
 }

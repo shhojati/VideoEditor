@@ -99,11 +99,12 @@ function addMask(clipId: ID, mask: RotoMask) {
   setActiveMask(clipId, mask.id);
 }
 
-export function addPresetMask(clipId: ID, kind: MaskPreset, name: string) {
+/** A ready-made mask; `frame` (layer units) is the box dragged with the shape tool. */
+export function addPresetMask(clipId: ID, kind: MaskPreset, name: string, frame?: { cx: number; cy: number; w: number; h: number }) {
   const p = project();
   const clip = p && findClip(p, clipId)?.clip;
   if (!clip) return;
-  const f = presetFrame(p!, clip);
+  const f = frame ?? presetFrame(p!, clip);
   addMask(clipId, createMask(name, presetPath(kind, f.cx, f.cy, f.w, f.h)));
 }
 

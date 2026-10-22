@@ -8,6 +8,9 @@ import { TransportBar } from './TransportBar';
 import { backingRatio, panBy, setViewport, usePreviewView, zoomTo } from './previewView';
 import { spaceHand } from './spaceHand';
 import { Scopes } from './Scopes';
+import { ToolBar } from '../tools/ToolBar';
+import { TextEditBox } from '../tools/TextEditBox';
+import { useTool } from '../tools/toolService';
 
 /**
  * Zoomable, pannable preview. The canvas covers the whole viewport; the engine draws the picture
@@ -57,6 +60,8 @@ export function PreviewPanel({ project }: { project: Project }) {
             style={{ left: view.ox, top: view.oy, width: width * view.k, height: height * view.k }}
           />
           <CanvasOverlay project={project} />
+          <TextEditBox project={project} />
+          <ToolBar />
           <Scopes />
         </div>
         <TransportBar fps={project.settings.fps} />
@@ -66,8 +71,8 @@ export function PreviewPanel({ project }: { project: Project }) {
 }
 
 /**
- * Ctrl+wheel (or pinch) zooms about the pointer; wheel, Space+drag and middle-drag pan.
- * Two touch pointers pinch-zoom and pan together.
+ * Ctrl+wheel (or pinch) zooms about the pointer; wheel, Space+drag, middle-drag and the hand tool
+ * pan. Two touch pointers pinch-zoom and pan together; one pans with the hand tool.
  */
 function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -97,22 +102,27 @@ function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
       return { dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
     };
 
+    const hand = () => useTool.getState().tool === 'hand';
     const onDown = (e: PointerEvent) => {
+      // The tool strip and other controls on the preview keep their clicks.
+      if ((e.target as Element).closest('[data-preview-ui]')) return;
       if (e.pointerType === 'touch') {
         pointers.set(e.pointerId, local(e));
         if (pointers.size === 2) {
           pinch = pinchState();
+          panning = null;
           e.stopPropagation(); // not a tap on a clip
           box.dispatchEvent(new Event('previewpinch')); // cancels a clip drag the first finger began
+          return;
         }
-        return;
+        if (!hand()) return;
       }
-      if (e.button === 1 || (e.button === 0 && spaceHand.held)) {
+      if (e.button === 1 || (e.button === 0 && (spaceHand.held || hand()))) {
         e.preventDefault();
         e.stopPropagation();
         panning = e.pointerId;
         last = local(e);
-        spaceHand.used = true;
+        if (spaceHand.held) spaceHand.used = true;
         box.setPointerCapture(e.pointerId);
         box.style.cursor = 'grabbing';
       }
@@ -125,8 +135,8 @@ function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
           panBy(next.mid.x - pinch.mid.x, next.mid.y - pinch.mid.y);
           if (pinch.dist > 0) zoomTo(usePreviewView.getState().view.k * (next.dist / pinch.dist), next.mid.x, next.mid.y);
           pinch = next;
+          return;
         }
-        return;
       }
       if (panning !== e.pointerId) return;
       const p = local(e);
@@ -138,13 +148,13 @@ function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
       if (pointers.size < 2) pinch = null;
       if (panning === e.pointerId) {
         panning = null;
-        box.style.cursor = spaceHand.held ? 'grab' : '';
+        box.style.cursor = spaceHand.held || hand() ? 'grab' : '';
       }
     };
     const onAux = (e: MouseEvent) => e.button === 1 && e.preventDefault(); // no autoscroll / paste
     const onEnter = () => (spaceHand.hover = true);
     const onLeave = () => (spaceHand.hover = false);
-    const onHandChange = () => panning === null && (box.style.cursor = spaceHand.held ? 'grab' : '');
+    const onHandChange = () => panning === null && (box.style.cursor = spaceHand.held || hand() ? 'grab' : '');
 
     box.addEventListener('wheel', onWheel, { passive: false });
     // Capture phase: a pan gesture must win over clip handles underneath.
@@ -157,6 +167,7 @@ function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
     box.addEventListener('pointerenter', onEnter);
     box.addEventListener('pointerleave', onLeave);
     const offHand = spaceHand.subscribe(onHandChange);
+    const offTool = useTool.subscribe(onHandChange);
     return () => {
       box.removeEventListener('wheel', onWheel);
       box.removeEventListener('pointerdown', onDown, true);
@@ -168,6 +179,7 @@ function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
       box.removeEventListener('pointerenter', onEnter);
       box.removeEventListener('pointerleave', onLeave);
       offHand();
+      offTool();
       spaceHand.hover = false;
     };
   }, [boxRef]);

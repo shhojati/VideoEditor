@@ -650,3 +650,20 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - Compound clips, text and shapes are not placed by layouts (only video and photo clips).
 - A layout is applied once: changing a clip's crop or position afterwards is by hand in the inspector (there is no "layout" object that remembers the arrangement).
+
+## Post-MVP 23 — After Effects tools: tool bar, drawing shapes and masks, typing on the preview ✅ (2026-10-22)
+
+### Done
+- **Tool bar** on the preview (top-left, `features/tools/ToolBar.tsx`, state in `toolService.ts`), with After Effects' keys: **Select (V)**, **Hand (H)**, **Pen (G)**, **Shape (Q)**, **Type (T)**. Escape returns to Select first, then clears the selection. Only the selection tool shows transform handles and selects or moves clips.
+- **Hand**: dragging pans the preview (mouse, and one finger on touch), as Space-drag already did.
+- **Shape tool**: drag a box on the preview to draw the chosen shape there, at the dragged size (Shift: square; a line goes from where the drag starts to where it ends; a click gives the default size). Q again, or the row of shapes beside the tool, picks the next shape. With a video, photo or adjustment layer selected, the drag draws a **mask** on it instead (rectangle, ellipse or polygon, from the shape), as in After Effects.
+- **Pen**: the mask pen on the selected clip, as G already did; finishing or cancelling the path goes back to Select so the new mask can be edited.
+- **Type tool**: click the preview to start a new text there and type it in a box on the picture (the text updates behind it as you type); click an existing text to edit it. A double-click on a text with the selection tool does the same. Escape, Ctrl+Enter or a click outside finishes. A new text left empty is taken back. The new clip and its typing are one undo step.
+
+### Verified
+- Unit tests (`features/tools/tools.test.ts`): Q cycles shapes, the pen without a clip falls back to Select, dragged boxes (any corner order, Shift square), a drawn shape takes the box, an empty new text undoes cleanly.
+- In the browser: a rectangle drawn by dragging at 9:16 has the dragged size and place; an ellipse mask dragged on a selected video matches the drag exactly; Type → click → typing shows "Hello AE" on the picture as one undo step; the Hand tool pans a zoomed preview without moving any clip.
+
+### Known issues / not done
+- The text box is a plain editing box over the picture, not the text itself in its own font and size.
+- Brushes, pen-drawn shapes, parenting, null objects and solids follow in the next steps.

@@ -11,8 +11,8 @@ import {
   stepFrames,
   zoomBy,
 } from '../features/timeline/actions';
-import { select, useTimelineUi } from '../features/timeline/timelineUi';
-import { startPen } from '../features/masks/maskService';
+import { select } from '../features/timeline/timelineUi';
+import { setTool, shapeToolKey, useTool } from '../features/tools/toolService';
 import { jumpSelectedKeyframe, toggleSelectedKeyframe } from '../features/keyframes/keyframeService';
 import { spaceDown } from '../features/preview/spaceHand';
 import { useProjectStore } from '../store/projectStore';
@@ -48,12 +48,15 @@ const PLAIN: Record<string, Handler> = {
   ArrowDown: () => jumpToEdit(1),
   Home: () => useTransport.getState().seek(0),
   End: seekToEnd,
-  Escape: () => select([]),
-  // The mask pen on the selected clip (After Effects' G).
-  KeyG: () => {
-    const sel = useTimelineUi.getState().selection;
-    if (sel.length === 1) startPen(sel[0]);
-  },
+  // Escape leaves a tool first, then clears the selection.
+  Escape: () => (useTool.getState().tool !== 'select' ? setTool('select') : select([])),
+  // The preview's tools, with After Effects' keys: selection, hand, pen (a mask on the selected
+  // clip), shapes (Q again: the next shape), type.
+  KeyV: () => setTool('select'),
+  KeyH: () => setTool('hand'),
+  KeyG: () => setTool('pen'),
+  KeyQ: shapeToolKey,
+  KeyT: () => setTool('text'),
   // Keyframes on the selected clip at the playhead (InShot's ◆ button), previous / next keyframe.
   KeyK: toggleSelectedKeyframe,
   BracketLeft: () => jumpSelectedKeyframe(-1),

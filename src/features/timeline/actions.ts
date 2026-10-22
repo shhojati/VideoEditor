@@ -29,13 +29,41 @@ export function editableSelection(p: Project): Set<ID> {
   return new Set(useTimelineUi.getState().selection.filter((id) => findClip(p, id) && !findClip(p, id)!.track.locked));
 }
 
-/** New text clip at the playhead, selected so the inspector opens on it. */
-export function addText(content: string) {
+/** Where a clip drawn on the preview goes: centre (project px), size and rotation (degrees). */
+export interface Placement {
+  cx: number;
+  cy: number;
+  w?: number;
+  h?: number;
+  rotation?: number;
+}
+
+/** Centre the clip on the placement (its transform position is relative to the frame centre). */
+function place(p: Project, id: ID, at: Placement) {
+  const clip = findClip(p, id)?.clip;
+  if (!clip) return;
+  const { width: W, height: H } = p.settings;
+  clip.transform.x = (at.cx - W / 2) / W;
+  clip.transform.y = (at.cy - H / 2) / H;
+  if (at.rotation) clip.transform.rotation = at.rotation;
+}
+
+/**
+ * New text clip at the playhead (at `at` on the preview when given), selected so the inspector
+ * opens on it. `mergeKey`: the typing that follows joins the same undo step.
+ */
+export function addText(content: string, at?: Placement, mergeKey?: string): ID {
   let id = '';
-  edit('ops.addText', (d) => {
-    id = addTextClip(d, useTransport.getState().time, { ...TEXT_STYLE_DEFAULTS, content, rtl: detectRtl(content) });
-  });
+  edit(
+    'ops.addText',
+    (d) => {
+      id = addTextClip(d, useTransport.getState().time, { ...TEXT_STYLE_DEFAULTS, content, rtl: detectRtl(content) });
+      if (at) place(d, id, at);
+    },
+    mergeKey ? { mergeKey, gesture: true } : undefined,
+  );
   select([id]);
+  return id;
 }
 
 export function splitAtPlayhead() {
@@ -138,11 +166,18 @@ export function zoomToFit() {
   useTimelineUi.setState({ pps: clampPps(((viewportWidth - headerWidth) * 0.95) / d), scrollX: 0 });
 }
 
-/** New shape clip at the playhead, selected so the inspector and canvas handles open on it. */
-export function addShape(kind: ShapeKind) {
+/**
+ * New shape clip at the playhead, selected so the inspector and canvas handles open on it. Drawn
+ * with the shape tool it takes the dragged box (`at`).
+ */
+export function addShape(kind: ShapeKind, at?: Placement) {
   let id = '';
   edit('ops.addShape', (d) => {
-    id = addShapeClip(d, useTransport.getState().time, defaultShape(kind));
+    const shape = defaultShape(kind);
+    if (at?.w) shape.width = Math.round(at.w);
+    if (at?.h && kind !== 'line') shape.height = Math.round(at.h);
+    id = addShapeClip(d, useTransport.getState().time, shape);
+    if (at) place(d, id, at);
   });
   select([id]);
 }

@@ -583,15 +583,19 @@
       "zoom": "Zoom timeline",
       "zoomWheel": "Zoom timeline or preview at the pointer",
       "noSnap": "Disable snapping while dragging",
-      "deselect": "Clear selection",
+      "deselect": "Back to the selection tool / clear selection",
       "help": "Show this list",
       "previewPan": "Pan the zoomed preview",
       "previewShift": "Preview: move on one axis, keep proportions, rotate in 15° steps",
       "previewAlt": "Preview: resize from the centre / move without snapping",
-      "maskPen": "Draw a mask on the selected clip (pen)",
+      "maskPen": "Pen tool: draw a mask on the selected clip",
       "keyframe": "Add/remove a keyframe on the selected clip",
       "keyframeJump": "Previous/next keyframe",
-      "marker": "Add/remove a marker at the playhead"
+      "marker": "Add/remove a marker at the playhead",
+      "toolSelect": "Selection tool",
+      "toolHand": "Hand tool (pan the preview)",
+      "toolShape": "Shape tool (again: next shape)",
+      "toolText": "Type tool"
     }
   },
   "transitions": {
@@ -1484,5 +1488,18 @@
       "collage1plus2": "1 + 2",
       "collage1plus3": "1 + 3"
     }
+  },
+  "tools": {
+    "title": "Tools",
+    "select": "Select",
+    "hand": "Hand (pan the preview)",
+    "pen": "Pen (mask on the selected clip)",
+    "shape": "Shape",
+    "text": "Type",
+    "shapeKind": "Shape to draw",
+    "shapeHint": "Shape tool: drag to draw a shape (Shift: keep it square); click for the default size",
+    "maskHint": "Shape tool: drag to draw a mask on the selected clip",
+    "textHint": "Type tool: click to add a text there, or click a text to edit it",
+    "typeHere": "Type here (Esc or Ctrl+Enter to finish)"
   }
 }

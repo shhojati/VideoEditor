@@ -27,6 +27,8 @@ import {
 import { usePreviewView, type View } from './previewView';
 import { TrackerOverlay } from './TrackerOverlay';
 import { MaskOverlay } from '../masks/MaskOverlay';
+import { ToolOverlay } from '../tools/ToolOverlay';
+import { editText, useTool } from '../tools/toolService';
 
 /** Screen px: handle size, rotate-handle distance, drag threshold, snap distance, hit slack. */
 const HANDLE = 9;
@@ -83,6 +85,9 @@ export function CanvasOverlay({ project }: { project: Project }) {
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const gesture = useRef<Gesture | null>(null);
   const { width: W, height: H } = project.settings;
+  // Other tools (shape, type, pen…) take the clicks; handles show only for selecting.
+  const tool = useTool((s) => s.tool);
+  const selecting = tool === 'select';
 
   const active = useMemo(() => editableClipsAt(project, time), [project, time]);
   const boxes = useMemo(() => {
@@ -151,7 +156,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !selecting) return;
     const target = (e.target as Element).closest('[data-handle]')?.getAttribute('data-handle');
     if (target && single) {
       e.stopPropagation();
@@ -180,7 +185,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
     const g = gesture.current;
     const s = local(e);
     if (!g) {
-      setHover(hitTest(s));
+      setHover(selecting ? hitTest(s) : null);
       return;
     }
     if (!g.moved && Math.hypot(s.x - g.startScreen.x, s.y - g.startScreen.y) < DRAG_THRESHOLD) return;
@@ -258,8 +263,14 @@ export function CanvasOverlay({ project }: { project: Project }) {
       .map((c) => `${c.x},${c.y}`)
       .join(' ');
 
-  const cursor = hover ? 'move' : 'default';
-  const handles = single && renderHandles(single.clip, single.box, view);
+  const cursor = tool === 'hand' ? 'grab' : hover ? 'move' : 'default';
+  const handles = selecting && single && renderHandles(single.clip, single.box, view);
+
+  // Double-click a text to type into it on the preview.
+  const onDoubleClick = (e: React.MouseEvent) => {
+    const id = selecting ? hitTest(local(e)) : null;
+    if (id && boxes.get(id)?.clip.text && !findClip(project, id)?.track.locked) editText(id, `text-edit:${++gestureSeq}`);
+  };
 
   return (
     <svg
@@ -275,6 +286,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
       onPointerUp={onPointerUp}
       onPointerCancel={cancel}
       onPointerLeave={() => !gesture.current && setHover(null)}
+      onDoubleClick={onDoubleClick}
     >
       {guides.x !== undefined && (
         <line x1={view.ox + guides.x * view.k} x2={view.ox + guides.x * view.k} y1={0} y2={viewport.h} className="stroke-fuchsia-400" strokeDasharray="4 3" />
@@ -291,6 +303,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
       {handles}
       <TrackerOverlay project={project} time={time} />
       <MaskOverlay project={project} time={time} />
+      <ToolOverlay project={project} time={time} hitTest={hitTest} />
     </svg>
   );
 }

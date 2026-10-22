@@ -751,3 +751,20 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - No layers panel separate from the timeline (the timeline tracks are the layers).
 - Parenting converts keyframes with the parent's pose at the playhead (as After Effects does), so a child keyframed while its parent moves may shift at other keys.
+
+## Post-MVP 29 — Shape and text extras ✅ (2026-10-22)
+
+### Done
+- **Polygon** shape (⬢, 3–12 sides, rounded corners) in the shapes menu, the shape tool's row and Q's cycle.
+- **Gradient fill**: Fill → Colour / Linear (angle) / Radial, from the fill colour to a second colour.
+- **Soft edge** for shape fills (px): the fill fades out at its edge, like the mask feather (one colour; a gradient fill is drawn hard when the edge is soft).
+- **Line ends** (flat, round, square) for lines and open pen shapes, and **corners** (sharp, round, bevel) for outlines.
+- **Text keyframes**: text size and colour (as red, green, blue channels) take part in the clip's ◆ keyframes, so a title can grow or change colour over time; the inspector shows the values at the playhead.
+- Project version 8.
+
+### Verified
+- Unit tests: text size and colour half way between two keyframes; polygon corners; the new shape settings survive save → load.
+- In the page: a linear gradient polygon is red on the left and blue on the right; with a 30 px soft edge the centre is solid, the edge half transparent and just outside nearly clear. `npm run build` passes.
+
+### Known issues / not done
+- A soft edge and a drop shadow are not combined on the fill (the shadow then shows on the outline only).

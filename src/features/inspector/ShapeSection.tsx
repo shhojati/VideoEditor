@@ -56,7 +56,29 @@ export function ShapeSection({ clipId, shape, set, maxSize, keyAt, fps }: { clip
         <>
           <ColorField label={t('inspector.fill')} optional fallback="#2563eb" value={shape.fill} onChange={(v) => setShape('fill', v)} />
           {shape.fill && (
-            <NumberField label={t('inspector.fillOpacity')} value={shape.fillOpacity ?? 1} min={0} max={1} factor={100} unit="%" onChange={(v) => setShape('fillOpacity', v)} />
+            <>
+              <NumberField label={t('inspector.fillOpacity')} value={shape.fillOpacity ?? 1} min={0} max={1} factor={100} unit="%" onChange={(v) => setShape('fillOpacity', v)} />
+              <Segmented
+                label={t('shapes.fillKind')}
+                value={shape.gradient?.kind ?? 'solid'}
+                options={(['solid', 'linear', 'radial'] as const).map((k) => ({ value: k, label: t(`shapes.fillKinds.${k}`) }))}
+                onChange={(k) =>
+                  set('shape.gradient', (c) => {
+                    if (k === 'solid') delete c.shape!.gradient;
+                    else c.shape!.gradient = { kind: k, to: c.shape!.gradient?.to ?? '#ffffff', angle: c.shape!.gradient?.angle ?? 90 };
+                  })
+                }
+              />
+              {shape.gradient && (
+                <>
+                  <ColorField label={t('shapes.gradientTo')} value={shape.gradient.to} onChange={(v) => v && set('shape.gradient.to', (c) => void (c.shape!.gradient!.to = v))} />
+                  {shape.gradient.kind === 'linear' && (
+                    <NumberField label={t('shapes.gradientAngle')} value={shape.gradient.angle} min={0} max={360} step={1} unit="°" onChange={(v) => set('shape.gradient.angle', (c) => void (c.shape!.gradient!.angle = v))} />
+                  )}
+                </>
+              )}
+              <NumberField label={t('shapes.feather')} value={shape.feather ?? 0} min={0} max={200} step={1} unit="px" onChange={(v) => setShape('feather', v || undefined)} />
+            </>
           )}
         </>
       )}
@@ -83,10 +105,29 @@ export function ShapeSection({ clipId, shape, set, maxSize, keyAt, fps }: { clip
             options={(['solid', 'dash', 'dot'] as const).map((d) => ({ value: d, label: t(`inspector.dashes.${d}`) }))}
             onChange={(v) => setShape('dash', v === 'solid' ? undefined : v)}
           />
+          {isLine && (
+            <Segmented
+              label={t('shapes.cap')}
+              value={shape.cap ?? 'round'}
+              options={(['butt', 'round', 'square'] as const).map((c) => ({ value: c, label: t(`shapes.caps.${c}`) }))}
+              onChange={(v) => setShape('cap', v === 'round' ? undefined : v)}
+            />
+          )}
+          {shape.kind !== 'line' && (
+            <Segmented
+              label={t('shapes.join')}
+              value={shape.join ?? 'round'}
+              options={(['miter', 'round', 'bevel'] as const).map((j) => ({ value: j, label: t(`shapes.joins.${j}`) }))}
+              onChange={(v) => setShape('join', v === 'round' ? undefined : v)}
+            />
+          )}
         </>
       )}
 
-      {(shape.kind === 'rectangle' || shape.kind === 'square' || shape.kind === 'triangle') && (
+      {shape.kind === 'polygon' && (
+        <NumberField label={t('shapes.sides')} value={shape.sides ?? 6} min={3} max={12} step={1} onChange={(v) => setShape('sides', Math.round(v))} />
+      )}
+      {(shape.kind === 'rectangle' || shape.kind === 'square' || shape.kind === 'triangle' || shape.kind === 'polygon') && (
         <NumberField
           label={t('inspector.corners')}
           value={shape.cornerRadius ?? 0}

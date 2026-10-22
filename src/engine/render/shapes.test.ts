@@ -117,3 +117,24 @@ describe('darker color', () => {
     ]);
   });
 });
+
+describe('polygon and new shape settings', () => {
+  it('a regular polygon starts at the top and fills its box', async () => {
+    const { polygonPoints } = await import('./shapes');
+    const pts = polygonPoints(4, 100, 50);
+    expect(pts[0][0]).toBeCloseTo(0);
+    expect(pts[0][1]).toBeCloseTo(-25);
+    expect(pts[1][0]).toBeCloseTo(50);
+  });
+
+  it('gradient, soft edge, sides, cap and join survive saving', async () => {
+    const { createProject } = await import('../../model/factories');
+    const { addShapeClip, findClip } = await import('../../model/timeline');
+    const { defaultShape } = await import('../../model/overlays');
+    const { parseProject } = await import('../../model/validate');
+    const p = createProject('t');
+    const id = addShapeClip(p, 0, { ...defaultShape('polygon'), gradient: { kind: 'linear', to: '#fff', angle: 45 }, feather: 12, cap: 'square', join: 'bevel' });
+    const back = parseProject(JSON.parse(JSON.stringify(p)));
+    expect(findClip(back, id)!.clip.shape).toMatchObject({ kind: 'polygon', sides: 6, gradient: { kind: 'linear', to: '#fff', angle: 45 }, feather: 12, cap: 'square', join: 'bevel' });
+  });
+});

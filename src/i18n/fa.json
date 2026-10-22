@@ -690,7 +690,30 @@
     "removePathKey": "حذف کی‌فریم مسیر در محل نشانگر",
     "pathHint": "برای تغییر شکل نقطه‌ها را بکشید؛ Alt+کلیک روی نقطه برای منحنی یا گوشه؛ Ctrl+کلیک روی خط دور برای افزودن نقطه؛ Delete نقطه‌ها را حذف می‌کند.",
     "solid": "رنگ ثابت (Solid)",
-    "null": "شیء پوچ (Null)"
+    "null": "شیء پوچ (Null)",
+    "polygon": "چندضلعی",
+    "sides": "تعداد ضلع",
+    "fillKind": "پرکردن",
+    "fillKinds": {
+      "solid": "رنگ",
+      "linear": "خطی",
+      "radial": "دایره‌ای"
+    },
+    "gradientTo": "گرادیان تا",
+    "gradientAngle": "زاویه",
+    "feather": "نرمی لبه",
+    "cap": "سر خط",
+    "caps": {
+      "butt": "صاف",
+      "round": "گرد",
+      "square": "مربعی"
+    },
+    "join": "گوشه‌ها",
+    "joins": {
+      "miter": "تیز",
+      "round": "گرد",
+      "bevel": "پخ"
+    }
   },
   "blend": {
     "label": "حالت ترکیب",

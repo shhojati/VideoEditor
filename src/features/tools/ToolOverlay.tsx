@@ -26,6 +26,7 @@ const MASK_OF: Record<ShapeKind, MaskPreset> = {
   oval: 'ellipse',
   triangle: 'polygon',
   star: 'polygon',
+  polygon: 'polygon',
   path: 'polygon',
 };
 

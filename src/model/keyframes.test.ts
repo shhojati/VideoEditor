@@ -208,3 +208,21 @@ describe('volume keyframes', () => {
     expect(peakVolume(c)).toBe(2);
   });
 });
+
+describe('text keyframes', () => {
+  it('size and colour animate between keyframes', async () => {
+    const { createTextClip } = await import('./timeline');
+    const { TEXT_STYLE_DEFAULTS } = await import('./overlays');
+    const clip = createTextClip(0, { ...TEXT_STYLE_DEFAULTS, content: 'hi', rtl: false, color: '#000000', fontSize: 40 });
+    addKeyAt(clip, 0, 0.01);
+    editAt(clip, 2, 0.01, (c) => {
+      c.text!.fontSize = 80;
+      c.text!.color = '#ff8000';
+    });
+    const mid = keyedClip(clip, 1).text!;
+    expect(mid.fontSize).toBeCloseTo(60);
+    // Half way with the default ease in-out: each channel half way.
+    expect(mid.color).toBe('#804000');
+    expect(keyedClip(clip, 0).text!.fontSize).toBe(40);
+  });
+});

@@ -40,6 +40,12 @@ export function readProps(clip: Clip): KeyValues {
     v['shape.width'] = clip.shape.width;
     v['shape.height'] = clip.shape.height;
   }
+  if (clip.text) {
+    v['text.size'] = clip.text.fontSize;
+    // The colour as three channels, so it fades from one keyframe's colour to the next.
+    const rgb = hexRgb(clip.text.color);
+    if (rgb) [v['text.r'], v['text.g'], v['text.b']] = rgb;
+  }
   const { voice, space } = clip.audio;
   if (voice) {
     v['voice.pitch'] = voice.pitch;
@@ -49,6 +55,22 @@ export function readProps(clip: Clip): KeyValues {
   for (const e of clip.effects ?? [])
     for (const [k, x] of Object.entries({ ...defaultParams(e.kind), ...e.params })) if (typeof x === 'number') v[fxProp(e.id, k)] = x;
   return v;
+}
+
+/** '#rrggbb' → [r, g, b] (0..255), or undefined for any other colour notation. */
+function hexRgb(c: string): [number, number, number] | undefined {
+  const m = /^#([0-9a-f]{6})$/i.exec(c);
+  if (!m) return undefined;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Replace one channel (0 r, 1 g, 2 b) of a '#rrggbb' colour. */
+function withChannel(c: string, i: number, v: number): string {
+  const rgb = hexRgb(c);
+  if (!rgb) return c;
+  rgb[i] = Math.max(0, Math.min(255, Math.round(v)));
+  return `#${rgb.map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /** Settings with whole-number steps (levels, counts…) stay whole while animating. */
@@ -75,6 +97,14 @@ export function writeProp(clip: Clip, prop: string, v: number) {
       return;
     case 'shape.height':
       if (clip.shape) clip.shape.height = v;
+      return;
+    case 'text.size':
+      if (clip.text) clip.text.fontSize = v;
+      return;
+    case 'text.r':
+    case 'text.g':
+    case 'text.b':
+      if (clip.text) clip.text.color = withChannel(clip.text.color, 'rgb'.indexOf(prop[5]), v);
       return;
     case 'voice.pitch':
       if (clip.audio.voice) clip.audio.voice.pitch = v;
@@ -141,6 +171,7 @@ export function keyedClip(clip: Clip, t: number): Clip {
     transform: { ...clip.transform },
     audio: { ...clip.audio, ...(clip.audio.voice && { voice: { ...clip.audio.voice } }), ...(clip.audio.space && { space: { ...clip.audio.space } }) },
     shape: clip.shape && { ...clip.shape },
+    text: clip.text && { ...clip.text },
     effects: clip.effects?.map((e) => ({ ...e, params: { ...e.params } })),
   };
   delete out.keyframes;

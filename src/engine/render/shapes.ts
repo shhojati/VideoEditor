@@ -44,6 +44,51 @@ export function starPoints(points: number, inner: number, w: number, h: number):
   return pts;
 }
 
+/** A regular polygon's corners in a w×h box, the first at the top. */
+export function polygonPoints(sides: number, w: number, h: number): Pt[] {
+  return Array.from({ length: sides }, (_, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / sides;
+    return [(Math.cos(a) * w) / 2, (Math.sin(a) * h) / 2] as Pt;
+  });
+}
+
+/** The fill: a colour, or a gradient across the w×h box (centred on the origin). */
+function fillStyle(ctx: Ctx2D, s: ShapeProps, w: number, h: number): string | CanvasGradient {
+  const g = s.gradient;
+  if (!g || !s.fill) return s.fill!;
+  let grad: CanvasGradient;
+  if (g.kind === 'radial') grad = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(w, h) / 2);
+  else {
+    const a = (g.angle * Math.PI) / 180;
+    const dx = (Math.cos(a) * w) / 2;
+    const dy = (Math.sin(a) * h) / 2;
+    grad = ctx.createLinearGradient(-dx, -dy, dx, dy);
+  }
+  grad.addColorStop(0, s.fill);
+  grad.addColorStop(1, g.to);
+  return grad;
+}
+
+/**
+ * Fill the path that `trace` builds with a soft edge `blur` (device px): the shape is drawn out
+ * of sight and its blurred shadow lands in place (as the mask feather does). A soft edge is one
+ * colour (the fill's first).
+ */
+function softFill(ctx: Ctx2D, trace: () => void, color: string, blur: number) {
+  const m = ctx.getTransform();
+  const off = ctx.canvas.width + ctx.canvas.height + 4 * blur;
+  ctx.save();
+  ctx.setTransform(m.a, m.b, m.c, m.d, m.e - off, m.f);
+  trace();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur;
+  ctx.shadowOffsetX = off;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+
 /** Arrowhead length for a line of this (scaled) stroke width. */
 export const arrowSize = (strokeWidth: number) => Math.max(12, strokeWidth * 3.5);
 
@@ -65,6 +110,9 @@ function closedPath(ctx: Ctx2D, s: ShapeProps, w: number, h: number, r: number) 
     case 'star':
       roundedPolygon(ctx, starPoints(s.points ?? 5, s.innerRadius ?? 0.5, w, h), 0);
       return;
+    case 'polygon':
+      roundedPolygon(ctx, polygonPoints(s.sides ?? 6, w, h), r);
+      return;
   }
 }
 
@@ -76,6 +124,12 @@ function setDash(ctx: Ctx2D, dash: ShapeProps['dash'], lw: number) {
     ctx.lineCap = 'round';
   } else ctx.setLineDash([]);
 }
+
+/** How many device pixels one unit of the current transform is. */
+const deviceScale = (ctx: Ctx2D) => {
+  const m = ctx.getTransform();
+  return Math.hypot(m.a, m.b);
+};
 
 /** Draw a shape clip at time t. Position/scale/rotation/opacity come from the clip transform. */
 export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number, canvasH: number) {
@@ -91,7 +145,8 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
   ctx.save();
   ctx.translate(canvasW / 2 + clip.transform.x * canvasW, canvasH / 2 + clip.transform.y * canvasH);
   if (clip.transform.rotation) ctx.rotate((clip.transform.rotation * Math.PI) / 180);
-  ctx.lineJoin = 'round';
+  ctx.lineJoin = s.join ?? 'round';
+  if (s.join === 'miter') ctx.miterLimit = 10;
   // Shadow on the first thing painted only, so fill + stroke do not double it.
   let shadow = !!(s.shadowColor && s.shadowBlur !== undefined);
   const paint = (fn: () => void) => {
@@ -114,7 +169,7 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
     ctx.globalAlpha = base * (s.strokeOpacity ?? 1);
     if (lw > 0) {
       paint(() => {
-        ctx.lineCap = s.arrowStart || s.arrowEnd ? 'butt' : 'round';
+        ctx.lineCap = s.arrowStart || s.arrowEnd ? 'butt' : (s.cap ?? 'round');
         setDash(ctx, s.dash, lw);
         ctx.lineWidth = lw;
         ctx.strokeStyle = stroke;
@@ -148,13 +203,22 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
     }
     // Points are project pixels at scale 1 around the position.
     ctx.scale(k, k);
-    ctx.beginPath();
-    tracePath(ctx, path, !!s.closed);
-    ctx.lineCap = 'round';
+    const trace = () => {
+      ctx.beginPath();
+      tracePath(ctx, path, !!s.closed);
+    };
+    trace();
+    ctx.lineCap = s.cap ?? 'round';
     if (s.fill && s.closed) {
       ctx.globalAlpha = base * (s.fillOpacity ?? 1);
-      ctx.fillStyle = s.fill;
-      paint(() => ctx.fill());
+      const blur = s.feather ? s.feather * k * deviceScale(ctx) : 0;
+      if (blur > 0.5) {
+        softFill(ctx, trace, s.fill, blur);
+        trace();
+      } else {
+        ctx.fillStyle = fillStyle(ctx, s, s.width, s.height);
+        paint(() => ctx.fill());
+      }
     }
     if (s.stroke && s.strokeWidth > 0) {
       ctx.globalAlpha = base * (s.strokeOpacity ?? 1);
@@ -167,11 +231,19 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
     return;
   }
 
-  closedPath(ctx, s, w, h, (s.cornerRadius ?? 0) * k);
+  const trace = () => closedPath(ctx, s, w, h, (s.cornerRadius ?? 0) * k);
+  trace();
   if (s.fill) {
     ctx.globalAlpha = base * (s.fillOpacity ?? 1);
-    ctx.fillStyle = s.fill;
-    paint(() => ctx.fill());
+    const blur = s.feather ? s.feather * k * deviceScale(ctx) : 0;
+    if (blur > 0.5) {
+      softFill(ctx, trace, s.fill, blur);
+      // The outline (if any) goes on the path in place.
+      trace();
+    } else {
+      ctx.fillStyle = fillStyle(ctx, s, w, h);
+      paint(() => ctx.fill());
+    }
   }
   if (s.stroke && lw > 0) {
     ctx.globalAlpha = base * (s.strokeOpacity ?? 1);

@@ -1,7 +1,7 @@
 // Overlay clips (text and shapes, on 'text' tracks) and per-clip blend modes.
 import type { BlendMode, Clip, ShapeKind, ShapeProps, TextProps } from './types';
 
-export const SHAPE_KINDS = ['rectangle', 'square', 'circle', 'oval', 'triangle', 'star', 'line'] as const satisfies readonly ShapeKind[];
+export const SHAPE_KINDS = ['rectangle', 'square', 'circle', 'oval', 'triangle', 'star', 'polygon', 'line'] as const satisfies readonly ShapeKind[];
 
 /** Grouped as in After Effects' blend mode menu: normal | darken | lighten | contrast | difference | component. */
 export const BLEND_GROUPS: readonly (readonly BlendMode[])[] = [
@@ -53,6 +53,8 @@ export function defaultShape(kind: ShapeKind): ShapeProps {
       return { ...base, width: 450, fill: '#2563eb', strokeWidth: 0 };
     case 'star':
       return { ...base, fill: '#facc15', strokeWidth: 0, points: 5, innerRadius: 0.5 };
+    case 'polygon':
+      return { ...base, fill: '#10b981', strokeWidth: 0, sides: 6 };
     default:
       return { ...base, fill: '#2563eb', strokeWidth: 0 };
   }
@@ -77,4 +79,5 @@ export function setShapeKind(s: ShapeProps, kind: ShapeKind) {
     s.points ??= 5;
     s.innerRadius ??= 0.5;
   }
+  if (kind === 'polygon') s.sides ??= 6;
 }

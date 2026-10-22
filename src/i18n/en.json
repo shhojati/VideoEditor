@@ -690,7 +690,30 @@
     "removePathKey": "Remove the path keyframe at the playhead",
     "pathHint": "Drag points to reshape; Alt-click a point for a curve or a corner; Ctrl-click the outline to add a point; Delete removes points.",
     "solid": "Solid colour",
-    "null": "Null object"
+    "null": "Null object",
+    "polygon": "Polygon",
+    "sides": "Sides",
+    "fillKind": "Fill",
+    "fillKinds": {
+      "solid": "Colour",
+      "linear": "Linear",
+      "radial": "Radial"
+    },
+    "gradientTo": "Gradient to",
+    "gradientAngle": "Angle",
+    "feather": "Soft edge",
+    "cap": "Line ends",
+    "caps": {
+      "butt": "Flat",
+      "round": "Round",
+      "square": "Square"
+    },
+    "join": "Corners",
+    "joins": {
+      "miter": "Sharp",
+      "round": "Round",
+      "bevel": "Bevel"
+    }
   },
   "blend": {
     "label": "Blend mode",

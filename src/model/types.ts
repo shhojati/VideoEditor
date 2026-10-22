@@ -244,7 +244,7 @@ export interface TextProps {
 
 export type TextAnimKind = 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'slideRight' | 'pop' | 'zoom' | 'typewriter' | 'wordByWord' | 'blurIn' | 'wipe';
 
-export type ShapeKind = 'rectangle' | 'square' | 'circle' | 'oval' | 'triangle' | 'star' | 'line' | 'path';
+export type ShapeKind = 'rectangle' | 'square' | 'circle' | 'oval' | 'triangle' | 'star' | 'polygon' | 'line' | 'path';
 
 /**
  * A vector shape, centred on the clip transform's position. Sizes are project pixels at scale 1.
@@ -258,6 +258,10 @@ export interface ShapeProps {
   height: number;
   /** No fill when absent. */
   fill?: string;
+  /** A gradient from `fill` to `to`: linear at `angle` degrees, or radial from the centre. */
+  gradient?: { kind: 'linear' | 'radial'; to: string; angle: number };
+  /** Soft edge of the fill (project px at scale 1). */
+  feather?: number;
   /** 0..1, default 1. */
   fillOpacity?: number;
   /** No outline when absent (a line always strokes, falling back to white). */
@@ -266,11 +270,16 @@ export interface ShapeProps {
   /** 0..1, default 1. */
   strokeOpacity?: number;
   dash?: 'solid' | 'dash' | 'dot';
+  /** Line ends (lines and open paths) and corners of the outline; default round. */
+  cap?: 'butt' | 'round' | 'square';
+  join?: 'miter' | 'round' | 'bevel';
   /** Rounded corners (px) for rectangle, square and triangle. */
   cornerRadius?: number;
   /** Star: number of points (3..20, default 5) and inner radius as a fraction of the outer (default 0.5). */
   points?: number;
   innerRadius?: number;
+  /** Polygon: number of sides (3..12, default 6). */
+  sides?: number;
   /** Line: arrowheads. */
   arrowStart?: boolean;
   arrowEnd?: boolean;
@@ -418,8 +427,8 @@ export type KeyEase = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'hold';
 /**
  * A snapshot of a clip's animatable values at source time `t` (like tracker samples, so trims and
  * splits keep it). Values by property: x, y, scale, rotation, opacity, volume, shape.width,
- * shape.height, voice.pitch, voice.amount, space.mix and fx.<effectId>.<param> for numeric effect
- * settings. A property missing from a
+ * shape.height, text.size, text.r/g/b (colour), voice.pitch, voice.amount, space.mix and
+ * fx.<effectId>.<param> for numeric effect settings. A property missing from a
  * keyframe is interpolated from the keyframes that have it.
  */
 export interface ClipKeyframe {

@@ -113,7 +113,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       </Section>
       {timed && asset && !clip.freeze && <SpeedSection clip={clip} asset={asset} audible={!!audible} set={set} />}
 
-      {isText && <TextSection clipId={clipId} text={clip.text!} set={set} />}
+      {isText && <TextSection clipId={clipId} text={shown.text!} set={set} />}
       {clip.paint && <PaintSection project={project} clip={clip} />}
       {clip.solid && (
         <Section id="solid" title={t('shapes.solid')}>

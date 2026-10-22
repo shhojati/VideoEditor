@@ -7,6 +7,7 @@ export const SHAPE_ICONS: Record<ShapeKind, string> = {
   oval: '⬬',
   triangle: '▲',
   star: '★',
+  polygon: '⬢',
   line: '╱',
   path: '✒',
 };

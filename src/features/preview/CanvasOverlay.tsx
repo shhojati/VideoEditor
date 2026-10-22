@@ -29,6 +29,7 @@ import { TrackerOverlay } from './TrackerOverlay';
 import { MaskOverlay } from '../masks/MaskOverlay';
 import { ToolOverlay } from '../tools/ToolOverlay';
 import { PaintOverlay } from '../paint/PaintOverlay';
+import { OnionSkin } from '../paint/OnionSkin';
 import { editText, useTool } from '../tools/toolService';
 
 /** Screen px: handle size, rotate-handle distance, drag threshold, snap distance, hit slack. */
@@ -303,6 +304,7 @@ export function CanvasOverlay({ project }: { project: Project }) {
       ))}
       {handles}
       <TrackerOverlay project={project} time={time} />
+      <OnionSkin project={project} time={time} />
       <MaskOverlay project={project} time={time} />
       <ToolOverlay project={project} time={time} hitTest={hitTest} />
       <PaintOverlay project={project} time={time} />

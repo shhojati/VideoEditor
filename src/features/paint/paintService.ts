@@ -6,11 +6,12 @@ import { isActiveAt } from '../../engine/render/renderFrame';
 import { newId } from '../../model/factories';
 import { keyedClip } from '../../model/keyframes';
 import { isPaintLayer } from '../../model/overlays';
-import { newStrokeTiming, round3 } from '../../model/paint';
-import { keyTimeAt } from '../../model/remap';
+import { celStep, newStrokeTiming, round3 } from '../../model/paint';
+import { keyTimeAt, keyToTimeline } from '../../model/remap';
 import { addPaintClip, findClip } from '../../model/timeline';
 import type { Clip, ID, PaintStroke, Project } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore } from '../../store/projectStore';
+import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from '../timeline/timelineUi';
 import type { BrushSettings } from '../tools/toolService';
 
@@ -49,7 +50,7 @@ export const layerSize = (projectPx: number, layer: Affine) => projectPx / (affi
 export function commitStroke(targetId: ID | undefined, tool: 'brush' | 'eraser', points: number[], pressure: boolean, brush: BrushSettings, size: number, t: number) {
   let id = targetId;
   useProjectStore.getState().edit(tool === 'eraser' ? 'ops.erase' : 'ops.paint', (d) => {
-    if (!id) id = addPaintClip(d, t, { strokes: [] });
+    if (!id) id = addPaintClip(d, t, brush.frameByFrame ? { strokes: [], frames: { hold: 2 } } : { strokes: [] });
     const ref = findClip(d, id);
     if (!ref || ref.track.locked) return;
     const clip = ref.clip;
@@ -64,7 +65,7 @@ export function commitStroke(targetId: ID | undefined, tool: 'brush' | 'eraser',
       hardness: brush.hardness,
       opacity: brush.opacity,
       color: brush.color,
-      start: round3(timing.start),
+      start: timing.start,
     };
     if (pressure) stroke.pressure = true;
     // Frame-by-frame drawings hold for their frames; otherwise the brush's duration.
@@ -120,8 +121,24 @@ export function clearPaint(clipId: ID) {
 
 /** Frame-by-frame drawing on or off: each drawing holds `hold` frames. */
 export function setFrameByFrame(clipId: ID, hold: number | null) {
-  editPaint('ops.paintFrames', clipId, (c) => {
-    if (hold) c.paint!.frames = { hold };
-    else delete c.paint!.frames;
+  useProjectStore.getState().edit('ops.paintFrames', (d) => {
+    const ref = findClip(d, clipId);
+    if (!ref || ref.track.locked) return;
+    const c = ref.clip;
+    if (hold) (c.paint ??= { strokes: [] }).frames = { hold };
+    else if (c.paint) delete c.paint.frames;
   });
+}
+
+/** Move the playhead to the previous (-1) or next (1) drawing of a frame-by-frame clip (within the clip). */
+export function stepDrawing(clipId: ID, dir: -1 | 1) {
+  const p = currentProject();
+  const clip = p && findClip(p, clipId)?.clip;
+  const hold = clip?.paint?.frames?.hold;
+  if (!clip || !hold) return;
+  const { time, seek } = useTransport.getState();
+  const now = Math.min(clip.start + clip.duration - 1e-3, Math.max(clip.start, time));
+  const target = keyToTimeline(clip, celStep(keyTimeAt(clip, now), hold, p.settings.fps, dir));
+  // A little past the drawing's start, so rounding lands inside it.
+  if (target >= clip.start - 1e-6 && target < clip.start + clip.duration) seek(Math.max(clip.start, target) + 1e-4);
 }

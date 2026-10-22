@@ -21,9 +21,11 @@ export interface BrushSettings {
   seconds: number;
   /** Write On: seconds the stroke takes to draw itself (0: off). */
   writeOn: number;
+  /** A new paint layer starts in frame-by-frame mode (drawings on twos). */
+  frameByFrame: boolean;
 }
 
-export const BRUSH_DEFAULTS: BrushSettings = { color: '#ff3b30', size: 24, hardness: 0.8, opacity: 1, duration: 'constant', seconds: 1, writeOn: 0 };
+export const BRUSH_DEFAULTS: BrushSettings = { color: '#ff3b30', size: 24, hardness: 0.8, opacity: 1, duration: 'constant', seconds: 1, writeOn: 0, frameByFrame: false };
 
 const BRUSH_KEY = 'video-editor:brush';
 
@@ -46,9 +48,11 @@ interface ToolState {
    */
   editingText: { clipId: ID; key: string; created: boolean } | null;
   brush: BrushSettings;
+  /** Onion skin: the drawings before and after show faintly on the preview (frame-by-frame paint). */
+  onion: boolean;
 }
 
-export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush() }));
+export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush(), onion: true }));
 
 /** Change the brush settings (remembered on this device). */
 export function setBrush(change: Partial<BrushSettings>) {

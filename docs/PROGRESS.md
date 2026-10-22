@@ -686,3 +686,18 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - The live stroke while drawing shows with a hard edge; the soft edge appears when it is committed.
 - No pressure on touch screens (fingers draw an even line).
+
+## Post-MVP 25 — Frame-by-frame drawing and onion skin ✅ (2026-10-22)
+
+### Done
+- **Frame by frame** (Inspector → Paint, or the brush option "New paint layers: frame by frame"): each stroke drawn belongs to the drawing at the playhead and shows only for that drawing's frames — on ones, twos or threes (1, 2 or 3 frames per drawing).
+- **Stepping through drawings**: ◀ Drawing / Drawing ▶ in the inspector, or `,` and `.`; the playhead goes to the previous or next drawing's first frame.
+- **Onion skin** (on by default, switch in the inspector): on the preview only, never exported, the selected frame-by-frame clip's previous drawing shows faintly in red and the next one in green.
+- Works on paint layers and on videos and photos (rotoscoping by hand over the footage).
+
+### Verified
+- Unit tests: drawing starts and lengths on twos at 30 fps, stepping back stops at 0, new strokes take their drawing's timing.
+- In the browser: two strokes on the first drawing, `.`, a third stroke lands on the second drawing (start 2/30 s, 2 frames long) while the onion skin shows the first drawing's two strokes in red.
+
+### Known issues / not done
+- No "duplicate the previous drawing" or exposure sheet; retiming a drawing is per stroke in the stroke list.

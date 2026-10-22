@@ -11,8 +11,9 @@ import {
   stepFrames,
   zoomBy,
 } from '../features/timeline/actions';
-import { select } from '../features/timeline/timelineUi';
+import { select, useTimelineUi } from '../features/timeline/timelineUi';
 import { setTool, shapeToolKey, useTool } from '../features/tools/toolService';
+import { stepDrawing } from '../features/paint/paintService';
 import { jumpSelectedKeyframe, toggleSelectedKeyframe } from '../features/keyframes/keyframeService';
 import { spaceDown } from '../features/preview/spaceHand';
 import { useProjectStore } from '../store/projectStore';
@@ -21,6 +22,11 @@ import { useShortcutSheet } from './ShortcutSheet';
 import { toggleMarkerAtPlayhead } from '../features/timeline/beatActions';
 
 type Handler = (e: KeyboardEvent) => void;
+
+function stepSelectedDrawing(dir: -1 | 1) {
+  const sel = useTimelineUi.getState().selection;
+  if (sel.length === 1) stepDrawing(sel[0], dir);
+}
 
 // Keyed by KeyboardEvent.code so letters also work with a Persian keyboard layout.
 const WITH_CTRL: Record<string, Handler> = {
@@ -59,6 +65,9 @@ const PLAIN: Record<string, Handler> = {
   KeyT: () => setTool('text'),
   KeyB: () => setTool('brush'),
   KeyE: () => setTool('eraser'),
+  // Previous / next drawing of the selected frame-by-frame paint.
+  Comma: () => stepSelectedDrawing(-1),
+  Period: () => stepSelectedDrawing(1),
   // Keyframes on the selected clip at the playhead (InShot's ◆ button), previous / next keyframe.
   KeyK: toggleSelectedKeyframe,
   BracketLeft: () => jumpSelectedKeyframe(-1),

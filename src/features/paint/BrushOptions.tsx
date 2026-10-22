@@ -31,6 +31,10 @@ export function BrushOptions() {
       {!erasing && (
         <NumberField label={t('paint.writeOn')} value={b.writeOn} min={0} max={10} step={0.1} unit="s" onChange={(v) => setBrush({ writeOn: v })} />
       )}
+      <label className="flex items-center gap-2 text-neutral-300" title={t('paint.framesHint')}>
+        <input type="checkbox" checked={b.frameByFrame} onChange={(e) => setBrush({ frameByFrame: e.target.checked })} />
+        {t('paint.newLayerFrames')}
+      </label>
       <p className="text-[11px] text-neutral-400">{t('paint.targetHint')}</p>
     </div>
   );

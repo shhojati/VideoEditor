@@ -602,7 +602,8 @@
       "toolHand": "Hand tool (pan the preview)",
       "toolShape": "Shape tool (again: next shape)",
       "toolText": "Type tool",
-      "toolBrush": "Brush / eraser"
+      "toolBrush": "Brush / eraser",
+      "drawingStep": "Previous/next drawing (frame-by-frame paint)"
     }
   },
   "transitions": {
@@ -1535,6 +1536,16 @@
     "count_other": "{{count}} strokes",
     "goTo": "Go to where this stroke starts",
     "deleteStroke": "Delete stroke",
-    "clear": "Clear all strokes"
+    "clear": "Clear all strokes",
+    "frameByFrame": "Frame by frame",
+    "framesHint": "Each drawing shows for a few frames only: move to the next drawing and draw again, like hand-drawn animation",
+    "newLayerFrames": "New paint layers: frame by frame",
+    "hold": "Each drawing",
+    "holdN_one": "{{count}} frame",
+    "holdN_other": "{{count}} frames",
+    "drawing": "Drawing",
+    "prevDrawing": "Previous drawing",
+    "nextDrawing": "Next drawing",
+    "onion": "Onion skin (previous drawing red, next green)"
   }
 }

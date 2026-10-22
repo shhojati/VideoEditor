@@ -36,6 +36,12 @@ export type SttMessage =
 const post = (m: SttMessage) => self.postMessage(m);
 const RATE = 16_000;
 
+// A rejection nobody awaits (e.g. inside ONNX Runtime) does not reach the page's onerror.
+self.addEventListener('unhandledrejection', (e) => {
+  const reason: unknown = e.reason;
+  post({ type: 'error', message: reason instanceof Error ? reason.message : String(reason) });
+});
+
 self.onmessage = async (e: MessageEvent<SttRequest>) => {
   const { pcm, windows, model, device, language, words } = e.data;
   try {

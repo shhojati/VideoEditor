@@ -186,6 +186,25 @@ function transcribe(req: SttRequest, allowFallback: boolean, onDone: (segments: 
     const w = new Worker(new URL('../../workers/stt.worker.ts', import.meta.url), { type: 'module' });
     worker = w;
     useStt.setState({ stage: 'loading', device: req.device, loading: 0 });
+    const fail = (message: string) => {
+      w.terminate();
+      worker = null;
+      const missing = /not found|404|Could not locate file|Unauthorized access/i.test(message);
+      if (req.device === 'webgpu' && allowFallback && !missing) {
+        // Some GPUs/drivers fail in WebGPU; the WASM backend is slower but works everywhere.
+        void transcribe({ ...req, device: 'wasm' }, false, onDone).then(resolve);
+        return;
+      }
+      useStt.setState({ stage: 'error', error: missing ? 'missingModel' : 'failed', detail: message });
+      resolve();
+    };
+    // The worker script failed to load, or the worker crashed (e.g. out of memory): without this
+    // the panel would wait forever.
+    w.onerror = (e) => {
+      e.preventDefault();
+      if (worker === w) fail(e.message || 'The speech recognition worker stopped (it may have run out of memory).');
+    };
+    w.onmessageerror = () => worker === w && fail('The speech recognition worker sent an unreadable message.');
     w.onmessage = ({ data }: MessageEvent<SttMessage>) => {
       if (worker !== w) return; // cancelled
       switch (data.type) {
@@ -204,18 +223,8 @@ function transcribe(req: SttRequest, allowFallback: boolean, onDone: (segments: 
           onDone(segments);
           resolve();
           break;
-        case 'error': {
-          w.terminate();
-          worker = null;
-          const missing = /not found|404|Could not locate file|Unauthorized access/i.test(data.message);
-          if (req.device === 'webgpu' && allowFallback && !missing) {
-            // Some GPUs/drivers fail in WebGPU; the WASM backend is slower but works everywhere.
-            void transcribe({ ...req, device: 'wasm' }, false, onDone).then(resolve);
-            return;
-          }
-          useStt.setState({ stage: 'error', error: missing ? 'missingModel' : 'failed', detail: data.message });
-          resolve();
-        }
+        case 'error':
+          fail(data.message);
       }
     };
     // Keep our copy: the worker may be restarted on the WASM fallback.

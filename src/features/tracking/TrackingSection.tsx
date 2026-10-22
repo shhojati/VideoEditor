@@ -20,6 +20,7 @@ import {
   useTracking,
 } from './trackingService';
 import { timelineTimeAt } from '../../model/remap';
+import { resetClipSection } from '../inspector/resetActions';
 
 const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
 const seconds = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
@@ -43,7 +44,7 @@ export function TrackingSection({ project, clip }: { project: Project; clip: Cli
   const newName = () => t('tracking.objectN', { n: trackers.length + 1 });
 
   return (
-    <Section title={t('tracking.title')}>
+    <Section id="tracking" title={t('tracking.title')} onReset={trackers.length ? () => resetClipSection(clip.id, 'tracking') : undefined}>
       <div data-testid="tracking-section" className="space-y-2">
         {!trackers.length && <p className="text-xs text-neutral-400">{t('tracking.intro')}</p>}
         {trackers.map((tr) => (
@@ -171,7 +172,7 @@ export function MotionSection({ project, clip }: { project: Project; clip: Clip 
   const source = link && clipsWithTracker(project, link.trackerId)[0];
   const parts: (keyof Pick<MotionLink, 'position' | 'rotation' | 'scale'>)[] = ['position', 'rotation', 'scale'];
   return (
-    <Section title={t('tracking.follow')}>
+    <Section id="motion" title={t('tracking.follow')} onReset={link ? () => detach(clip.id) : undefined}>
       <div data-testid="motion-section" className="space-y-2">
         {link ? (
           <>

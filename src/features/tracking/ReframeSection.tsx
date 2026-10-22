@@ -3,6 +3,8 @@ import { aspectOf } from '../../model/factories';
 import type { Clip, Project } from '../../model/types';
 import { Section } from '../inspector/controls';
 import { autoReframe, cancelReframe, reframeProject, useReframe } from './reframeService';
+import { ProBadge } from '../account/ProBadge';
+import { resetClipSection } from '../inspector/resetActions';
 
 const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
 
@@ -13,7 +15,7 @@ export function ReframeSection({ project, clip }: { project: Project; clip: Clip
   const busy = !!state.clipId;
   const vertical = aspectOf(project.settings) === '9:16';
   return (
-    <Section title={t('reframe.title')}>
+    <Section id="reframe" title={t('reframe.title')} onReset={clip.motion?.mode === 'reframe' && !busy ? () => resetClipSection(clip.id, 'reframe') : undefined}>
       <div className="space-y-2" data-testid="reframe-section">
         <p className="text-[11px] text-neutral-400">{t('reframe.intro')}</p>
         {busy ? (
@@ -31,11 +33,11 @@ export function ReframeSection({ project, clip }: { project: Project; clip: Clip
         ) : (
           <div className="flex flex-wrap gap-1">
             <button className={btn} data-testid="reframe-clip" onClick={() => void autoReframe(clip.id)}>
-              ✨ {clip.motion?.mode === 'reframe' ? t('reframe.again') : t('reframe.clip')} <span className="text-[10px] text-amber-300">PRO</span>
+              ✨ {clip.motion?.mode === 'reframe' ? t('reframe.again') : t('reframe.clip')} <ProBadge />
             </button>
             {!vertical && (
               <button className={btn} data-testid="reframe-project" onClick={() => void reframeProject('9:16')}>
-                📱 {t('reframe.project')} <span className="text-[10px] text-amber-300">PRO</span>
+                📱 {t('reframe.project')} <ProBadge />
               </button>
             )}
           </div>

@@ -97,7 +97,7 @@ function link(clipId: ID, detections: Detection[]) {
 
 /** Auto reframe one clip (Pro). */
 export async function autoReframe(clipId: ID) {
-  if (!requireAi() || useReframe.getState().clipId) return;
+  if (!requireAi(() => void autoReframe(clipId)) || useReframe.getState().clipId) return;
   if (!(await modelInstalled())) {
     useReframe.setState({ error: 'missingModel' });
     return;
@@ -107,7 +107,7 @@ export async function autoReframe(clipId: ID) {
 
 /** Switch the project to another aspect (default 9:16) and reframe every video clip (Pro). */
 export async function reframeProject(aspect: AspectPreset = '9:16') {
-  if (!requireAi() || useReframe.getState().clipId) return;
+  if (!requireAi(() => void reframeProject(aspect)) || useReframe.getState().clipId) return;
   if (!(await modelInstalled())) {
     useReframe.setState({ error: 'missingModel' });
     return;

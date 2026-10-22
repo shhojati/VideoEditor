@@ -5,6 +5,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { TRANSITION_ICON } from '../transitions/TransitionsPanel';
 import { applyTransition, deleteTransitions } from '../transitions/transitionActions';
 import { NumberField, Section } from './controls';
+import { resetTransitionDuration, resetTransitionKind } from './resetActions';
 
 /** Edit the transition on a cut, or pick one for a cut that has none. */
 export function TransitionInspector({ project, fromId, toId }: { project: Project; fromId: ID; toId: ID }) {
@@ -24,7 +25,7 @@ export function TransitionInspector({ project, fromId, toId }: { project: Projec
       <p className="truncate px-3 pt-2 text-xs text-neutral-400" dir="auto">
         {name(from)} → {name(to)}
       </p>
-      <Section title={t('transitions.kind')}>
+      <Section id="transitionKind" title={t('transitions.kind')} onReset={transition ? () => resetTransitionKind(transition.id) : undefined}>
         <div className="grid grid-cols-2 gap-1 text-xs">
           {kindsFor(track).map((kind) => (
             <button
@@ -47,7 +48,7 @@ export function TransitionInspector({ project, fromId, toId }: { project: Projec
         {max < MIN_TRANSITION_DURATION && <p className="text-xs text-amber-300">{t('transitions.tooShort')}</p>}
       </Section>
       {transition && (
-        <Section title={t('transitions.timing')}>
+        <Section id="transitionTiming" title={t('transitions.timing')} onReset={() => resetTransitionDuration(transition.id)}>
           <NumberField
             label={t('inspector.duration')}
             value={transition.duration}

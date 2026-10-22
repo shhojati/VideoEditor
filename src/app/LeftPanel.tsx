@@ -11,18 +11,18 @@ import { TemplatesPanel } from '../features/templates/TemplatesPanel';
 import { LayoutsPanel } from '../features/layouts/LayoutsPanel';
 import type { Project } from '../model/types';
 
-export const PANEL_TABS: { id: PanelTab; icon: string; label: string }[] = [
-  { id: 'media', icon: '🎞', label: 'panels.media' },
-  { id: 'subtitles', icon: '💬', label: 'panels.subtitles' },
-  { id: 'transcript', icon: '📝', label: 'panels.transcript' },
-  { id: 'stickers', icon: '🌟', label: 'panels.stickers' },
-  { id: 'sounds', icon: '🔊', label: 'panels.sounds' },
-  { id: 'overlays', icon: '🎇', label: 'panels.overlays' },
-  { id: 'templates', icon: '🧩', label: 'panels.templates' },
-  { id: 'layouts', icon: '▦', label: 'panels.layouts' },
-  { id: 'transitions', icon: '✨', label: 'panels.transitions' },
-  { id: 'effects', icon: '🪄', label: 'panels.effects' },
-  { id: 'filters', icon: '🎨', label: 'panels.filters' },
+export const PANEL_TABS: { id: PanelTab; label: string }[] = [
+  { id: 'media', label: 'panels.media' },
+  { id: 'subtitles', label: 'panels.subtitles' },
+  { id: 'transcript', label: 'panels.transcript' },
+  { id: 'stickers', label: 'panels.stickers' },
+  { id: 'sounds', label: 'panels.sounds' },
+  { id: 'overlays', label: 'panels.overlays' },
+  { id: 'templates', label: 'panels.templates' },
+  { id: 'layouts', label: 'panels.layouts' },
+  { id: 'transitions', label: 'panels.transitions' },
+  { id: 'effects', label: 'panels.effects' },
+  { id: 'filters', label: 'panels.filters' },
 ];
 
 /**
@@ -38,21 +38,18 @@ export function LeftPanel({ project, tabs }: { project: Project; tabs?: PanelTab
     <section className="flex min-h-0 min-w-0 flex-col bg-surface-1">
       {shown.length > 1 && (
         <div role="tablist" className="grid grid-cols-[repeat(auto-fit,minmax(56px,1fr))] border-b border-line">
-          {shown.map(({ id, icon, label }) => (
+          {shown.map(({ id, label }) => (
             <button
               key={id}
               role="tab"
               aria-selected={tab === id}
               data-testid={`tab-${id}`}
               title={t(label)}
-              className={`flex min-w-0 flex-col items-center gap-0.5 px-1 py-1 text-[11px] font-medium ${
+              className={`flex min-w-0 items-center justify-center px-1 py-1.5 text-[11px] font-medium ${
                 tab === id ? 'bg-surface-2 text-white shadow-[inset_0_-2px_0_var(--color-accent)]' : 'text-neutral-400 hover:text-white'
               }`}
               onClick={() => useSubtitlesUi.setState({ tab: id })}
             >
-              <span className="text-sm leading-none" aria-hidden>
-                {icon}
-              </span>
               <span className="max-w-full truncate">{t(label)}</span>
             </button>
           ))}

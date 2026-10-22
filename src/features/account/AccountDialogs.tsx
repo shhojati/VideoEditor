@@ -6,12 +6,18 @@ import { Button } from '../../app/ui';
 import { ApiError } from '../../lib/api';
 import { loadPricing, type PricingConfig } from '../../lib/appConfig';
 import { changePassword, login, logout, register, useAccount } from '../../store/account';
+import { afterLogin, dropPendingAi } from './aiGate';
 import { isPro, proDaysLeft } from './policy';
 
 export const useAccountUi = create<{ dialog: 'auth' | 'account' | null }>()(() => ({ dialog: null }));
 export const openAuth = () => useAccountUi.setState({ dialog: 'auth' });
 export const openAccount = () => useAccountUi.setState({ dialog: 'account' });
 const close = () => useAccountUi.setState({ dialog: null });
+/** Closed without logging in: an AI action that was waiting for the login is dropped. */
+const cancel = () => {
+  dropPendingAi();
+  close();
+};
 
 export function usePricing() {
   const [pricing, setPricing] = useState<PricingConfig | null>(null);
@@ -24,7 +30,7 @@ export function AccountDialogs() {
   const me = useAccount((s) => s.me);
   useEffect(() => {
     if (!dialog) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && cancel();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [dialog]);
@@ -42,7 +48,7 @@ function Modal({ title, testId, children }: { title: string; testId: string; chi
       role="dialog"
       aria-modal="true"
       aria-labelledby={`${testId}-title`}
-      onClick={close}
+      onClick={cancel}
     >
       <div
         className="max-h-[94vh] w-[min(400px,94vw)] space-y-3 overflow-y-auto rounded-lg border border-line bg-surface-1 p-4 text-sm shadow-2xl"
@@ -82,6 +88,7 @@ function AuthDialog() {
     try {
       await (mode === 'login' ? login(email, password) : register(email, password));
       close();
+      afterLogin();
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -140,7 +147,7 @@ function AuthDialog() {
             {mode === 'login' ? t('account.noAccount') : t('account.haveAccount')}
           </button>
           <div className="flex gap-2">
-            <Button onClick={close}>{t('account.cancel')}</Button>
+            <Button onClick={cancel}>{t('account.cancel')}</Button>
             <button
               type="submit"
               disabled={busy}

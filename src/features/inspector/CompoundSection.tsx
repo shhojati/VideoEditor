@@ -10,7 +10,7 @@ export function CompoundSection({ project, clip }: { project: Project; clip: Cli
   if (!seq) return null;
   const count = seq.tracks.reduce((n, tr) => n + tr.clips.length, 0);
   return (
-    <Section title={t('compound.title')}>
+    <Section id="compound" title={t('compound.title')}>
       <div className="space-y-2 text-xs" data-testid="compound-section">
         <label className="flex items-center gap-2">
           <span className="w-16 text-neutral-400">{t('compound.nameLabel')}</span>

@@ -16,6 +16,7 @@ import { TransitionInspector } from './TransitionInspector';
 import { SubtitleStyleInspector } from '../subtitles/SubtitleStyleInspector';
 import { CueTextField } from '../subtitles/CueTextField';
 import { Section, SelectField } from './controls';
+import { resetProjectSettings } from './resetActions';
 
 const FPS_OPTIONS = [24, 25, 30, 50, 60];
 
@@ -64,7 +65,7 @@ function ProjectSettings({ project }: { project: Project }) {
   const edit = useProjectStore((s) => s.edit);
   const { width, height, fps } = project.settings;
   return (
-    <Section title={t('settings.title')}>
+    <Section id="project" title={t('settings.title')} onReset={resetProjectSettings}>
       <SelectField
         label={t('settings.aspect')}
         value={aspectOf(project.settings) ?? ''}

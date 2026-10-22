@@ -1,4 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { create } from 'zustand';
 
 /** Fade in/out presets shared by text and shape clips (s). */
 export const FADE_PRESETS = [
@@ -7,11 +9,74 @@ export const FADE_PRESETS = [
   { key: 'slow', value: 1 },
 ] as const;
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+const COLLAPSED_KEY = 'videoEditor.collapsedSections';
+
+function loadCollapsed(): string[] {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Properties sections the user folded, by section id; remembered on this device. */
+export const useCollapsedSections = create<{ ids: string[] }>()(() => ({ ids: loadCollapsed() }));
+
+function toggleSection(id: string) {
+  const { ids } = useCollapsedSections.getState();
+  const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+  useCollapsedSections.setState({ ids: next });
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+  } catch {
+    // Not remembered; the section still folds.
+  }
+}
+
+/**
+ * A Properties section: its title folds it (per `id`, the same in both languages), and with
+ * `onReset` a ↺ button beside the title puts its settings back to their defaults.
+ */
+export function Section({ id, title, onReset, children }: { id: string; title: string; onReset?: () => void; children: ReactNode }) {
+  const { t } = useTranslation();
+  const collapsed = useCollapsedSections((s) => s.ids.includes(id));
   return (
-    <section className="space-y-2 border-b border-line px-3 py-3">
-      <h3 className="text-xs font-medium tracking-wide text-neutral-400 uppercase">{title}</h3>
-      {children}
+    <section className="border-b border-line px-3 py-2" data-testid={`section-${id}`} data-collapsed={collapsed || undefined}>
+      <div className="flex items-center gap-1">
+        {/* Not a <button>: a locked clip's fieldset disables buttons, and folding must still work there. */}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={!collapsed}
+          data-testid="section-toggle"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-xs font-medium tracking-wide text-neutral-400 uppercase select-none hover:text-neutral-200"
+          onClick={() => toggleSection(id)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            toggleSection(id);
+          }}
+        >
+          <span aria-hidden className="w-2.5 text-[10px]">
+            {collapsed ? (document.documentElement.dir === 'rtl' ? '◂' : '▸') : '▾'}
+          </span>
+          <h3 className="truncate">{title}</h3>
+        </div>
+        {onReset && (
+          <button
+            type="button"
+            className="rounded px-1.5 py-0.5 text-sm leading-none text-neutral-400 hover:bg-surface-3 hover:text-white disabled:opacity-30"
+            title={t('inspector.resetSection')}
+            aria-label={`${t('inspector.resetSection')}: ${title}`}
+            data-testid="section-reset"
+            onClick={onReset}
+          >
+            ↺
+          </button>
+        )}
+      </div>
+      {!collapsed && <div className="space-y-2 pt-1 pb-1">{children}</div>}
     </section>
   );
 }

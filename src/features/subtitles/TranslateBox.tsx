@@ -4,6 +4,7 @@ import { Button } from '../../app/ui';
 import type { SubtitleTrack } from '../../model/types';
 import type { TranslateQuality } from '../../workers/translate.worker';
 import { cancelTranslate, checkTranslateModels, translateTrack, useTranslate } from './translateService';
+import { ProBadge } from '../account/ProBadge';
 
 const SIZE_MB: Record<TranslateQuality, number> = { standard: 630, precise: 1200 };
 
@@ -23,7 +24,7 @@ export function TranslateBox({ track }: { track: SubtitleTrack }) {
       <div className="flex items-center gap-2 font-medium">
         <span>🌐</span>
         <span className="flex-1">{t('translate.title')}</span>
-        <span className="text-[10px] text-amber-300">PRO</span>
+        <ProBadge />
       </div>
       <label className="flex items-center gap-2">
         <span className="w-16 text-neutral-400">{t('translate.quality')}</span>

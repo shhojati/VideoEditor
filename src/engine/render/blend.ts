@@ -69,17 +69,23 @@ function lutFor(mode: BlendMode): Uint8Array {
 }
 
 type Canvas = OffscreenCanvas;
-const pool: Canvas[] = [];
+/**
+ * Layer canvases are reused between frames (one per nesting level). Only the pixel blend modes read
+ * a layer back, so only they get CPU-backed canvases (willReadFrequently): drawing a decoded video
+ * frame into one of those copies it off the GPU on every frame, which in Chrome took ~20 ms at
+ * 1080p and starved audio decoding during playback of masked or effected clips.
+ */
+const pools: Record<'gpu' | 'readable', Canvas[]> = { gpu: [], readable: [] };
 
-/** Layer canvases are reused between frames (one per nesting level). */
-function layer(level: number, w: number, h: number) {
+function layer(level: number, w: number, h: number, readable: boolean) {
+  const pool = pools[readable ? 'readable' : 'gpu'];
   let c = pool[level];
   if (!c) c = pool[level] = new OffscreenCanvas(w, h);
   if (c.width !== w || c.height !== h) {
     c.width = w;
     c.height = h;
   }
-  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  const ctx = c.getContext('2d', { willReadFrequently: readable })!;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
@@ -111,7 +117,8 @@ export function drawBlended(ctx: Ctx2D, mode: BlendMode | undefined, draw: (c: C
     return;
   }
   const { width, height } = ctx.canvas;
-  const l = layer(depth, width, height);
+  const native = NATIVE[mode];
+  const l = layer(depth, width, height, !native);
   depth++;
   try {
     l.ctx.setTransform(ctx.getTransform());
@@ -123,7 +130,6 @@ export function drawBlended(ctx: Ctx2D, mode: BlendMode | undefined, draw: (c: C
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha *= alpha;
-  const native = NATIVE[mode];
   if (native) ctx.globalCompositeOperation = native;
   else {
     const src = l.ctx.getImageData(0, 0, width, height);

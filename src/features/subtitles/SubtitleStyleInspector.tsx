@@ -5,6 +5,7 @@ import type { ID, Project, SubtitleAnimation, SubtitleStyle } from '../../model/
 import { useProjectStore } from '../../store/projectStore';
 import { ColorField, NumberField, Section, Segmented, SelectField } from '../inspector/controls';
 import { RTL_LANGUAGES, SUBTITLE_LANGUAGES } from './subtitleActions';
+import { resetSubtitleSection } from '../inspector/resetActions';
 
 const ANIMATIONS: SubtitleAnimation[] = ['none', 'karaoke', 'pop', 'single', 'typewriter'];
 
@@ -33,7 +34,7 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
       <div className="border-b border-line px-3 py-2 text-sm font-medium text-white">
         {t('subtitles.styleTitle', { lang: t(`subtitles.languages.${track.language}`, track.language) })}
       </div>
-      <Section title={t('subtitles.presets')}>
+      <Section id="subPresets" title={t('subtitles.presets')} onReset={() => resetSubtitleSection(trackId, 'preset')}>
         <div className="grid grid-cols-2 gap-1 text-xs">
           {(Object.keys(SUBTITLE_PRESETS) as SubtitlePresetId[]).map((id) => (
             <button
@@ -46,7 +47,7 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
           ))}
         </div>
       </Section>
-      <Section title={t('subtitles.textStyle')}>
+      <Section id="subText" title={t('subtitles.textStyle')} onReset={() => resetSubtitleSection(trackId, 'textStyle')}>
         <SelectField label={t('inspector.font')} value={style.fontFamily} options={FONT_CHOICES.map((f) => ({ value: f.family, label: f.label }))} onChange={(v) => set('font', (s) => {
           s.fontFamily = v;
           s.fontWeight = resolveWeight(v, s.fontWeight ?? 600);
@@ -64,13 +65,13 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
         <ColorField label={t('inspector.background')} optional fallback="#000000" value={style.bgColor} onChange={(v) => setKey('bgColor', v)} />
         {style.bgColor && <NumberField label={t('subtitles.bgOpacity')} value={style.bgOpacity ?? 0.6} min={0} max={1} factor={100} unit="%" onChange={(v) => setKey('bgOpacity', v)} />}
       </Section>
-      <Section title={t('subtitles.layout')}>
+      <Section id="subLayout" title={t('subtitles.layout')} onReset={() => resetSubtitleSection(trackId, 'layout')}>
         <Segmented label={t('subtitles.position')} value={style.position} options={(['top', 'middle', 'bottom'] as const).map((p) => ({ value: p, label: t(`subtitles.positions.${p}`) }))} onChange={(v) => setKey('position', v)} />
         <NumberField label={t('subtitles.margin')} value={style.marginY} min={0} max={400} step={1} unit="px" onChange={(v) => setKey('marginY', v)} />
         <NumberField label={t('inspector.maxWidth')} value={style.maxWidthPct} min={30} max={100} step={1} unit="%" onChange={(v) => setKey('maxWidthPct', v)} />
         <Segmented label={t('subtitles.digits')} value={style.digits ?? 'keep'} options={(['keep', 'persian', 'latin'] as const).map((d) => ({ value: d, label: t(`subtitles.digitModes.${d}`) }))} onChange={(v) => setKey('digits', v)} />
       </Section>
-      <Section title={t('subtitles.animationSection')}>
+      <Section id="subAnimation" title={t('subtitles.animationSection')} onReset={() => resetSubtitleSection(trackId, 'animation')}>
         <SelectField
           label={t('subtitles.animation')}
           value={animation}
@@ -93,7 +94,7 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
           <p className="text-[11px] text-neutral-400">{t('subtitles.estimatedTiming')}</p>
         )}
       </Section>
-      <Section title={t('subtitles.languageSection')}>
+      <Section id="subLanguage" title={t('subtitles.languageSection')} onReset={() => resetSubtitleSection(trackId, 'language')}>
         <SelectField
           label={t('subtitles.language')}
           value={track.language}

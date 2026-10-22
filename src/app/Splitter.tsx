@@ -92,7 +92,7 @@ const MIN_PREVIEW_PX = 280;
 /**
  * Desktop handle between the preview and a side column ('start' = Media…, 'end' = Properties).
  * Narrower side panels give the preview more width — with a short timeline, a bigger picture.
- * Works in RTL, where the start column is on the right.
+ * Follows the editor grid's direction (left-to-right in both languages, see App).
  */
 export function ColumnSplitter({ column, container }: { column: Column; container: RefObject<HTMLElement | null> }) {
   const { t } = useTranslation();
@@ -127,7 +127,7 @@ export function ColumnSplitter({ column, container }: { column: Column; containe
       }}
       onDoubleClick={() => set(DEFAULT_COLUMN_SHARE[column])}
       onKeyDown={(e) => {
-        const rtl = getComputedStyle(e.currentTarget).direction === 'rtl';
+        const rtl = getComputedStyle(container.current ?? e.currentTarget).direction === 'rtl';
         // Arrow toward the column's own side shrinks it.
         const towardStart = rtl ? 'ArrowRight' : 'ArrowLeft';
         const towardEnd = rtl ? 'ArrowLeft' : 'ArrowRight';

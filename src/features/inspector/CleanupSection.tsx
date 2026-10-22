@@ -5,6 +5,7 @@ import type { Clip, Project } from '../../model/types';
 import { clipLoudness, ensureNoiseProfile } from '../media-bin/audioAnalysis';
 import type { SetFn } from './ClipInspector';
 import { NumberField, Section } from './controls';
+import { resetClipSection } from './resetActions';
 
 /** Noise reduction, Enhance voice and Normalize for an audible clip. */
 export function CleanupSection({ project, clip, set }: { project: Project; clip: Clip; set: SetFn }) {
@@ -30,7 +31,7 @@ export function CleanupSection({ project, clip, set }: { project: Project; clip:
   };
 
   return (
-    <Section title={t('cleanup.title')}>
+    <Section id="cleanup" title={t('cleanup.title')} onReset={() => resetClipSection(clip.id, 'cleanup')}>
       <NumberField
         label={t('cleanup.denoise')}
         value={clean?.denoise ?? 0}

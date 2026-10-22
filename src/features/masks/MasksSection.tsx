@@ -26,6 +26,7 @@ import {
   type MaskAnimKey,
 } from './maskService';
 import { keyRate, keyTimeAt } from '../../model/remap';
+import { resetClipSection } from '../inspector/resetActions';
 
 const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
 const iconBtn = 'rounded px-1.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
@@ -47,7 +48,7 @@ export function MasksSection({ project, clip }: { project: Project; clip: Clip }
   const drawing = pen?.clipId === clip.id;
 
   return (
-    <Section title={t('masks.title')}>
+    <Section id="masks" title={t('masks.title')} onReset={masks.length ? () => resetClipSection(clip.id, 'masks') : undefined}>
       <div data-testid="masks-section" className="space-y-2">
         {drawing ? (
           <div className="space-y-1.5 rounded border border-yellow-400/50 p-2" data-testid="mask-pen-hint">

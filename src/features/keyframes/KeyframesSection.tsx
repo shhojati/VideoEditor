@@ -14,7 +14,7 @@ export function KeyframesSection({ project, clip, time }: { project: Project; cl
   const index = inside ? keyAtPlayhead(project, clip, time) : -1;
   const here = index >= 0;
   return (
-    <Section title={t('keyframes.title')}>
+    <Section id="keyframes" title={t('keyframes.title')} onReset={keys.length ? () => clearKeyframes(clip.id) : undefined}>
       <div className="space-y-2" data-testid="keyframes-section">
         <div className="flex items-center gap-1" dir="ltr">
           <button className={btn} disabled={!keys.length} title={t('keyframes.prev')} aria-label={t('keyframes.prev')} onClick={() => jumpToKeyframe(clip.id, -1)}>

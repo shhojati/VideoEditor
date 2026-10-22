@@ -8,6 +8,7 @@ import { setKeepPitch } from '../../model/voiceFx';
 import { freezeAtPlayhead, toggleReverse, useSpeedUi } from '../timeline/speedActions';
 import type { SetFn } from './ClipInspector';
 import { NumberField, Section } from './controls';
+import { resetClipSection } from './resetActions';
 
 const RAMPS = Object.keys(SPEED_PRESETS) as Exclude<SpeedPreset, 'custom'>[];
 const QUICK = [0.25, 0.5, 1, 2, 4];
@@ -22,7 +23,7 @@ export function SpeedSection({ clip, asset, audible, set }: { clip: Clip; asset:
   const setCurve = (curve: SpeedPoint[] | null, preset: SpeedPreset = 'custom') => set('speedCurve', (c, p) => void setSpeedCurve(p, c.id, curve, preset));
 
   return (
-    <Section title={t('speed.title')}>
+    <Section id="speed" title={t('speed.title')} onReset={() => resetClipSection(clip.id, 'speed')}>
       <NumberField label={t('inspector.speed')} value={clip.speedCurve ? Math.round(avg * 100) / 100 : clip.speed} min={SPEED_RANGE.min} max={SPEED_RANGE.max} step={0.05} unit="×" onChange={setSpeed} />
       <div className="flex flex-wrap gap-1 text-xs">
         {QUICK.map((s) => (

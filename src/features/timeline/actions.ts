@@ -11,7 +11,7 @@ import {
   timelineDuration,
   type ClipboardItem,
 } from '../../model/timeline';
-import { defaultShape } from '../../model/overlays';
+import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
 import type { ID, Project, ShapeKind } from '../../model/types';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
@@ -33,19 +33,7 @@ export function editableSelection(p: Project): Set<ID> {
 export function addText(content: string) {
   let id = '';
   edit('ops.addText', (d) => {
-    id = addTextClip(d, useTransport.getState().time, {
-      content,
-      fontFamily: 'Vazirmatn',
-      fontSize: 72,
-      fontWeight: 700,
-      color: '#ffffff',
-      strokeColor: '#000000',
-      strokeWidth: 6,
-      align: 'center',
-      rtl: detectRtl(content),
-      fadeIn: 0,
-      fadeOut: 0,
-    });
+    id = addTextClip(d, useTransport.getState().time, { ...TEXT_STYLE_DEFAULTS, content, rtl: detectRtl(content) });
   });
   select([id]);
 }

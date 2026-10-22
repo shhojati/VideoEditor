@@ -1,5 +1,5 @@
 // Overlay clips (text and shapes, on 'text' tracks) and per-clip blend modes.
-import type { BlendMode, Clip, ShapeKind, ShapeProps } from './types';
+import type { BlendMode, Clip, ShapeKind, ShapeProps, TextProps } from './types';
 
 export const SHAPE_KINDS = ['rectangle', 'square', 'circle', 'oval', 'triangle', 'star', 'line'] as const satisfies readonly ShapeKind[];
 
@@ -20,6 +20,19 @@ export const isOverlay = (clip: Clip) => !!(clip.text || clip.shape || clip.adju
 
 /** Shapes whose width and height are kept equal. */
 export const keepsAspect = (kind: ShapeKind) => kind === 'square' || kind === 'circle';
+
+/** How a new text clip looks (its words and direction come from what is typed). */
+export const TEXT_STYLE_DEFAULTS: Omit<TextProps, 'content' | 'rtl'> = {
+  fontFamily: 'Vazirmatn',
+  fontSize: 72,
+  fontWeight: 700,
+  color: '#ffffff',
+  strokeColor: '#000000',
+  strokeWidth: 6,
+  align: 'center',
+  fadeIn: 0,
+  fadeOut: 0,
+};
 
 export const SHAPE_DEFAULT_SIZE = 300;
 

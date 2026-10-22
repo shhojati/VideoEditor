@@ -23,6 +23,7 @@ import { Onboarding } from './Onboarding';
 import { useGlobalShortcuts } from './shortcuts';
 import { ShortcutSheet } from './ShortcutSheet';
 import { AccountDialogs } from '../features/account/AccountDialogs';
+import { Splash } from './Splash';
 import { StartupCheck } from './StartupCheck';
 import { Toasts } from './toasts';
 import { TopBar } from './TopBar';
@@ -34,13 +35,14 @@ export function App() {
         <Editor />
       </StartupCheck>
       <Toasts />
+      <Splash />
     </div>
   );
 }
 
 /** Only mounted once the browser passed the capability check. */
 function Editor() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const project = useProject();
   // Export always takes the whole document, also while a compound clip is open.
   const root = useRootProject();
@@ -86,9 +88,10 @@ function Editor() {
       )}
       {project && !mobile && (
         <>
+          {/* Panels sit as in English in both languages (Media left, Properties right); only their contents follow the language. */}
           <main
             ref={mainRef}
-            className="grid min-h-0 flex-1"
+            className={`grid min-h-0 flex-1 [direction:ltr] ${i18n.dir() === 'rtl' ? '[&>*]:[direction:rtl]' : ''}`}
             style={{ gridTemplateColumns: `max(160px, ${columns.start * 100}%) 4px minmax(0, 1fr) 4px max(160px, ${columns.end * 100}%)` }}
           >
             <ErrorBoundary area={t('panels.media')}>

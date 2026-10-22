@@ -51,7 +51,7 @@ export function cancelTranslate() {
 
 /** Translate an English track into a new Persian track (Pro). Resolves when finished. */
 export async function translateTrack(trackId: ID, quality: TranslateQuality): Promise<void> {
-  if (!requireAi()) return;
+  if (!requireAi(() => void translateTrack(trackId, quality))) return;
   const project = useProjectStore.getState().history?.present;
   const source = project?.subtitleTracks.find((t) => t.id === trackId);
   if (!source) return;

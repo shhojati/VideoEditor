@@ -9,7 +9,7 @@ export function CueTextField({ cueId, text, rtl }: { cueId: ID; text: string; rt
   const { t } = useTranslation();
   const edit = useProjectStore((s) => s.edit);
   return (
-    <Section title={t('subtitles.cueText')}>
+    <Section id="cueText" title={t('subtitles.cueText')}>
       <textarea
         dir={rtl ? 'rtl' : 'ltr'}
         data-testid="inspector-cue-text"

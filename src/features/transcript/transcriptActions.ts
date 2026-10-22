@@ -57,7 +57,7 @@ export function removals(p: Project, opts: { minSilence: number; fillers: boolea
 
 /** Cut these ranges from every unlocked track and close the gaps (one undo step, Pro). */
 export function cutRanges(ranges: readonly [number, number][], label = 'ops.cutText'): boolean {
-  if (!ranges.length || !requireAi()) return false;
+  if (!ranges.length || !requireAi(() => cutRanges(ranges, label))) return false;
   useProjectStore.getState().edit(label, (d) => void rippleDeleteRanges(d, ranges));
   return true;
 }

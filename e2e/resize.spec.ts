@@ -50,7 +50,7 @@ test.describe('phone', () => {
   });
 });
 
-test('a shorter timeline plus narrower side panels gives a bigger preview (LTR and RTL)', async ({ page }) => {
+test('a shorter timeline plus narrower side panels gives a bigger preview (panels stay put in RTL)', async ({ page }) => {
   await page.goto('/');
   const canvas = page.getByTestId('preview-frame');
   const size = async () => (await canvas.boundingBox())!;
@@ -66,10 +66,10 @@ test('a shorter timeline plus narrower side panels gives a bigger preview (LTR a
     await page.getByTestId('column-splitter-start').dblclick();
     await page.getByTestId('column-splitter-end').dblclick();
     const before = await size();
-    // Drag each splitter toward its own panel's outer edge.
+    // Drag each splitter toward its own panel's outer edge: Media is on the left in both directions.
     for (const col of ['start', 'end'] as const) {
       const b = (await page.getByTestId(`column-splitter-${col}`).boundingBox())!;
-      const outward = (col === 'start') === (dir === 'ltr') ? -1 : 1;
+      const outward = col === 'start' ? -1 : 1;
       await page.mouse.move(b.x + 2, b.y + b.height / 2);
       await page.mouse.down();
       await page.mouse.move(b.x + 2 + outward * 150, b.y + b.height / 2, { steps: 5 });

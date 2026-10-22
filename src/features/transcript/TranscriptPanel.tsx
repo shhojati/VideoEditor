@@ -9,6 +9,7 @@ import { useTransport } from '../../store/transport';
 import { cancelAutoSubtitles, checkModels, transcribeClips, useStt } from '../subtitles/sttService';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { cutRanges, removals, transcriptClips, wordsRange, type Removal } from './transcriptActions';
+import { ProBadge } from '../account/ProBadge';
 
 const LANGS = ['fa', 'en', 'auto'] as const;
 
@@ -120,7 +121,7 @@ export function TranscriptPanel({ project }: { project: Project }) {
               🔍 {t('transcript.find')}
             </Button>
             <Button className="text-xs" data-testid="cut-words" onMouseDown={(e) => e.preventDefault()} onClick={cutSelection} title={t('transcript.cutHint')}>
-              ✂ {t('transcript.cut')} <span className="text-[10px] text-amber-300">PRO</span>
+              ✂ {t('transcript.cut')} <ProBadge />
             </Button>
           </div>
           {review && (
@@ -159,7 +160,7 @@ export function TranscriptPanel({ project }: { project: Project }) {
                         if (cutRanges(found.filter((r) => !unchecked.has(r.id)).map((r) => r.range), 'ops.removePauses')) setReview(null);
                       }}
                     >
-                      {t('transcript.remove', { count: found.length - unchecked.size })} <span className="text-[10px] text-amber-300">PRO</span>
+                      {t('transcript.remove', { count: found.length - unchecked.size })} <ProBadge />
                     </Button>
                     <Button className="text-xs" onClick={() => setReview(null)}>
                       {t('transcript.close')}

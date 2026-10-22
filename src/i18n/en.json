@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "Video Editor",
-    "untitled": "Untitled project"
+    "untitled": "Untitled project",
+    "loading": "Loading…"
   },
   "project": {
     "menu": "Projects",
@@ -47,6 +48,7 @@
     "fit": "Change fit",
     "addText": "Add text",
     "clipProp": "Change clip property",
+    "resetSection": "Reset section",
     "moveCues": "Move subtitles",
     "trimCue": "Retime subtitle",
     "splitCue": "Split subtitle",
@@ -251,6 +253,7 @@
     }
   },
   "inspector": {
+    "resetSection": "Reset to defaults",
     "textClip": "Text clip",
     "locked": "track is locked",
     "multi": "{{count}} clips selected",

@@ -8,6 +8,7 @@ import { useSubtitlesUi } from '../subtitles/subtitlesUi';
 import type { SetFn } from './ClipInspector';
 import { ColorField, NumberField, Section, SelectField } from './controls';
 import { FramePicker } from './FramePicker';
+import { resetClipSection } from './resetActions';
 
 /** Effects whose colour is best picked from the clip's own (un-keyed) frame. */
 const KEYING = new Set<Effect['kind']>(['keylight', 'linearColorKey', 'colorRange']);
@@ -17,7 +18,7 @@ export function EffectsSection({ clip, asset, set }: { clip: Clip; asset?: Asset
   const { t } = useTranslation();
   const effects = clip.effects ?? [];
   return (
-    <Section title={t('effects.stack')}>
+    <Section id="effects" title={t('effects.stack')} onReset={effects.length ? () => resetClipSection(clip.id, 'effects') : undefined}>
       {effects.length === 0 && (
         <p className="text-xs text-neutral-400">
           {t('effects.none')}{' '}

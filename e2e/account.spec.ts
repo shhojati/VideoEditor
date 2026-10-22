@@ -177,8 +177,7 @@ test('AI features need Pro: log in first, then the upgrade dialog', async ({ pag
   await page.getByTestId('auth-submit').click();
   await expect(page.getByTestId('auth-dialog')).toHaveCount(0);
 
-  // Free: the account dialog, to upgrade; nothing runs.
-  await page.getByTestId('reframe-clip').click();
+  // Free: the waiting action continues straight into the account dialog, to upgrade; nothing runs.
   await expect(page.getByText(/AI features .* are part of Pro/)).toBeVisible();
   await expect(page.getByTestId('account-dialog').getByTestId('account-plan')).toHaveAttribute('data-plan', 'free');
   await expect(page.getByTestId('reframe-progress')).toHaveCount(0);

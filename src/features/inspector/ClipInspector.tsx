@@ -25,6 +25,7 @@ import { SpeedSection } from './SpeedSection';
 import { CompoundSection } from './CompoundSection';
 import { ReframeSection } from '../tracking/ReframeSection';
 import { DUCK_DEFAULTS } from '../../engine/audio/ducking';
+import { resetClipSection } from './resetActions';
 
 /**
  * Edit one property of one clip, as it looks at the playhead (on an animated clip the change lands
@@ -83,7 +84,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {compound && <CompoundSection project={project} clip={clip} />}
       {(visual || audible) && <KeyframesSection project={project} clip={clip} time={time} />}
 
-      <Section title={t('inspector.timing')}>
+      <Section id="timing" title={t('inspector.timing')} onReset={() => resetClipSection(clipId, 'timing')}>
         <NumberField
           label={t('inspector.start')}
           value={clip.start}
@@ -109,17 +110,17 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       </Section>
       {timed && asset && !clip.freeze && <SpeedSection clip={clip} asset={asset} audible={!!audible} set={set} />}
 
-      {isText && <TextSection text={clip.text!} set={set} />}
-      {clip.shape && <ShapeSection shape={shown.shape!} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
+      {isText && <TextSection clipId={clipId} text={clip.text!} set={set} />}
+      {clip.shape && <ShapeSection clipId={clipId} shape={shown.shape!} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
 
       {clip.adjustment && !clip.masks?.length && (
-        <Section title={t('inspector.transform')}>
+        <Section id="transform" title={t('inspector.transform')} onReset={() => resetClipSection(clipId, 'transform')}>
           <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
         </Section>
       )}
 
       {visual && (!clip.adjustment || !!clip.masks?.length) && (
-        <Section title={t('inspector.transform')}>
+        <Section id="transform" title={t('inspector.transform')} onReset={() => resetClipSection(clipId, 'transform')}>
           <NumberField label={t('inspector.x')} value={shown.transform.x} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('x', v)} />
           <NumberField label={t('inspector.y')} value={shown.transform.y} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('y', v)} />
           <NumberField label={t('inspector.scale')} value={shown.transform.scale} min={0.1} max={4} factor={100} unit="%" onChange={(v) => setTransform('scale', v)} />
@@ -150,7 +151,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {visual && <EffectsSection clip={shown} asset={asset} set={set} />}
 
       {(audible || compound) && (
-        <Section title={t('inspector.audio')}>
+        <Section id="audio" title={t('inspector.audio')} onReset={() => resetClipSection(clipId, 'audio')}>
           <NumberField label={t('inspector.volume')} value={shown.audio.volume} min={0} max={2} factor={100} unit="%" onChange={(v) => set('volume', (c) => void (c.audio.volume = v))} />
           <NumberField label={t('inspector.fadeIn')} value={clip.audio.fadeIn} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeIn', (c) => void (c.audio.fadeIn = v))} />
           <NumberField label={t('inspector.fadeOut')} value={clip.audio.fadeOut} min={0} max={Math.min(5, clip.duration)} step={0.1} unit="s" onChange={(v) => set('afadeOut', (c) => void (c.audio.fadeOut = v))} />
@@ -193,7 +194,7 @@ function BlendSection({ clip, set }: { clip: Clip; set: SetFn }) {
   const { t } = useTranslation();
   const mode = clip.blend ?? 'normal';
   return (
-    <Section title={t('inspector.blending')}>
+    <Section id="blend" title={t('inspector.blending')} onReset={() => resetClipSection(clip.id, 'blend')}>
       <label className="flex flex-col gap-1 text-xs">
         <span className="text-neutral-400">{t('blend.label')}</span>
         <select
@@ -254,14 +255,14 @@ function CropFields({ clip, set }: { clip: Clip; set: SetFn }) {
   );
 }
 
-function TextSection({ text, set }: { text: TextProps; set: SetFn }) {
+function TextSection({ clipId, text, set }: { clipId: ID; text: TextProps; set: SetFn }) {
   const { t } = useTranslation();
   const setText = <K extends keyof TextProps>(key: K, v: TextProps[K]) => set(`text.${key}`, (c) => void (c.text![key] = v));
   const font = FONT_CHOICES.find((f) => f.family === text.fontFamily) ?? FONT_CHOICES[0];
   const preset = FADE_PRESETS.find((p) => p.value === text.fadeIn && p.value === text.fadeOut)?.key ?? 'custom';
 
   return (
-    <Section title={t('inspector.text')}>
+    <Section id="text" title={t('inspector.text')} onReset={() => resetClipSection(clipId, 'text')}>
       <textarea
         dir="auto"
         rows={3}

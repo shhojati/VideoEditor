@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { keepsAspect, setShapeKind, SHAPE_KINDS } from '../../model/overlays';
-import type { ShapeProps } from '../../model/types';
+import type { ID, ShapeProps } from '../../model/types';
 import { SHAPE_ICONS } from '../shapes/shapesUi';
 import type { SetFn } from './ClipInspector';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
+import { resetClipSection } from './resetActions';
 
 /** Shape type, size, fill, stroke (colour, width, opacity, dashes), corners, star, arrows, shadow, fades. */
-export function ShapeSection({ shape, set, maxSize }: { shape: ShapeProps; set: SetFn; maxSize: number }) {
+export function ShapeSection({ clipId, shape, set, maxSize }: { clipId: ID; shape: ShapeProps; set: SetFn; maxSize: number }) {
   const { t } = useTranslation();
   const setShape = <K extends keyof ShapeProps>(key: K, v: ShapeProps[K]) => set(`shape.${key}`, (c) => void (c.shape![key] = v));
   const isLine = shape.kind === 'line';
@@ -15,7 +16,7 @@ export function ShapeSection({ shape, set, maxSize }: { shape: ShapeProps; set: 
   const preset = FADE_PRESETS.find((p) => p.value === shape.fadeIn && p.value === shape.fadeOut)?.key ?? 'custom';
 
   return (
-    <Section title={t('inspector.shape')}>
+    <Section id="shape" title={t('inspector.shape')} onReset={() => resetClipSection(clipId, 'shape')}>
       <SelectField
         label={t('inspector.kind')}
         value={shape.kind}

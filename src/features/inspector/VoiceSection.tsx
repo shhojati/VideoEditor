@@ -3,13 +3,14 @@ import { PITCH_RANGE, setSpace, setVoice, SPACE_KINDS, VOICE_GROUPS, VOICE_PRESE
 import type { Clip, SpaceKind, VoiceKind } from '../../model/types';
 import type { SetFn } from './ClipInspector';
 import { NumberField, Section } from './controls';
+import { resetClipSection } from './resetActions';
 
 /** Voice changer and space for an audible clip: preset chips, then their sliders. `clip` = values at the playhead. */
 export function VoiceSection({ clip, set }: { clip: Clip; set: SetFn }) {
   const { t } = useTranslation();
   const { voice, space } = clip.audio;
   return (
-    <Section title={t('voiceFx.title')}>
+    <Section id="voice" title={t('voiceFx.title')} onReset={() => resetClipSection(clip.id, 'voice')}>
       <Chips
         label={t('voiceFx.voice')}
         testId="voice-preset"

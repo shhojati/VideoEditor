@@ -21,7 +21,7 @@ export function BeatsSection({ clip, asset }: { clip: Clip; asset: Asset }) {
     }
   };
   return (
-    <Section title={t('beats.title')}>
+    <Section id="beats" title={t('beats.title')} onReset={asset.beats ? () => clearBeats(asset.id) : undefined}>
       <div className="flex items-center gap-2 text-xs">
         {asset.beats ? (
           <>

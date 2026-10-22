@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BLEND_GROUPS, BLEND_MODES } from '../../model/overlays';
-import { blendPixels, dissolve, isPixelBlend, SEPARABLE } from './blend';
+import { blendPixels, dissolve, drawBlended, isPixelBlend, SEPARABLE } from './blend';
 
 const px = (...v: number[]) => new Uint8ClampedArray(v);
 
@@ -59,5 +59,50 @@ describe('blend modes', () => {
     const c = make();
     dissolve(c, 8);
     expect(c).not.toEqual(a);
+  });
+});
+
+describe('layer canvases', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A 2D context stand-in that records nothing but answers what drawBlended asks. */
+  const fakeCtx = (canvas: object) => ({
+    canvas,
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+    setTransform() {},
+    save() {},
+    restore() {},
+    clearRect() {},
+    drawImage() {},
+    getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+    putImageData() {},
+    globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
+    filter: 'none',
+  });
+
+  it('keeps masked and effected layers on the GPU; only pixel blends get readable canvases', () => {
+    const options: (CanvasRenderingContext2DSettings | undefined)[] = [];
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        constructor(
+          public width: number,
+          public height: number,
+        ) {}
+        getContext(_kind: string, o?: CanvasRenderingContext2DSettings) {
+          options.push(o);
+          return fakeCtx(this);
+        }
+      },
+    );
+    const target = fakeCtx({ width: 8, height: 8 }) as unknown as OffscreenCanvasRenderingContext2D;
+    // A mask or effect (post) with a native mode: drawing a video frame into a CPU-backed canvas
+    // copied it off the GPU every frame and starved audio playback in Chrome.
+    drawBlended(target, 'normal', () => {}, { post: () => {} });
+    drawBlended(target, 'screen', () => {});
+    expect(options.every((o) => !o?.willReadFrequently)).toBe(true);
+    drawBlended(target, 'linearBurn', () => {});
+    expect(options.at(-1)?.willReadFrequently).toBe(true);
   });
 });

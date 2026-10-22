@@ -1,4 +1,5 @@
-// The preview's tools (After Effects' toolbar): select, hand, pen, shape, type, brush and eraser.
+// The preview's tools (After Effects' toolbar): select, hand, pen, shape, type, brush, clone stamp
+// and eraser.
 // The active tool decides what a click or drag on the preview does.
 import { create } from 'zustand';
 import { SHAPE_KINDS } from '../../model/overlays';
@@ -6,7 +7,19 @@ import type { ID, ShapeKind } from '../../model/types';
 import { cancelPen, startPen, useMasks } from '../masks/maskService';
 import { useTimelineUi } from '../timeline/timelineUi';
 
-export type Tool = 'select' | 'hand' | 'pen' | 'shape' | 'text' | 'brush' | 'eraser';
+export type Tool = 'select' | 'hand' | 'pen' | 'shape' | 'text' | 'brush' | 'clone' | 'eraser';
+
+/**
+ * The clone stamp's source: a point in the layer units of the clip it was set on (`clipId`, or
+ * none for a new paint layer). Once a stroke starts, `offset` (source − painted point) is kept
+ * for the next strokes too (After Effects' "Aligned").
+ */
+export interface CloneSource {
+  clipId: string | undefined;
+  x: number;
+  y: number;
+  offset?: { dx: number; dy: number };
+}
 
 /** The brush (and eraser) settings new strokes get. */
 export interface BrushSettings {
@@ -50,9 +63,10 @@ interface ToolState {
   brush: BrushSettings;
   /** Onion skin: the drawings before and after show faintly on the preview (frame-by-frame paint). */
   onion: boolean;
+  cloneSource: CloneSource | null;
 }
 
-export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush(), onion: true }));
+export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush(), onion: true, cloneSource: null }));
 
 /** Change the brush settings (remembered on this device). */
 export function setBrush(change: Partial<BrushSettings>) {

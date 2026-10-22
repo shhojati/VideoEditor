@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { findClip } from '../../model/timeline';
+import { isPaintLayer } from '../../model/overlays';
 import type { Clip, ID, Project } from '../../model/types';
 import { baseFromDrawn, motionTransform, withMotion } from '../../engine/render/motion';
 import { keyedClip } from '../../model/keyframes';
@@ -14,6 +15,7 @@ import {
   contains,
   corners,
   editableClipsAt,
+  nearPaint,
   handlesFor,
   moveLineEnd,
   resizesFreely,
@@ -115,7 +117,8 @@ export function CanvasOverlay({ project }: { project: Project }) {
     const p = toProject(view, screen);
     for (const { clip } of active) {
       const b = boxes.get(clip.id)?.box;
-      if (b && contains(b, p, HIT_SLACK / view.k)) return clip.id;
+      // A paint layer spans the frame; it is picked only where it has strokes.
+      if (b && contains(b, p, HIT_SLACK / view.k) && (!isPaintLayer(clip) || nearPaint(project, boxes.get(clip.id)!.clip, p, HIT_SLACK / view.k))) return clip.id;
     }
     return null;
   };

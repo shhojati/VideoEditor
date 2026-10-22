@@ -47,9 +47,18 @@ export const layerSize = (projectPx: number, layer: Affine) => projectPx / (affi
  * Add a finished stroke (points in layer units) at timeline time t: to `targetId`, or to a new
  * paint layer there (selected, so the next strokes join it). One undo step.
  */
-export function commitStroke(targetId: ID | undefined, tool: 'brush' | 'eraser', points: number[], pressure: boolean, brush: BrushSettings, size: number, t: number) {
+export function commitStroke(
+  targetId: ID | undefined,
+  tool: PaintStroke['tool'],
+  points: number[],
+  pressure: boolean,
+  brush: BrushSettings,
+  size: number,
+  t: number,
+  clone?: { dx: number; dy: number },
+) {
   let id = targetId;
-  useProjectStore.getState().edit(tool === 'eraser' ? 'ops.erase' : 'ops.paint', (d) => {
+  useProjectStore.getState().edit(tool === 'eraser' ? 'ops.erase' : tool === 'clone' ? 'ops.clone' : 'ops.paint', (d) => {
     if (!id) id = addPaintClip(d, t, brush.frameByFrame ? { strokes: [], frames: { hold: 2 } } : { strokes: [] });
     const ref = findClip(d, id);
     if (!ref || ref.track.locked) return;
@@ -73,6 +82,7 @@ export function commitStroke(targetId: ID | undefined, tool: 'brush' | 'eraser',
     else if (brush.duration === 'frame') stroke.duration = 1 / d.settings.fps;
     else if (brush.duration === 'custom') stroke.duration = brush.seconds;
     if (brush.writeOn > 0 && tool === 'brush') stroke.writeOn = brush.writeOn;
+    if (clone) stroke.clone = { dx: round3(clone.dx), dy: round3(clone.dy) };
     clip.paint.strokes.push(stroke);
   });
   if (id && id !== targetId) select([id]);

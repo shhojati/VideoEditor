@@ -116,19 +116,63 @@ export function paintRaster(id: string, paint: PaintProps, s: number, T: Affine,
   return r;
 }
 
+/** Scratch canvases for clone strokes: the picture they copy from, and one stroke's copy. */
+const scratch: OffscreenCanvas[] = [];
+
+function scratchCtx(i: number, w: number, h: number) {
+  const c = (scratch[i] = canvas(scratch[i], w, h));
+  const x = c.getContext('2d')!;
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.globalAlpha = 1;
+  x.globalCompositeOperation = 'source-over';
+  return x;
+}
+
+/**
+ * Clone stamp strokes: inside each stroke, the picture `source` (pixels of the same size as the
+ * target) taken from `clone` away. Drawn every frame (the picture under them moves).
+ */
+function drawClones(ctx: Ctx2D, clones: ShownStroke[], T: Affine, source: CanvasImageSource) {
+  const { width: w, height: h } = ctx.canvas;
+  const snap = scratchCtx(0, w, h);
+  // The picture as it was before any clone stroke, so strokes don't copy each other.
+  snap.drawImage(source, 0, 0);
+  for (const x of clones) {
+    const { dx, dy } = x.stroke.clone!;
+    const c = scratchCtx(1, w, h);
+    fillStroke(c, x, T, '#000');
+    c.globalCompositeOperation = 'source-in';
+    // A pixel at p shows the picture at p + (dx, dy) (through T's linear part).
+    c.drawImage(snap.canvas, -(T[0] * dx + T[2] * dy), -(T[1] * dx + T[3] * dy));
+    ctx.drawImage(c.canvas, 0, 0);
+  }
+}
+
 /**
  * Paint a clip's strokes at source time s onto `ctx`, whose current transform maps layer units
  * to its pixels and which holds the clip's picture alone (when the strokes rub out or copy it).
- * `cacheId` names this clip and use.
+ * Clone strokes copy from `source` (a paint layer: what is drawn below it), by default the
+ * picture in `ctx`. `cacheId` names this clip and use.
  */
-export function drawPaint(ctx: Ctx2D, paint: PaintProps, s: number, cacheId: string) {
+export function drawPaint(ctx: Ctx2D, paint: PaintProps, s: number, cacheId: string, source?: CanvasImageSource) {
   const m = ctx.getTransform();
   const T: Affine = [m.a, m.b, m.c, m.d, m.e, m.f];
   const { width: w, height: h } = ctx.canvas;
+  const clones = strokesAt(paint, s).filter((x) => x.stroke.tool === 'clone' && x.stroke.clone);
   const r = paintRaster(cacheId, paint, s, T, w, h);
-  if (!r) return;
+  if (!r && !clones.length) return;
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (clones.length) {
+    ctx.save();
+    // The clip's own clip region (crop) stays; the copies are drawn in pixels.
+    drawClones(ctx, clones, T, source ?? ctx.canvas);
+    ctx.restore();
+  }
+  if (!r) {
+    ctx.restore();
+    return;
+  }
   if (r.erase) {
     const a = ctx.globalAlpha;
     ctx.globalAlpha = 1;

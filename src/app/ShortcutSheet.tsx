@@ -33,6 +33,7 @@ export const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Q', label: 'toolShape' },
   { keys: 'T', label: 'toolText' },
   { keys: 'B / E', label: 'toolBrush' },
+  { keys: 'Shift + B', label: 'toolClone' },
   { keys: ', / .', label: 'drawingStep' },
   { keys: 'K', label: 'keyframe' },
   { keys: '[ / ]', label: 'keyframeJump' },

@@ -52,6 +52,22 @@ export function pointsUpTo(points: number[], upTo: number): [number, number, num
   return out;
 }
 
+/** Bounds of all strokes (layer units), each widened by half its size; undefined with no strokes. */
+export function paintBounds(paint: PaintProps | undefined): { x0: number; y0: number; x1: number; y1: number } | undefined {
+  let b: { x0: number; y0: number; x1: number; y1: number } | undefined;
+  for (const s of paint?.strokes ?? []) {
+    const r = s.size / 2;
+    for (let i = 0; i + 1 < s.points.length; i += 3) {
+      const x = s.points[i];
+      const y = s.points[i + 1];
+      b = b
+        ? { x0: Math.min(b.x0, x - r), y0: Math.min(b.y0, y - r), x1: Math.max(b.x1, x + r), y1: Math.max(b.y1, y + r) }
+        : { x0: x - r, y0: y - r, x1: x + r, y1: y + r };
+    }
+  }
+  return b;
+}
+
 /** Strokes that rub out or copy the clip's own pixels (it then needs a layer of its own to draw into). */
 export const touchesPixels = (paint: PaintProps | undefined) => !!paint?.strokes.some((s) => s.tool !== 'brush');
 

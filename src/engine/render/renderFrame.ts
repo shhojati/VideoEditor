@@ -147,16 +147,18 @@ export function drawClip(
           fx(layer);
         }
       : (cut ?? fx ?? own);
-  drawBlended(ctx, clip.blend, (c) => drawClipPixels(c, clip, t, lookup, width, height), { seed, post });
+  // A paint layer's clone strokes copy what is drawn below it.
+  const below = ctx.canvas;
+  drawBlended(ctx, clip.blend, (c) => drawClipPixels(c, clip, t, lookup, width, height, below), { seed, post });
 }
 
-function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number) {
+function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, width: number, height: number, below?: CanvasImageSource) {
   if (isOverlay(clip)) {
     // Inside a transition an overlay may be drawn outside its own range: hold its edge state.
     const tc = Math.min(clip.start + clip.duration - 1e-3, Math.max(clip.start, t));
     if (clip.text) drawTextClip(ctx, clip, tc, width, height);
     else if (clip.shape) drawShapeClip(ctx, clip, tc, width, height);
-    else if (isPaintLayer(clip)) drawPaintLayer(ctx, clip, tc, width, height);
+    else if (isPaintLayer(clip)) drawPaintLayer(ctx, clip, tc, width, height, below);
     return;
   }
   const src = lookup(clip, t);
@@ -182,7 +184,7 @@ function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, 
 }
 
 /** A paint layer: its strokes around the clip's position (project pixels at scale 1). */
-function drawPaintLayer(ctx: Ctx2D, clip: Clip, t: number, width: number, height: number) {
+function drawPaintLayer(ctx: Ctx2D, clip: Clip, t: number, width: number, height: number, below?: CanvasImageSource) {
   const tr = clip.transform;
   if (tr.opacity <= 0) return;
   ctx.save();
@@ -190,7 +192,7 @@ function drawPaintLayer(ctx: Ctx2D, clip: Clip, t: number, width: number, height
   ctx.translate(width / 2 + tr.x * width, height / 2 + tr.y * height);
   if (tr.rotation) ctx.rotate((tr.rotation * Math.PI) / 180);
   ctx.scale(tr.scale, tr.scale);
-  drawPaint(ctx, clip.paint!, keyTimeAt(clip, t), clip.id);
+  drawPaint(ctx, clip.paint!, keyTimeAt(clip, t), clip.id, below);
   ctx.restore();
 }
 

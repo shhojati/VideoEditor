@@ -63,7 +63,8 @@ const PLAIN: Record<string, Handler> = {
   KeyG: () => setTool('pen'),
   KeyQ: shapeToolKey,
   KeyT: () => setTool('text'),
-  KeyB: () => setTool('brush'),
+  // Shift+B: the clone stamp.
+  KeyB: (e) => setTool(e.shiftKey ? 'clone' : 'brush'),
   KeyE: () => setTool('eraser'),
   // Previous / next drawing of the selected frame-by-frame paint.
   Comma: () => stepSelectedDrawing(-1),

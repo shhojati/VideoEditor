@@ -11,6 +11,7 @@ const TOOLS: { tool: Tool; key: string; icon?: string }[] = [
   { tool: 'shape', key: 'Q' },
   { tool: 'text', key: 'T', icon: 'T' },
   { tool: 'brush', key: 'B', icon: '🖌' },
+  { tool: 'clone', key: 'Shift+B', icon: '⧉' },
   { tool: 'eraser', key: 'E', icon: '⌫' },
 ];
 
@@ -58,7 +59,7 @@ export function ToolBar() {
           ))}
         </div>
       )}
-      {(tool === 'brush' || tool === 'eraser') && <BrushOptions />}
+      {(tool === 'brush' || tool === 'eraser' || tool === 'clone') && <BrushOptions />}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { isActiveAt, placeMedia } from '../../engine/render/renderFrame';
 import { maskShapeAt } from '../../engine/render/masks';
 import { flatten } from '../../model/masks';
 import { isPaintLayer, keepsAspect } from '../../model/overlays';
+import { paintBounds } from '../../model/paint';
+import { applyAffine, invertAffine, layerAffine } from '../../engine/render/masks';
 import type { Clip, Project, Track } from '../../model/types';
 import { keyTimeAt } from '../../model/remap';
 
@@ -99,6 +101,16 @@ export const corners = (b: Box): Pt[] =>
 export function contains(b: Box, p: Pt, tolerance = 0) {
   const q = toLocal(b, p);
   return Math.abs(q.x) <= b.w / 2 + tolerance && Math.abs(q.y) <= b.h / 2 + tolerance;
+}
+
+/** Whether project point p is within `slack` (project px) of a paint layer's strokes (as drawn: `clip` keyed and moved). */
+export function nearPaint(project: Project, clip: Clip, p: Pt, slack: number): boolean {
+  const b = paintBounds(clip.paint);
+  const A = b && layerAffine(project, clip);
+  if (!A) return false;
+  const q = applyAffine(invertAffine(A), p);
+  const k = slack / (Math.hypot(A[0], A[1]) || 1);
+  return q.x >= b.x0 - k && q.x <= b.x1 + k && q.y >= b.y0 - k && q.y <= b.y1 + k;
 }
 
 /** Visual clips under the playhead, topmost first, on unlocked tracks. */

@@ -701,3 +701,19 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 
 ### Known issues / not done
 - No "duplicate the previous drawing" or exposure sheet; retiming a drawing is per stroke in the stroke list.
+
+## Post-MVP 26 — Clone Stamp ✅ (2026-10-22)
+
+### Done
+- **Clone stamp (Shift+B, ⧉ in the tool strip)**: Alt-click (or, before a source is set, a plain click, for touch screens) picks where to copy from; painting copies the picture from that offset inside the stroke, with the brush's size, hardness, opacity and how long the stroke shows. The offset stays for the next strokes (After Effects' "Aligned") until a new source is picked; a source set on one clip does not carry over to another. A dashed ring shows the source (and follows the brush while painting).
+- On a video or photo the strokes copy the clip's own picture at the same frame (so a moving picture stays moving under the clone); on a paint layer they copy what is drawn below it.
+- Rendering: clone strokes are drawn each frame from a snapshot of the picture taken before them (strokes do not copy each other), then the erase and paint canvases as before.
+- **Selecting on the preview**: a paint layer is picked only near its strokes, so clips under a full-frame paint layer can still be clicked.
+
+### Verified
+- In the page, `drawPaint` with a clone stroke over a blue/red canvas copies the red from 120 px away inside the stroke and leaves the rest blue.
+- In the browser: the clone stroke is stored with its offset; the video under a paint layer is selected by clicking it on the preview.
+
+### Known issues / not done
+- The source is always the same frame; After Effects' source time offset (copying from another moment) is not done.
+- Clone strokes are applied after the eraser and before brush strokes, whatever order they were painted in.

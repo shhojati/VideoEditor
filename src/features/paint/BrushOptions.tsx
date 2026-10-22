@@ -8,6 +8,8 @@ export function BrushOptions() {
   const tool = useTool((s) => s.tool);
   const b = useTool((s) => s.brush);
   const erasing = tool === 'eraser';
+  const cloning = tool === 'clone';
+  const source = useTool((s) => s.cloneSource);
   return (
     <div
       data-testid="brush-options"
@@ -15,7 +17,17 @@ export function BrushOptions() {
       role="group"
       className="w-60 space-y-1.5 rounded border border-line bg-surface-2/95 p-2 text-xs shadow-lg"
     >
-      {!erasing && <ColorField label={t('paint.color')} value={b.color} onChange={(v) => v && setBrush({ color: v })} />}
+      {cloning && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-sky-300">{t(source ? 'paint.cloneReady' : 'paint.cloneHint')}</p>
+          {source && (
+            <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49]" onClick={() => useTool.setState({ cloneSource: null })}>
+              {t('paint.cloneReset')}
+            </button>
+          )}
+        </div>
+      )}
+      {!erasing && !cloning && <ColorField label={t('paint.color')} value={b.color} onChange={(v) => v && setBrush({ color: v })} />}
       <NumberField label={t('paint.size')} value={b.size} min={1} max={400} step={1} unit="px" onChange={(v) => setBrush({ size: Math.round(v) })} />
       <NumberField label={t('paint.hardness')} value={b.hardness} min={0} max={1} factor={100} unit="%" onChange={(v) => setBrush({ hardness: v })} />
       <NumberField label={t('paint.opacity')} value={b.opacity} min={0.05} max={1} factor={100} unit="%" onChange={(v) => setBrush({ opacity: v })} />
@@ -28,7 +40,7 @@ export function BrushOptions() {
       {b.duration === 'custom' && (
         <NumberField label={t('paint.seconds')} value={b.seconds} min={0.1} max={60} step={0.1} unit="s" onChange={(v) => setBrush({ seconds: v })} />
       )}
-      {!erasing && (
+      {!erasing && !cloning && (
         <NumberField label={t('paint.writeOn')} value={b.writeOn} min={0} max={10} step={0.1} unit="s" onChange={(v) => setBrush({ writeOn: v })} />
       )}
       <label className="flex items-center gap-2 text-neutral-300" title={t('paint.framesHint')}>

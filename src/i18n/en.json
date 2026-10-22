@@ -122,7 +122,8 @@
     "deleteStroke": "Delete stroke",
     "strokeProp": "Change stroke",
     "clearPaint": "Clear paint",
-    "paintFrames": "Frame-by-frame"
+    "paintFrames": "Frame-by-frame",
+    "clone": "Clone stamp"
   },
   "panels": {
     "media": "Media",
@@ -603,7 +604,8 @@
       "toolShape": "Shape tool (again: next shape)",
       "toolText": "Type tool",
       "toolBrush": "Brush / eraser",
-      "drawingStep": "Previous/next drawing (frame-by-frame paint)"
+      "drawingStep": "Previous/next drawing (frame-by-frame paint)",
+      "toolClone": "Clone stamp"
     }
   },
   "transitions": {
@@ -1510,7 +1512,8 @@
     "textHint": "Type tool: click to add a text there, or click a text to edit it",
     "typeHere": "Type here (Esc or Ctrl+Enter to finish)",
     "brush": "Brush",
-    "eraser": "Eraser"
+    "eraser": "Eraser",
+    "clone": "Clone stamp"
   },
   "paint": {
     "layer": "Paint",
@@ -1546,6 +1549,9 @@
     "drawing": "Drawing",
     "prevDrawing": "Previous drawing",
     "nextDrawing": "Next drawing",
-    "onion": "Onion skin (previous drawing red, next green)"
+    "onion": "Onion skin (previous drawing red, next green)",
+    "cloneHint": "Clone stamp: Alt-click (or click) where to copy from, then paint",
+    "cloneReady": "Source set: paint to copy it. Alt-click to pick another source.",
+    "cloneReset": "Pick a new source"
   }
 }

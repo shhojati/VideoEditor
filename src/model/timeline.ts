@@ -3,7 +3,7 @@
 // Invariant: clips on one track never overlap and are kept sorted by start.
 import { newId } from './factories';
 import { isOverlay } from './overlays';
-import type { Asset, AssetKind, Clip, Effect, ID, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
+import type { Asset, AssetKind, Clip, Effect, ID, PaintProps, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
 import { handles, isLinear, retime, sourceLength, SPEED_RANGE } from './remap';
 import { cloneSequence, sequenceDuration } from './sequences';
 
@@ -305,7 +305,7 @@ export function cueBoundaries(p: Project): number[] {
 export const TEXT_DEFAULT_DURATION = 3;
 
 /** A clip that draws itself (text or shape): no media, default transform slightly below centre for text. */
-export function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects'>): Clip {
+export function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects' | 'paint'>): Clip {
   return {
     id: newId(),
     start,
@@ -345,6 +345,12 @@ export const addAdjustmentClip = (p: Project, time: number, effects: Effect[] = 
   addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { adjustment: true, effects }), duration: ADJUSTMENT_DEFAULT_DURATION });
 
 export const ADJUSTMENT_DEFAULT_DURATION = 5;
+
+export const PAINT_DEFAULT_DURATION = 5;
+
+/** A paint layer (brush strokes only), full frame, on a graphics track. */
+export const addPaintClip = (p: Project, time: number, paint: PaintProps): ID =>
+  addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { paint }), duration: PAINT_DEFAULT_DURATION });
 
 /** An adjustment layer over the given time range, on a graphics track above `trackIndex`. */
 export const addAdjustmentClipAbove = (p: Project, trackIndex: number, start: number, duration: number, props: Pick<Clip, 'effects' | 'masks' | 'transform'>): ID =>

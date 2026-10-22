@@ -3,9 +3,9 @@
 // keyframe overrides would not look reset).
 import { defaultParams } from '../../model/effects';
 import { ASPECT_PRESETS, DEFAULT_SUBTITLE_STYLE } from '../../model/factories';
-import { defaultShape, isOverlay, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
+import { defaultShape, isOverlay, isPaintLayer, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
 import { setSpeedCurve } from '../../model/speed';
-import { ADJUSTMENT_DEFAULT_DURATION, findClip, IMAGE_DEFAULT_DURATION, setClipSpeed, TEXT_DEFAULT_DURATION, trimClip } from '../../model/timeline';
+import { ADJUSTMENT_DEFAULT_DURATION, findClip, IMAGE_DEFAULT_DURATION, PAINT_DEFAULT_DURATION, setClipSpeed, TEXT_DEFAULT_DURATION, trimClip } from '../../model/timeline';
 import { DEFAULT_TRANSITION_DURATION, TRANSITION_KINDS, updateTransition } from '../../model/transitions';
 import type { Clip, ID, Project, SubtitleStyle } from '../../model/types';
 import { setKeepPitch } from '../../model/voiceFx';
@@ -44,7 +44,7 @@ export function resetClipSection(clipId: ID, section: ClipSection) {
         const asset = c.assetId ? p.assets[c.assetId] : undefined;
         const media = (asset?.kind === 'video' || asset?.kind === 'audio' || !!c.sequenceId) && !c.freeze;
         if (media && !c.speedCurve) c.inPoint = 0;
-        const length = c.adjustment ? ADJUSTMENT_DEFAULT_DURATION : isOverlay(c) ? TEXT_DEFAULT_DURATION : IMAGE_DEFAULT_DURATION;
+        const length = c.adjustment ? ADJUSTMENT_DEFAULT_DURATION : isPaintLayer(c) ? PAINT_DEFAULT_DURATION : isOverlay(c) ? TEXT_DEFAULT_DURATION : IMAGE_DEFAULT_DURATION;
         trimClip(p, c.id, 'end', media ? Number.MAX_SAFE_INTEGER : c.start + length);
       });
     case 'speed':

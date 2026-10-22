@@ -5,7 +5,7 @@ import { arrowSize } from '../../engine/render/shapes';
 import { isActiveAt, placeMedia } from '../../engine/render/renderFrame';
 import { maskShapeAt } from '../../engine/render/masks';
 import { flatten } from '../../model/masks';
-import { keepsAspect } from '../../model/overlays';
+import { isPaintLayer, keepsAspect } from '../../model/overlays';
 import type { Clip, Project, Track } from '../../model/types';
 import { keyTimeAt } from '../../model/remap';
 
@@ -62,6 +62,10 @@ export function clipBox(project: Project, clip: Clip, measure: Measure, t = clip
   if (clip.adjustment) {
     const e = adjustmentExtent(project, clip, t);
     return e ? { ...centre, w: e.w * tr.scale, h: e.h * tr.scale } : null;
+  }
+  if (isPaintLayer(clip)) {
+    // A paint layer covers the frame at scale 1 (strokes may go anywhere on it).
+    return { ...centre, w: W * tr.scale, h: H * tr.scale };
   }
   if (clip.text) {
     const l = layoutText(measure, clip, W);

@@ -1,12 +1,40 @@
-// The preview's tools (After Effects' toolbar): select, hand, pen, shape and type. The active tool
-// decides what a click or drag on the preview does.
+// The preview's tools (After Effects' toolbar): select, hand, pen, shape, type, brush and eraser.
+// The active tool decides what a click or drag on the preview does.
 import { create } from 'zustand';
 import { SHAPE_KINDS } from '../../model/overlays';
 import type { ID, ShapeKind } from '../../model/types';
 import { cancelPen, startPen, useMasks } from '../masks/maskService';
 import { useTimelineUi } from '../timeline/timelineUi';
 
-export type Tool = 'select' | 'hand' | 'pen' | 'shape' | 'text';
+export type Tool = 'select' | 'hand' | 'pen' | 'shape' | 'text' | 'brush' | 'eraser';
+
+/** The brush (and eraser) settings new strokes get. */
+export interface BrushSettings {
+  color: string;
+  /** Diameter in project pixels. */
+  size: number;
+  /** 0..1 */
+  hardness: number;
+  opacity: number;
+  /** How long a new stroke shows: to the clip's end, one frame, or `seconds`. */
+  duration: 'constant' | 'frame' | 'custom';
+  seconds: number;
+  /** Write On: seconds the stroke takes to draw itself (0: off). */
+  writeOn: number;
+}
+
+export const BRUSH_DEFAULTS: BrushSettings = { color: '#ff3b30', size: 24, hardness: 0.8, opacity: 1, duration: 'constant', seconds: 1, writeOn: 0 };
+
+const BRUSH_KEY = 'video-editor:brush';
+
+function loadBrush(): BrushSettings {
+  try {
+    const saved = JSON.parse(localStorage.getItem(BRUSH_KEY) ?? 'null') as Partial<BrushSettings> | null;
+    return { ...BRUSH_DEFAULTS, ...saved };
+  } catch {
+    return BRUSH_DEFAULTS;
+  }
+}
 
 interface ToolState {
   tool: Tool;
@@ -17,9 +45,21 @@ interface ToolState {
    * undo step. A new clip left empty is taken back.
    */
   editingText: { clipId: ID; key: string; created: boolean } | null;
+  brush: BrushSettings;
 }
 
-export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null }));
+export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush() }));
+
+/** Change the brush settings (remembered on this device). */
+export function setBrush(change: Partial<BrushSettings>) {
+  const brush = { ...useTool.getState().brush, ...change };
+  useTool.setState({ brush });
+  try {
+    localStorage.setItem(BRUSH_KEY, JSON.stringify(brush));
+  } catch {
+    // Storage may be unavailable (private window); the settings still apply for now.
+  }
+}
 
 export function setTool(tool: Tool) {
   if (useTool.getState().tool === 'pen' && tool !== 'pen' && useMasks.getState().pen) cancelPen();

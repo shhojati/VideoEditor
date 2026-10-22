@@ -15,8 +15,11 @@ export const BLEND_GROUPS: readonly (readonly BlendMode[])[] = [
 
 export const BLEND_MODES = BLEND_GROUPS.flat() as [BlendMode, ...BlendMode[]];
 
-/** Text, shape or adjustment layer: no media file to decode. */
-export const isOverlay = (clip: Clip) => !!(clip.text || clip.shape || clip.adjustment);
+/** A clip that is only brush strokes (no media under them). */
+export const isPaintLayer = (clip: Clip) => !!clip.paint && !clip.assetId && !clip.sequenceId && !clip.text && !clip.shape && !clip.adjustment;
+
+/** Text, shape, paint or adjustment layer: no media file to decode. */
+export const isOverlay = (clip: Clip) => !!(clip.text || clip.shape || clip.adjustment) || isPaintLayer(clip);
 
 /** Shapes whose width and height are kept equal. */
 export const keepsAspect = (kind: ShapeKind) => kind === 'square' || kind === 'circle';

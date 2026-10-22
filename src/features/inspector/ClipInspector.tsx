@@ -11,7 +11,8 @@ import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField 
 import { ShapeSection } from './ShapeSection';
 import { EffectsSection } from './EffectsSection';
 import { isPixelBlend } from '../../engine/render/blend';
-import { BLEND_GROUPS, isOverlay } from '../../model/overlays';
+import { BLEND_GROUPS, isOverlay, isPaintLayer } from '../../model/overlays';
+import { PaintSection } from '../paint/PaintSection';
 import { MotionSection, TrackingSection } from '../tracking/TrackingSection';
 import { MasksSection } from '../masks/MasksSection';
 import { keyedClip } from '../../model/keyframes';
@@ -77,7 +78,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   return (
     <fieldset disabled={track.locked} className="min-w-0 disabled:opacity-60" data-testid="clip-inspector">
       <div className="truncate border-b border-line px-3 py-2 text-sm font-medium text-white" dir="auto">
-        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
+        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : isPaintLayer(clip) ? `🖌 ${t('paint.layer')}` : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
         {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
       </div>
 
@@ -111,6 +112,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {timed && asset && !clip.freeze && <SpeedSection clip={clip} asset={asset} audible={!!audible} set={set} />}
 
       {isText && <TextSection clipId={clipId} text={clip.text!} set={set} />}
+      {clip.paint && <PaintSection project={project} clip={clip} />}
       {clip.shape && <ShapeSection clipId={clipId} shape={shown.shape!} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
 
       {clip.adjustment && !clip.masks?.length && (

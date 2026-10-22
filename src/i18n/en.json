@@ -116,7 +116,13 @@
     "makeCompound": "Make compound clip",
     "breakApart": "Break apart compound clip",
     "renameCompound": "Rename compound clip",
-    "applyLayout": "Apply layout"
+    "applyLayout": "Apply layout",
+    "paint": "Paint",
+    "erase": "Erase",
+    "deleteStroke": "Delete stroke",
+    "strokeProp": "Change stroke",
+    "clearPaint": "Clear paint",
+    "paintFrames": "Frame-by-frame"
   },
   "panels": {
     "media": "Media",
@@ -595,7 +601,8 @@
       "toolSelect": "Selection tool",
       "toolHand": "Hand tool (pan the preview)",
       "toolShape": "Shape tool (again: next shape)",
-      "toolText": "Type tool"
+      "toolText": "Type tool",
+      "toolBrush": "Brush / eraser"
     }
   },
   "transitions": {
@@ -1500,6 +1507,34 @@
     "shapeHint": "Shape tool: drag to draw a shape (Shift: keep it square); click for the default size",
     "maskHint": "Shape tool: drag to draw a mask on the selected clip",
     "textHint": "Type tool: click to add a text there, or click a text to edit it",
-    "typeHere": "Type here (Esc or Ctrl+Enter to finish)"
+    "typeHere": "Type here (Esc or Ctrl+Enter to finish)",
+    "brush": "Brush",
+    "eraser": "Eraser"
+  },
+  "paint": {
+    "layer": "Paint",
+    "title": "Paint",
+    "options": "Brush settings",
+    "color": "Colour",
+    "size": "Size",
+    "hardness": "Hardness",
+    "opacity": "Opacity",
+    "duration": "Shows",
+    "durations": {
+      "constant": "To the end",
+      "frame": "One frame",
+      "custom": "For…"
+    },
+    "seconds": "Seconds",
+    "writeOn": "Write on",
+    "writeOnHint": "Seconds the stroke takes to draw itself (0: shows at once)",
+    "targetHint": "Paints on the selected video, photo or paint layer; with nothing selected, a new paint layer starts. Strokes show from the playhead.",
+    "brushHint": "Brush: drag to paint",
+    "eraserHint": "Eraser: drag to rub out the clip and its paint",
+    "count_one": "{{count}} stroke",
+    "count_other": "{{count}} strokes",
+    "goTo": "Go to where this stroke starts",
+    "deleteStroke": "Delete stroke",
+    "clear": "Clear all strokes"
   }
 }

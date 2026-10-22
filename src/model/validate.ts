@@ -78,6 +78,21 @@ const rotoMask = z.object({
   track: z.object({ trackerId: z.string(), position: z.boolean(), rotation: z.boolean(), scale: z.boolean(), ref: num }).optional(),
 });
 
+const paintStroke = z.object({
+  id: z.string(),
+  tool: z.enum(['brush', 'eraser', 'clone']),
+  points: z.array(num).refine((p) => p.length % 3 === 0, 'stroke points come in x, y, pressure triples'),
+  pressure: z.boolean().optional(),
+  size: num.positive(),
+  hardness: unit,
+  opacity: unit,
+  color: z.string(),
+  start: num,
+  duration: num.positive().optional(),
+  writeOn: num.positive().optional(),
+  clone: z.object({ dx: num, dy: num }).optional(),
+});
+
 const clip = z.object({
   id: z.string(),
   assetId: z.string().optional(),
@@ -117,6 +132,7 @@ const clip = z.object({
   }),
   text: textProps.optional(),
   shape: shapeProps.optional(),
+  paint: z.object({ strokes: z.array(paintStroke), frames: z.object({ hold: z.int().min(1).max(12) }).optional() }).optional(),
   blend: z.enum(BLEND_MODES).optional(),
   effects: z
     .array(

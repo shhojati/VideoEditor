@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { clipsWithTracker } from '../../engine/render/motion';
-import { isOverlay } from '../../model/overlays';
+import { isOverlay, isPaintLayer } from '../../model/overlays';
 import type { Clip, MotionLink, Project, Tracker } from '../../model/types';
 import { Section } from '../inspector/controls';
 import { select } from '../timeline/timelineUi';
@@ -30,6 +30,7 @@ function clipName(project: Project, clip: Clip, t: (k: string) => string) {
   if (clip.adjustment) return t('effects.adjustment');
   if (clip.text) return clip.text.content.split('\n')[0].slice(0, 30) || t('inspector.textClip');
   if (clip.shape) return t('inspector.shapeClip');
+  if (isPaintLayer(clip)) return t('paint.layer');
   return (clip.assetId && project.assets[clip.assetId]?.name) || '?';
 }
 

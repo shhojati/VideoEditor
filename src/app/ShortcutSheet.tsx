@@ -32,6 +32,7 @@ export const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'G', label: 'maskPen' },
   { keys: 'Q', label: 'toolShape' },
   { keys: 'T', label: 'toolText' },
+  { keys: 'B / E', label: 'toolBrush' },
   { keys: 'K', label: 'keyframe' },
   { keys: '[ / ]', label: 'keyframeJump' },
   { keys: 'Esc', label: 'deselect' },

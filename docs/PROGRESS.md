@@ -667,3 +667,22 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - The text box is a plain editing box over the picture, not the text itself in its own font and size.
 - Brushes, pen-drawn shapes, parenting, null objects and solids follow in the next steps.
+
+## Post-MVP 24 — Brushes: paint layers, painting on clips, eraser, Write On ✅ (2026-10-22)
+
+### Done
+- **Brush (B)** and **Eraser (E)** in the preview's tool strip, with After Effects' Paint panel beside it: colour, size (project px), hardness (soft edge), opacity, how long a new stroke shows (to the end of the clip, one frame, or for N seconds) and **Write On** (seconds the stroke takes to draw itself). Settings are remembered on the device.
+- **Where a stroke goes**: on the selected video or photo (in its picture, so it moves, scales, masks, takes effects and blends with the clip, like After Effects' paint), on the selected paint layer, or, with nothing such selected, on a **new paint layer** (🖌 Paint on a graphics track, 5 s, full frame; it is selected, so the next strokes join it). Strokes start at the playhead; times are the clip's source time, so trims and splits keep them.
+- **Drawing**: pointer events with coalesced samples for smooth fast strokes; a **pen's pressure** changes the width (mouse and finger draw an even line). The stroke shows as it is drawn; lifting the pointer makes it one undo step. A ring shows the brush size.
+- **Eraser**: on a video or photo it rubs out the clip's own pixels and the paint under it; on a paint layer it rubs out paint. A later brush stroke paints over an erased area.
+- **Rendering** (`engine/render/paint.ts`, shared by preview and export): each stroke is an outline polygon from `perfect-freehand` (MIT, pinned 1.2.3); a soft edge is the polygon's shadow drawn out of sight, like the mask feather. The strokes of a clip are rasterised into a paint canvas and an erase canvas and kept until the visible strokes or the view change; a clip whose strokes rub out its pixels gets a layer of its own.
+- **Inspector → Paint**: the strokes, newest first; per stroke when it starts (click to go there), how long it shows, Write On, delete; "Clear all strokes".
+- Project version 5 (the `paint` field); older app versions refuse such projects instead of dropping the strokes.
+
+### Verified
+- Unit tests (`model/paint.test.ts`): visibility windows, Write On progress and the point cut along the path, eraser/clone needs a layer, frame-by-frame timing, a paint layer survives save → load.
+- In the browser: with nothing selected a stroke made a Paint layer; on the selected video a brush stroke shows in the exact brush colour (#ff3b30) and an eraser stroke leaves the black background along its path while the video stays on both sides; the inspector lists the strokes.
+
+### Known issues / not done
+- The live stroke while drawing shows with a hard edge; the soft edge appears when it is committed.
+- No pressure on touch screens (fingers draw an even line).

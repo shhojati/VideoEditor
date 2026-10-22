@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { SHAPE_KINDS } from '../../model/overlays';
 import { SHAPE_ICONS } from '../shapes/shapesUi';
+import { BrushOptions } from '../paint/BrushOptions';
 import { setTool, useTool, type Tool } from './toolService';
 
 const TOOLS: { tool: Tool; key: string; icon?: string }[] = [
@@ -9,11 +10,13 @@ const TOOLS: { tool: Tool; key: string; icon?: string }[] = [
   { tool: 'pen', key: 'G', icon: '✒' },
   { tool: 'shape', key: 'Q' },
   { tool: 'text', key: 'T', icon: 'T' },
+  { tool: 'brush', key: 'B', icon: '🖌' },
+  { tool: 'eraser', key: 'E', icon: '⌫' },
 ];
 
 const btn = 'flex h-7 w-7 items-center justify-center rounded text-sm leading-none';
 
-/** The preview's tool strip (top-left); the shape tool opens a row of shapes beside it. */
+/** The preview's tool strip (top-left); beside it, the shape tool's shapes or the brush settings. */
 export function ToolBar() {
   const { t } = useTranslation();
   const tool = useTool((s) => s.tool);
@@ -55,6 +58,7 @@ export function ToolBar() {
           ))}
         </div>
       )}
+      {(tool === 'brush' || tool === 'eraser') && <BrushOptions />}
     </div>
   );
 }

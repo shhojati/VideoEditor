@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Asset, Clip, Track } from '../../model/types';
+import { isPaintLayer } from '../../model/overlays';
 import { useMedia } from '../media-bin/mediaService';
 import { SHAPE_ICONS } from '../shapes/shapesUi';
 import { clipKeyTimes } from '../../model/masks';
@@ -20,6 +21,7 @@ const COLORS = {
   shape: 'bg-fuchsia-800/90 border-fuchsia-500',
   adjustment: 'bg-slate-600/80 border-slate-300 border-dashed',
   compound: 'bg-teal-800/90 border-teal-400',
+  paint: 'bg-rose-800/90 border-rose-400',
 };
 
 interface Props {
@@ -57,7 +59,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
   const left = clip.start * pps;
   const width = Math.max(2, clip.duration * pps);
   const { t } = useTranslation();
-  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : (asset?.kind ?? 'video');
+  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : isPaintLayer(clip) ? 'paint' : (asset?.kind ?? 'video');
   const [fxHover, setFxHover] = useState(false);
   const live = clip.effects?.filter((e) => e.enabled) ?? [];
   // Only the on-screen part of the clip gets thumbnails / waveform.
@@ -112,7 +114,9 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
           ? `◫ ${t('effects.adjustment')}`
           : clip.shape
             ? `${SHAPE_ICONS[clip.shape.kind]} ${t(`shapes.${clip.shape.kind}`)}`
-            : (clip.text?.content ?? asset?.name ?? '')}
+            : isPaintLayer(clip)
+              ? `🖌 ${t('paint.layer')}`
+              : (clip.text?.content ?? asset?.name ?? '')}
       </span>
       {live.length > 0 && (
         <span

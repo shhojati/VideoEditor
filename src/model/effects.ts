@@ -216,9 +216,9 @@ export function transitionCompletion(e: Effect, local: number, duration: number)
 
 export const isTransitionEffect = (kind: EffectKind) => EFFECT_MENU.find((m) => m.category === 'transition')!.kinds.includes(kind);
 
-/** Clips that can carry effects: anything visual (media, text, shapes) and adjustment layers. */
+/** Clips that can carry effects: anything visual (media, text, shapes, paint) and adjustment layers. */
 export function acceptsEffects(clip: Clip, assetKind: AssetKind | undefined): boolean {
-  return !!(clip.text || clip.shape || clip.adjustment || assetKind === 'video' || assetKind === 'image');
+  return !!(clip.text || clip.shape || clip.adjustment || clip.paint || assetKind === 'video' || assetKind === 'image');
 }
 
 /**

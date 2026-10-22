@@ -280,6 +280,41 @@ export interface ShapeProps {
   fadeOut: number;
 }
 
+/**
+ * A brush stroke (After Effects' paint) in the clip's layer units, like mask points. Times are
+ * source times of the clip, like keyframes, so trims and splits keep them.
+ */
+export interface PaintStroke {
+  id: ID;
+  /** brush paints `color`; eraser rubs out the clip and the paint under it; clone copies the picture `clone` away. */
+  tool: 'brush' | 'eraser' | 'clone';
+  /** x, y and pressure (0..1) of each point, one after another. */
+  points: number[];
+  /** Drawn with a pen: its pressure changes the width (otherwise an even line). */
+  pressure?: boolean;
+  /** Diameter, layer units. */
+  size: number;
+  /** 0..1: 1 a crisp edge, lower a softer one. */
+  hardness: number;
+  /** 0..1 */
+  opacity: number;
+  color: string;
+  /** Shows from source time `start` for `duration` s (absent: to the end of the clip). */
+  start: number;
+  duration?: number;
+  /** Draws itself along its path over this many seconds from `start` (After Effects' Write On). */
+  writeOn?: number;
+  /** Clone: where the picture is taken from, relative to the painted point (layer units). */
+  clone?: { dx: number; dy: number };
+}
+
+/** Brush strokes: on a video or photo they paint on it; a clip with only paint is a paint layer. */
+export interface PaintProps {
+  strokes: PaintStroke[];
+  /** Frame-by-frame drawing: each drawing holds this many frames (1, 2 or 3: on ones, twos, threes). */
+  frames?: { hold: number };
+}
+
 /** How a visual clip mixes with the layers below it (After Effects' layer blend modes). */
 export type BlendMode =
   | 'normal'
@@ -340,6 +375,8 @@ export interface Clip {
   audio: ClipAudio;
   text?: TextProps;
   shape?: ShapeProps;
+  /** Brush strokes painted on the clip, or, alone, a paint layer (see model/paint.ts). */
+  paint?: PaintProps;
   /** Default 'normal'. */
   blend?: BlendMode;
   /** Applied in order to the clip's pixels (see model/effects.ts). */

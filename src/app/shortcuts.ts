@@ -51,12 +51,14 @@ const PLAIN: Record<string, Handler> = {
   // Escape leaves a tool first, then clears the selection.
   Escape: () => (useTool.getState().tool !== 'select' ? setTool('select') : select([])),
   // The preview's tools, with After Effects' keys: selection, hand, pen (a mask on the selected
-  // clip), shapes (Q again: the next shape), type.
+  // clip), shapes (Q again: the next shape), type, brush and eraser.
   KeyV: () => setTool('select'),
   KeyH: () => setTool('hand'),
   KeyG: () => setTool('pen'),
   KeyQ: shapeToolKey,
   KeyT: () => setTool('text'),
+  KeyB: () => setTool('brush'),
+  KeyE: () => setTool('eraser'),
   // Keyframes on the selected clip at the playhead (InShot's ◆ button), previous / next keyframe.
   KeyK: toggleSelectedKeyframe,
   BracketLeft: () => jumpSelectedKeyframe(-1),

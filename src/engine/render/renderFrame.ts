@@ -3,17 +3,19 @@
 import { clipVisibleRange, cutTime } from '../../model/transitions';
 import type { Clip, Project, Track, Transition } from '../../model/types';
 import { keyedClip } from '../../model/keyframes';
-import { isOverlay } from '../../model/overlays';
+import { isOverlay, isPaintLayer } from '../../model/overlays';
+import { touchesPixels } from '../../model/paint';
 import { applyEffects, hasLiveEffects, type FxEnv } from '../effects/applyEffects';
 import { drawBlended, seedOf } from './blend';
 import { applyMasks, resolveMasks, type Affine, type ResolvedMasks } from './masks';
 import { withMotion } from './motion';
 import { placeMedia } from './placement';
+import { drawPaint } from './paint';
 import { drawShapeClip } from './shapes';
 import { drawSubtitles } from './subtitles';
 import { drawTextClip } from './text';
 import { drawTransition } from './transitions';
-import { mediaTimeAt } from '../../model/remap';
+import { keyTimeAt, mediaTimeAt } from '../../model/remap';
 import { MAX_NEST, sequenceDuration, sequenceView } from '../../model/sequences';
 
 /** Anything with display dimensions that can draw itself (Mediabunny VideoSample fits this). */
@@ -135,14 +137,16 @@ export function drawClip(
     drawBlended(ctx, clip.blend, copyBelow, { seed, post, alpha: clip.transform.opacity });
     return;
   }
-  // A clip is cut out first, so its effects (glow, shadow…) follow the cut-out's edge.
+  // A clip is cut out first, so its effects (glow, shadow…) follow the cut-out's edge. Paint that
+  // rubs out or copies the clip's pixels needs the clip on a layer of its own.
+  const own = !isOverlay(clip) && touchesPixels(clip.paint) ? () => {} : undefined;
   const post =
     cut && fx
       ? (layer: OffscreenCanvas) => {
           cut(layer);
           fx(layer);
         }
-      : (cut ?? fx);
+      : (cut ?? fx ?? own);
   drawBlended(ctx, clip.blend, (c) => drawClipPixels(c, clip, t, lookup, width, height), { seed, post });
 }
 
@@ -151,7 +155,8 @@ function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, 
     // Inside a transition an overlay may be drawn outside its own range: hold its edge state.
     const tc = Math.min(clip.start + clip.duration - 1e-3, Math.max(clip.start, t));
     if (clip.text) drawTextClip(ctx, clip, tc, width, height);
-    else drawShapeClip(ctx, clip, tc, width, height);
+    else if (clip.shape) drawShapeClip(ctx, clip, tc, width, height);
+    else if (isPaintLayer(clip)) drawPaintLayer(ctx, clip, tc, width, height);
     return;
   }
   const src = lookup(clip, t);
@@ -167,6 +172,25 @@ function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, 
     ctx.clip();
   }
   src.draw(ctx, p.frame.x, p.frame.y, p.frame.w, p.frame.h);
+  if (clip.paint) {
+    // Strokes are in source pixels over the uncropped picture.
+    ctx.translate(p.frame.x, p.frame.y);
+    ctx.scale(p.frame.w / src.displayWidth, p.frame.h / src.displayHeight);
+    drawPaint(ctx, clip.paint, keyTimeAt(clip, t), clip.id);
+  }
+  ctx.restore();
+}
+
+/** A paint layer: its strokes around the clip's position (project pixels at scale 1). */
+function drawPaintLayer(ctx: Ctx2D, clip: Clip, t: number, width: number, height: number) {
+  const tr = clip.transform;
+  if (tr.opacity <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= tr.opacity;
+  ctx.translate(width / 2 + tr.x * width, height / 2 + tr.y * height);
+  if (tr.rotation) ctx.rotate((tr.rotation * Math.PI) / 180);
+  ctx.scale(tr.scale, tr.scale);
+  drawPaint(ctx, clip.paint!, keyTimeAt(clip, t), clip.id);
   ctx.restore();
 }
 

@@ -48,7 +48,9 @@ self.onmessage = async (e: MessageEvent<SttRequest>) => {
     const t0 = performance.now();
     const asr = (await pipeline('automatic-speech-recognition', `onnx-community/${modelName(model, words)}`, {
       device,
-      dtype: { encoder_model: 'fp32', decoder_model_merged: DECODER_DTYPE[device] },
+      // `model` is the key transformers.js's progress pre-scan looks the encoder up by; without it the
+      // pre-scan asks for encoder_model_quantized.onnx (a harmless 404) and leaves the encoder out of the total.
+      dtype: { model: 'fp32', encoder_model: 'fp32', decoder_model_merged: DECODER_DTYPE[device] },
       progress_callback: (p: { status: string; file?: string; progress?: number }) => {
         if (p.status === 'progress') post({ type: 'loading', file: p.file, progress: p.progress });
       },

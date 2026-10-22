@@ -58,12 +58,13 @@ echo "  owner/permissions of the models folder (nginx must be able to read it):"
 ls -ld models models/onnx-community 2>&1 | sed 's/^/        /'
 
 echo "== 3. Files as the browser gets them (inside the server: $LOCAL)"
-check_url() { # url
+check_url() { # url [html]: files must not come back as HTML (the SPA fallback), the page must
   h=$(curl -sS -I -m 15 "$1" 2>&1)
   code=$(echo "$h" | head -1 | awk '{print $2}')
   type=$(echo "$h" | grep -i '^content-type:' | tr -d '\r' | cut -d' ' -f2-)
   len=$(echo "$h" | grep -i '^content-length:' | tr -d '\r' | cut -d' ' -f2)
-  if [ "$code" = 200 ] && ! echo "$type" | grep -qi html; then ok "$code $type ${len:-?} B  $1"; else bad "${code:-no answer} $type  $1"; echo "$h" | head -3 | sed 's/^/        /'; fi
+  want=${2:-file}
+  if [ "$code" = 200 ] && { [ "$want" = html ] && echo "$type" | grep -qi html || { [ "$want" != html ] && ! echo "$type" | grep -qi html; }; }; then ok "$code $type ${len:-?} B  $1"; else bad "${code:-no answer} $type  $1"; echo "$h" | head -3 | sed 's/^/        /'; fi
 }
 M=/models/onnx-community/whisper-small_timestamped
 for p in /wasm/ort-wasm-simd-threaded.asyncify.mjs /wasm/ort-wasm-simd-threaded.asyncify.wasm \
@@ -72,7 +73,8 @@ for p in /wasm/ort-wasm-simd-threaded.asyncify.mjs /wasm/ort-wasm-simd-threaded.
 done
 
 echo "== 4. Same through the public domain ($DOMAIN, via Caddy)"
-for p in / /wasm/ort-wasm-simd-threaded.asyncify.wasm $M/onnx/encoder_model.onnx; do
+check_url "$DOMAIN/" html
+for p in /wasm/ort-wasm-simd-threaded.asyncify.wasm $M/onnx/encoder_model.onnx; do
   check_url "$DOMAIN$p"
 done
 echo "  headers the speech worker needs on the page (COOP/COEP):"

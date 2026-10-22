@@ -4,12 +4,12 @@
 import { ALL_FORMATS, AudioSampleSink, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { getMediaFile } from '../lib/opfs';
 import { PeakBuilder } from '../lib/peaks';
-import { BinAccumulator, STT_RATE } from '../engine/stt/audio16k';
+import { mixClip, STT_RATE, type MixStats } from '../engine/stt/audio16k';
 import { LoudnessMeter, measureNoiseProfile } from '../engine/audio/cleanDsp';
 import { detectBeats } from '../engine/audio/beats';
 import { reverseMedia } from '../engine/reverse/reverseMedia';
 import { exposeRpc } from './rpc';
-import { sourceLength, timelineTimeAt, type Timing } from '../model/remap';
+import type { Timing } from '../model/remap';
 
 const JPEG = { type: 'image/jpeg', quality: 0.72 } as const;
 
@@ -102,32 +102,37 @@ export interface MixItem extends Timing {
 /** Mix audible clips onto a 16 kHz mono timeline buffer (input for speech-to-text). */
 async function mixdown16k({ items, duration }: { items: MixItem[]; duration: number }) {
   const mix = new Float32Array(Math.ceil(duration * STT_RATE));
+  // Per clip, so a silent result can say why (see describeMix).
+  const stats: MixStats[] = [];
   for (const item of items) {
     const file = await openFile(item.opfsPath);
     const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
     try {
       const track = await input.getPrimaryAudioTrack();
-      if (!track) continue;
-      const acc = new BinAccumulator(Math.floor(item.start * STT_RATE), Math.ceil(item.duration * STT_RATE) + 1);
-      let scratch: Float32Array[] = [];
-      const srcEnd = item.inPoint + sourceLength(item);
-      for await (const sample of new AudioSampleSink(track).samples(item.inPoint, srcEnd)) {
-        const n = sample.numberOfFrames;
-        if (scratch.length !== sample.numberOfChannels || scratch[0].length !== n)
-          scratch = Array.from({ length: sample.numberOfChannels }, () => new Float32Array(n));
-        for (let c = 0; c < sample.numberOfChannels; c++) sample.copyTo(scratch[c], { planeIndex: c, format: 'f32-planar' });
-        const t0 = sample.timestamp;
-        const rate = sample.sampleRate;
-        // Source time -> timeline time -> 16 kHz output position.
-        acc.push(scratch, (i) => timelineTimeAt(item, t0 + i / rate) * STT_RATE);
-        sample.close();
+      if (!track) {
+        stats.push({ codec: 'no audio track', frames: 0, used: 0, peak: 0 });
+        continue;
       }
-      acc.addInto(mix, item.gain);
+      const read = async function* (from?: number, to?: number) {
+        let scratch: Float32Array[] = [];
+        for await (const sample of new AudioSampleSink(track).samples(from, to)) {
+          try {
+            const n = sample.numberOfFrames;
+            if (scratch.length !== sample.numberOfChannels || scratch[0].length !== n)
+              scratch = Array.from({ length: sample.numberOfChannels }, () => new Float32Array(n));
+            for (let c = 0; c < sample.numberOfChannels; c++) sample.copyTo(scratch[c], { planeIndex: c, format: 'f32-planar' });
+            yield { channels: scratch, timestamp: sample.timestamp, sampleRate: sample.sampleRate };
+          } finally {
+            sample.close();
+          }
+        }
+      };
+      stats.push({ ...(await mixClip(mix, item, read)), codec: track.codec });
     } finally {
       input.dispose();
     }
   }
-  return { result: { pcm: mix }, transfer: [mix.buffer] };
+  return { result: { pcm: mix, stats }, transfer: [mix.buffer] };
 }
 
 /** Seconds of audio the noise profile looks at (enough to find the quiet parts of long files). */

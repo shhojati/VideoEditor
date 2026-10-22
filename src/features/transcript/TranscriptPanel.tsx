@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { formatDuration } from '../../lib/time';
-import { WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
+import { defaultSize, isPhone, WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
 import { isFiller } from '../../model/transcript';
 import type { Project } from '../../model/types';
 import { useTransport } from '../../store/transport';
@@ -28,7 +28,8 @@ export function TranscriptPanel({ project }: { project: Project }) {
   const clips = useMemo(() => transcriptClips(project), [project]);
   const busy = stt.target === 'transcript' && (stt.stage === 'extracting' || stt.stage === 'loading' || stt.stage === 'transcribing');
   const audible = selection.filter((id) => project.tracks.some((tr) => tr.kind !== 'text' && tr.clips.some((c) => c.id === id && c.assetId)));
-  const model: WhisperSize = [...WHISPER_SIZES].reverse().find((s) => stt.models[s]) ?? 'small';
+  // The largest installed model, but not small on a phone (see isPhone).
+  const model: WhisperSize = (isPhone() ? (['base', 'tiny', 'small'] as const) : [...WHISPER_SIZES].reverse()).find((s) => stt.models[s]) ?? defaultSize();
 
   useEffect(() => void checkModels(), []);
 
@@ -96,7 +97,12 @@ export function TranscriptPanel({ project }: { project: Project }) {
           )}
         </div>
         {!audible.length && !clips.length && <p className="text-neutral-400">{t('transcript.intro')}</p>}
-        {stt.target === 'transcript' && stt.stage === 'error' && <p className="text-red-300">{t(`stt.errors.${stt.error}`)}</p>}
+        {stt.target === 'transcript' && stt.stage === 'error' && (
+          <p className="text-red-300">
+            {t(`stt.errors.${stt.error}`)}
+            {stt.detail && <span className="block text-[10px] text-neutral-400" dir="ltr">{stt.detail}</span>}
+          </p>
+        )}
       </div>
 
       {clips.length > 0 && (

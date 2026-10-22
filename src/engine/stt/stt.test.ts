@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BinAccumulator } from './audio16k';
+import { BinAccumulator, describeMix, mixClip, STT_RATE, type AudioChunk } from './audio16k';
 import { collapseRepeats, segmentsToCues } from './postprocess';
 import { planWindows } from './windows';
 
@@ -21,6 +21,51 @@ describe('BinAccumulator', () => {
     acc.addInto(mix, 1);
     expect(mix[5]).toBe(0.5);
     expect(mix.reduce((a, b) => a + b)).toBe(0.5);
+  });
+});
+
+describe('mixClip', () => {
+  const clip = { start: 1, duration: 1, inPoint: 2, speed: 1, gain: 1 };
+  /** One second of 0.5 at 16 kHz starting at source time `at`. */
+  const second = (at: number): AudioChunk => ({ channels: [new Float32Array(STT_RATE).fill(0.5)], timestamp: at, sampleRate: STT_RATE });
+
+  it('reads only the clip range and places it on the timeline', async () => {
+    const calls: unknown[][] = [];
+    const mix = new Float32Array(3 * STT_RATE);
+    const stats = await mixClip(mix, clip, async function* (...range) {
+      calls.push(range);
+      yield second(2);
+    });
+    expect(calls).toEqual([[2, 3]]);
+    expect(mix[STT_RATE - 1]).toBe(0);
+    expect(mix[STT_RATE]).toBe(0.5);
+    expect(stats).toMatchObject({ frames: STT_RATE, used: STT_RATE, first: 2, peak: 0.5, sampleRate: STT_RATE, channels: 1 });
+    expect(stats.retried).toBeUndefined();
+  });
+
+  it('reads the whole file when the ranged read gives nothing (some Android decoders)', async () => {
+    const calls: unknown[][] = [];
+    const mix = new Float32Array(3 * STT_RATE);
+    const stats = await mixClip(mix, clip, async function* (...range) {
+      calls.push(range);
+      if (range.length) return;
+      for (let t = 0; t < 4; t++) yield second(t);
+    });
+    expect(calls).toEqual([[2, 3], []]);
+    expect(mix[STT_RATE]).toBe(0.5);
+    expect(mix[0]).toBe(0);
+    expect(stats).toMatchObject({ frames: 4 * STT_RATE, first: 0, last: 3, retried: true });
+    // The clip spans one extra bin at its end, so a frame or two of the next second lands in it too.
+    expect(stats.used).toBeGreaterThanOrEqual(STT_RATE);
+  });
+});
+
+describe('describeMix', () => {
+  it('summarises each clip on one line', () => {
+    expect(describeMix([])).toBe('no audible clips');
+    expect(describeMix([{ codec: 'aac', sampleRate: 48_000, channels: 2, frames: 96_000, used: 0, first: 0.0213, last: 1.98, peak: 0 }])).toBe(
+      '1: aac 48000Hz 2ch, 0/96000 frames, ts 0.02..1.98s, peak 0',
+    );
   });
 });
 

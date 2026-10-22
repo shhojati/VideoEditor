@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
-import { WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
+import { defaultSize, isPhone, WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
 import { findClip } from '../../model/timeline';
 import type { Project } from '../../model/types';
 import { useTimelineUi } from '../timeline/timelineUi';
@@ -16,8 +16,7 @@ export function AutoSubtitles({ project }: { project: Project }) {
   // Transcripts for text-based editing share the speech-to-text worker; their progress shows there.
   const stt = all.target === 'transcript' ? { ...all, stage: 'idle' as const } : all;
   const [open, setOpen] = useState(false);
-  // small is the recommended default for Persian (see docs/SPIKES.md).
-  const [picked, setModel] = useState<WhisperSize>('small');
+  const [picked, setModel] = useState<WhisperSize>(defaultSize);
   // If the picked model is not installed, use the best one that is.
   const model =
     stt.models[picked] === false ? ([...WHISPER_SIZES].reverse().find((s) => stt.models[s]) ?? picked) : picked;
@@ -50,6 +49,11 @@ export function AutoSubtitles({ project }: { project: Project }) {
               ))}
             </select>
           </label>
+          {model === 'small' && isPhone() && (
+            <p className="text-[11px] text-amber-300" data-testid="stt-small-phone">
+              {t('stt.smallOnPhone')}
+            </p>
+          )}
           <label className="flex items-center gap-2">
             <span className="w-16 text-neutral-400">{t('stt.language')}</span>
             <select className="flex-1 rounded bg-surface-3 px-1 py-1" value={lang} disabled={busy} onChange={(e) => setLang(e.target.value as typeof lang)} data-testid="stt-language">

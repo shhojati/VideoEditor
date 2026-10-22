@@ -33,3 +33,13 @@ export function requiredFiles(size: WhisperSize, device: SttDevice, words = true
 
 export const preferredDevice = (): SttDevice =>
   typeof navigator !== 'undefined' && 'gpu' in navigator ? 'webgpu' : 'wasm';
+
+/** Phones and tablets, where small (over 1 GB while running) tends to get the tab closed. */
+export function isPhone(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
+  return nav.userAgentData?.mobile || /Android|iPhone|iPad|Mobi/i.test(nav.userAgent ?? '');
+}
+
+/** Model to start with: small is best for Persian (docs/SPIKES.md), base fits in a phone's memory. */
+export const defaultSize = (): WhisperSize => (isPhone() ? 'base' : 'small');

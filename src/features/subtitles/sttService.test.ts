@@ -6,9 +6,16 @@ import { useProjectStore } from '../../store/projectStore';
 import type { SttRequest } from '../../workers/stt.worker';
 import { startAutoSubtitles, useStt } from './sttService';
 
-// 3 s of "speech" (a loud tone), so there is one window to transcribe.
+// 3 s of "speech" (a loud tone), so there is one window to transcribe; `silent` gives what an
+// Android decoder that yields nothing would.
+const mix = vi.hoisted(() => ({ silent: false }));
 vi.mock('../media-bin/mediaService', () => ({
-  mediaWorker: () => ({ mixdown16k: async () => ({ pcm: Float32Array.from({ length: 48_000 }, (_, i) => 0.3 * Math.sin(i / 5)) }) }),
+  mediaWorker: () => ({
+    mixdown16k: async () =>
+      mix.silent
+        ? { pcm: new Float32Array(48_000), stats: [{ codec: 'aac', frames: 0, used: 0, peak: 0, retried: true }] }
+        : { pcm: Float32Array.from({ length: 48_000 }, (_, i) => 0.3 * Math.sin(i / 5)), stats: [] },
+  }),
 }));
 
 /** A stand-in for the speech worker; `behave` decides what happens to each request. */
@@ -74,5 +81,20 @@ describe('startAutoSubtitles when the worker breaks', () => {
     await run('webgpu');
     expect(FakeWorker.requests.map((r) => r.device)).toEqual(['webgpu', 'wasm']);
     expect(useStt.getState()).toMatchObject({ stage: 'done', created: 1 });
+  });
+});
+
+describe('startAutoSubtitles when the audio decodes to silence', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    mix.silent = false;
+  });
+
+  it('says what the decoder gave instead of only "no audio"', async () => {
+    setup();
+    mix.silent = true;
+    await run('wasm');
+    expect(FakeWorker.requests).toEqual([]);
+    expect(useStt.getState()).toMatchObject({ stage: 'error', error: 'noAudio', detail: '1: aac, 0/0 frames, ts -, peak 0 (retried)' });
   });
 });

@@ -3,7 +3,7 @@
 // as a new subtitle track in one undo step. The user can keep editing meanwhile.
 import { create } from 'zustand';
 import { detectRtl } from '../../engine/render/textLayout';
-import { STT_RATE } from '../../engine/stt/audio16k';
+import { describeMix, STT_RATE, type MixStats } from '../../engine/stt/audio16k';
 import { preferredDevice, requiredFiles, WHISPER_SIZES, type SttDevice, type WhisperSize } from '../../engine/stt/models';
 import { segmentsToCues, type Segment } from '../../engine/stt/postprocess';
 import { planWindows } from '../../engine/stt/windows';
@@ -119,15 +119,17 @@ export async function startAutoSubtitles(opts: { model: WhisperSize; language: s
   useStt.setState({ stage: 'extracting', progress: 0, error: undefined, detail: undefined, created: undefined, rtf: undefined, target: 'subtitles' });
   const duration = Math.max(...items.map((i) => i.start + i.duration));
   let pcm: Float32Array;
+  let stats: MixStats[];
   try {
-    ({ pcm } = await mediaWorker().mixdown16k({ items, duration }));
+    ({ pcm, stats } = await mediaWorker().mixdown16k({ items, duration }));
   } catch (e) {
     useStt.setState({ stage: 'error', error: 'failed', detail: String(e) });
     return;
   }
   const windows = planWindows(pcm, STT_RATE);
   if (!windows.length) {
-    useStt.setState({ stage: 'error', error: 'noAudio' });
+    // The clips are there but decoded to silence: say what the decoder gave, per clip.
+    useStt.setState({ stage: 'error', error: 'noAudio', detail: describeMix(stats) });
     return;
   }
   // Not checked yet (the panel was never opened): try the word model; a missing one is reported.
@@ -145,6 +147,7 @@ export async function startAutoSubtitles(opts: { model: WhisperSize; language: s
 export async function transcribeClips(clipIds: readonly ID[], opts: { model: WhisperSize; language: string | null }) {
   cancelAutoSubtitles();
   let done = 0;
+  let silent: MixStats[] = [];
   for (const clipId of clipIds) {
     const project = currentProject();
     const clip = project && findClip(project, clipId)?.clip;
@@ -153,14 +156,18 @@ export async function transcribeClips(clipIds: readonly ID[], opts: { model: Whi
     if (!items.length) continue;
     useStt.setState({ stage: 'extracting', progress: 0, error: undefined, detail: undefined, created: undefined, rtf: undefined, target: 'transcript' });
     let pcm: Float32Array;
+    let stats: MixStats[];
     try {
-      ({ pcm } = await mediaWorker().mixdown16k({ items, duration: clip.start + clip.duration }));
+      ({ pcm, stats } = await mediaWorker().mixdown16k({ items, duration: clip.start + clip.duration }));
     } catch (e) {
       useStt.setState({ stage: 'error', error: 'failed', detail: String(e) });
       return;
     }
     const windows = planWindows(pcm, STT_RATE);
-    if (!windows.length) continue;
+    if (!windows.length) {
+      silent = silent.concat(stats);
+      continue;
+    }
     const words = useStt.getState().wordModels[opts.model] ?? true;
     const segments = await new Promise<Segment[] | null>((resolve) =>
       void transcribe({ pcm, windows, model: opts.model, language: opts.language, device: preferredDevice(), words }, true, resolve).then(() => resolve(null)),
@@ -177,7 +184,8 @@ export async function transcribeClips(clipIds: readonly ID[], opts: { model: Whi
     });
     done++;
   }
-  useStt.setState({ stage: 'done', created: done, progress: 1 });
+  if (!done && silent.length) useStt.setState({ stage: 'error', error: 'noAudio', detail: describeMix(silent) });
+  else useStt.setState({ stage: 'done', created: done, progress: 1 });
 }
 
 function transcribe(req: SttRequest, allowFallback: boolean, onDone: (segments: Segment[]) => void): Promise<void> {

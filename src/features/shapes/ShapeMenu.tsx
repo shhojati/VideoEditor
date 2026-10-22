@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { SHAPE_KINDS } from '../../model/overlays';
-import { addShape } from '../timeline/actions';
+import { addNull, addShape, addSolid } from '../timeline/actions';
 import { SHAPE_ICONS } from './shapesUi';
 
-const MENU_HEIGHT = 140;
+const MENU_HEIGHT = 200;
 
 /** "+ Shape" button with a small grid of shapes; picking one adds it at the playhead. */
 export function ShapeMenu() {
@@ -73,6 +73,29 @@ export function ShapeMenu() {
                   {SHAPE_ICONS[kind]}
                 </span>
                 {t(`shapes.${kind}`)}
+              </button>
+            ))}
+            {/* After Effects' Layer → New: a solid colour layer, and a null object to parent clips to. */}
+            {(
+              [
+                ['solid', '■', addSolid],
+                ['null', '⌖', addNull],
+              ] as const
+            ).map(([key, icon, add]) => (
+              <button
+                key={key}
+                role="menuitem"
+                data-testid={`add-${key}`}
+                className="flex items-center gap-2 rounded border-t border-line/60 px-2 py-1.5 text-start text-xs hover:bg-surface-3"
+                onClick={() => {
+                  setOpen(null);
+                  add();
+                }}
+              >
+                <span className="w-4 text-center text-base leading-none" aria-hidden>
+                  {icon}
+                </span>
+                {t(`shapes.${key}`)}
               </button>
             ))}
           </div>,

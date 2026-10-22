@@ -2,7 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { createTrack } from '../../model/factories';
-import { findClip, timelineDuration } from '../../model/timeline';
+import { findClip, moveTrack, timelineDuration } from '../../model/timeline';
 import type { Project, Track, TrackKind } from '../../model/types';
 import { formatDuration } from '../../lib/time';
 import { useProjectStore } from '../../store/projectStore';
@@ -327,6 +327,22 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
       <Toggle label={t('track.lock')} on={track.locked} onClick={() => flip('locked')}>
         L
       </Toggle>
+      {!compact && (
+        <span className="flex flex-col leading-none">
+          {([1, -1] as const).map((dir) => (
+            <button
+              key={dir}
+              aria-label={t(dir === 1 ? 'track.up' : 'track.down')}
+              title={t(dir === 1 ? 'track.up' : 'track.down')}
+              data-testid={`track-${dir === 1 ? 'up' : 'down'}`}
+              className="px-0.5 text-[9px] text-neutral-400 hover:text-white"
+              onClick={() => edit('ops.moveTrack', (p) => void moveTrack(p, track.id, dir))}
+            >
+              {dir === 1 ? '▲' : '▼'}
+            </button>
+          ))}
+        </span>
+      )}
       <button
         aria-label={t('track.remove')}
         title={t('track.remove')}

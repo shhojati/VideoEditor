@@ -218,7 +218,7 @@ export const isTransitionEffect = (kind: EffectKind) => EFFECT_MENU.find((m) => 
 
 /** Clips that can carry effects: anything visual (media, text, shapes, paint) and adjustment layers. */
 export function acceptsEffects(clip: Clip, assetKind: AssetKind | undefined): boolean {
-  return !!(clip.text || clip.shape || clip.adjustment || clip.paint || assetKind === 'video' || assetKind === 'image');
+  return !!(clip.text || clip.shape || clip.adjustment || clip.paint || clip.solid || assetKind === 'video' || assetKind === 'image');
 }
 
 /**

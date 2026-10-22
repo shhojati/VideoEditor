@@ -135,6 +135,9 @@ const clip = z.object({
   text: textProps.optional(),
   shape: shapeProps.optional(),
   paint: z.object({ strokes: z.array(paintStroke), frames: z.object({ hold: z.int().min(1).max(12) }).optional() }).optional(),
+  solid: z.object({ color: z.string() }).optional(),
+  nullObject: z.literal(true).optional(),
+  parentId: z.string().optional(),
   blend: z.enum(BLEND_MODES).optional(),
   effects: z
     .array(

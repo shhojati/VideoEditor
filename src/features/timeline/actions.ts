@@ -1,6 +1,8 @@
 // Timeline commands shared by the toolbar and keyboard shortcuts. Each project change is one undo step.
 import {
+  addNullClip,
   addShapeClip,
+  addSolidClip,
   addTextClip,
   copyClips,
   deleteClips,
@@ -14,6 +16,7 @@ import {
 import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
 import type { ID, MaskVertex, Project, ShapeKind } from '../../model/types';
 import { pathBounds } from '../../model/masks';
+import { unparent } from './parentActions';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
 import { findTransition, removeTransitions } from '../../model/transitions';
@@ -91,7 +94,10 @@ export function deleteSelection(ripple = false) {
   const cues = new Set(useTimelineUi.getState().selection.filter((id) => findCue(p, id)));
   const transitions = new Set(useTimelineUi.getState().selection.filter((id) => findTransition(p, id)));
   if (!sel.size && !cues.size && !transitions.size) return;
+  const now = useTransport.getState().time;
   edit(ripple ? 'ops.rippleDelete' : 'ops.deleteClips', (d) => {
+    // Children of a deleted parent stay where they are drawn now.
+    for (const t of d.tracks) for (const c of t.clips) if (c.parentId && sel.has(c.parentId) && !sel.has(c.id)) unparent(d, c, now);
     deleteClips(d, sel, ripple);
     deleteCues(d, cues);
     removeTransitions(d, transitions);
@@ -205,5 +211,19 @@ export function addPathShape(path: MaskVertex[], closed: boolean) {
     id = addShapeClip(d, useTransport.getState().time, shape);
     place(d, id, { cx: d.settings.width / 2 + mx, cy: d.settings.height / 2 + my });
   });
+  select([id]);
+}
+
+/** A solid colour layer (full frame) at the playhead, selected. */
+export function addSolid(color = '#6b7280') {
+  let id = '';
+  edit('ops.addSolid', (d) => void (id = addSolidClip(d, useTransport.getState().time, color)));
+  select([id]);
+}
+
+/** A null object (invisible, a parent for other clips) at the playhead, selected. */
+export function addNull() {
+  let id = '';
+  edit('ops.addNull', (d) => void (id = addNullClip(d, useTransport.getState().time)));
   select([id]);
 }

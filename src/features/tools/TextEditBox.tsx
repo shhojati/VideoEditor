@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { detectRtl } from '../../engine/render/textLayout';
-import { withMotion } from '../../engine/render/motion';
-import { keyedClip } from '../../model/keyframes';
+import { drawnClip } from '../../engine/render/parenting';
 import { findClip } from '../../model/timeline';
 import type { Project } from '../../model/types';
 import { currentProject, useProjectStore } from '../../store/projectStore';
@@ -62,7 +61,7 @@ export function TextEditBox({ project }: { project: Project }) {
 
   if (!editing || !clip?.text) return null;
   const { width: W, height: H } = project.settings;
-  const tr = withMotion(project, keyedClip(clip, time), time).transform;
+  const tr = drawnClip(project, clip, time).transform;
   const x = view.ox + (W / 2 + tr.x * W) * view.k;
   const y = view.oy + (H / 2 + tr.y * H) * view.k;
   return (

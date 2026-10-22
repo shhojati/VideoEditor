@@ -305,7 +305,7 @@ export function cueBoundaries(p: Project): number[] {
 export const TEXT_DEFAULT_DURATION = 3;
 
 /** A clip that draws itself (text or shape): no media, default transform slightly below centre for text. */
-export function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects' | 'paint'>): Clip {
+export function createOverlayClip(start: number, props: Pick<Clip, 'text' | 'shape' | 'adjustment' | 'effects' | 'paint' | 'solid' | 'nullObject'>): Clip {
   return {
     id: newId(),
     start,
@@ -347,6 +347,29 @@ export const addAdjustmentClip = (p: Project, time: number, effects: Effect[] = 
 export const ADJUSTMENT_DEFAULT_DURATION = 5;
 
 export const PAINT_DEFAULT_DURATION = 5;
+
+/** A solid colour layer (full frame) on a graphics track. */
+export const addSolidClip = (p: Project, time: number, color: string): ID =>
+  addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { solid: { color } }), duration: ADJUSTMENT_DEFAULT_DURATION });
+
+/** A null object (invisible, a parent for other clips) on a graphics track. */
+export const addNullClip = (p: Project, time: number): ID =>
+  addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { nullObject: true }), duration: ADJUSTMENT_DEFAULT_DURATION });
+
+/**
+ * Move a track one place up (1, drawn above more) or down (-1) in the stack, past the next track of
+ * its group: visual tracks among visual ones, audio among audio. Returns whether it moved.
+ */
+export function moveTrack(p: Project, trackId: ID, dir: 1 | -1): boolean {
+  const i = p.tracks.findIndex((t) => t.id === trackId);
+  if (i < 0) return false;
+  const audio = p.tracks[i].kind === 'audio';
+  let j = i + dir;
+  while (j >= 0 && j < p.tracks.length && (p.tracks[j].kind === 'audio') !== audio) j += dir;
+  if (j < 0 || j >= p.tracks.length) return false;
+  [p.tracks[i], p.tracks[j]] = [p.tracks[j], p.tracks[i]];
+  return true;
+}
 
 /** A paint layer (brush strokes only), full frame, on a graphics track. */
 export const addPaintClip = (p: Project, time: number, paint: PaintProps): ID =>

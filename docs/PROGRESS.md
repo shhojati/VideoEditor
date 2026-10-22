@@ -734,3 +734,20 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - One path per shape clip (After Effects shape layers can hold several).
 - Path keyframes are linear (no ease), like mask paths.
+
+## Post-MVP 28 — Layers: parenting, null objects, solids, track order ✅ (2026-10-22)
+
+### Done
+- **Parenting** (After Effects' Parent & Link): Inspector → Transform → 🔗 Parent lists the other visual clips of the timeline (not ones that would make a loop). The child's transform becomes relative to the parent: it moves, turns and scales with it, through the parent's keyframes, tracker motion and own parent (chains up to 8). Attaching or detaching keeps the clip where it is drawn at the playhead: its transform and transform keyframes are converted with the parent's pose there. Deleting a parent detaches its children in place. Preview, export, canvas handles, masks, paint and the text box all use the clip as drawn (`engine/render/parenting.ts`, `drawnClip`).
+- **Null object** (★+ Shape menu → Null object): draws nothing, shows a dashed red square and cross on the preview (never exported), has handles, keyframes and tracker motion; made to be a parent.
+- **Solid colour** (★+ Shape menu → Solid colour): the frame filled with one colour (colour in the inspector), with masks, effects, blend modes and keyframes like other layers.
+- **Track order**: ▲ / ▼ in each track header moves the track up or down the stack among tracks of its kind (visual tracks among visual ones, audio among audio).
+- Project version 7.
+
+### Verified
+- Unit tests (`engine/render/parenting.test.ts`): world ↔ local are inverse for a turned, scaled parent; attaching keeps the child in place and it then follows a turned and moved parent; detaching keeps it; loops are refused; track moves stay within their group; solids, nulls and parents survive save → load.
+- In the browser: Null object from the menu is selected with its marker on the preview; the Parent picker lists the clips; track headers have ▲ ▼.
+
+### Known issues / not done
+- No layers panel separate from the timeline (the timeline tracks are the layers).
+- Parenting converts keyframes with the parent's pose at the playhead (as After Effects does), so a child keyframed while its parent moves may shift at other keys.

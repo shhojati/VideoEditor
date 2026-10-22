@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { findClip } from '../../model/timeline';
 import { isPaintLayer } from '../../model/overlays';
 import type { Clip, ID, Project } from '../../model/types';
-import { baseFromDrawn, motionTransform, withMotion } from '../../engine/render/motion';
-import { keyedClip } from '../../model/keyframes';
+import { baseFromDrawn, motionTransform } from '../../engine/render/motion';
+import { drawnClip, parentPose, toLocal as localOf, toWorld as worldOf } from '../../engine/render/parenting';
 import { keyedEdit } from '../keyframes/keyframeService';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
@@ -97,8 +97,9 @@ export function CanvasOverlay({ project }: { project: Project }) {
   const boxes = useMemo(() => {
     const m = new Map<ID, { clip: Clip; box: Box }>();
     for (const { clip } of active) {
-      // Where it is drawn now: keyframes applied, clips following a tracker moved with it.
-      const moved = withMotion(project, keyedClip(clip, time), time);
+      // Where it is drawn now: keyframes applied, clips following a tracker moved with it, children
+      // placed by their parent.
+      const moved = drawnClip(project, clip, time);
       const box = clipBox(project, moved, measure(), time);
       if (box) m.set(clip.id, { clip: moved, box });
     }
@@ -242,14 +243,17 @@ export function CanvasOverlay({ project }: { project: Project }) {
           if (!ref || !box || ref.track.locked) continue;
           // On an animated clip the change lands in a keyframe at the playhead.
           keyedEdit(d, ref.clip, (c) => {
-            if (!c.motion) {
+            const pose = parentPose(d, c, now);
+            if (!c.motion && !pose) {
               applyBox(c, it.box, box, W, H, it.scale);
               return;
             }
-            // A linked clip: edit where it is drawn, then store the base that draws it there.
-            const drawn = { ...c, transform: { ...motionTransform(d, c, now) } };
+            // A linked or parented clip: edit where it is drawn, then store what draws it there.
+            const moved = c.motion ? motionTransform(d, c, now) : { ...c.transform };
+            const drawn = { ...c, transform: pose ? worldOf(d, moved, pose) : moved };
             applyBox(drawn, it.box, box, W, H, it.scale);
-            c.transform = baseFromDrawn(d, c, now, drawn.transform);
+            const back = pose ? localOf(d, drawn.transform, pose) : drawn.transform;
+            c.transform = c.motion ? baseFromDrawn(d, c, now, back) : back;
           }, now);
         }
       },
@@ -302,6 +306,18 @@ export function CanvasOverlay({ project }: { project: Project }) {
       {hover && !selection.includes(hover) && boxes.has(hover) && (
         <polygon points={poly(boxes.get(hover)!.box)} fill="none" className="stroke-sky-300/70" strokeWidth={1} />
       )}
+      {/* Null objects draw nothing: a dashed square and cross show where they are. */}
+      {[...boxes.values()]
+        .filter((b) => b.clip.nullObject)
+        .map(({ clip, box }) => {
+          const c = toScreen(view, { x: box.cx, y: box.cy });
+          return (
+            <g key={`null:${clip.id}`} style={{ pointerEvents: 'none' }} data-testid="null-marker">
+              <polygon points={poly(box)} fill="none" className="stroke-red-400/80" strokeDasharray="5 4" />
+              <path d={`M${c.x - 8},${c.y}h16M${c.x},${c.y - 8}v16`} className="stroke-red-400" />
+            </g>
+          );
+        })}
       {selectedHere.map((id) => (
         <polygon key={id} points={poly(boxes.get(id)!.box)} fill="none" className="stroke-sky-400" strokeWidth={1.5} data-testid="selection-box" data-clip-id={id} />
       ))}

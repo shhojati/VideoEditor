@@ -9,6 +9,7 @@ import { applyEffects, hasLiveEffects, type FxEnv } from '../effects/applyEffect
 import { drawBlended, seedOf } from './blend';
 import { applyMasks, resolveMasks, type Affine, type ResolvedMasks } from './masks';
 import { withMotion } from './motion';
+import { withParent } from './parenting';
 import { placeMedia } from './placement';
 import { drawPaint } from './paint';
 import { drawShapeClip } from './shapes';
@@ -159,6 +160,7 @@ function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, 
     if (clip.text) drawTextClip(ctx, clip, tc, width, height);
     else if (clip.shape) drawShapeClip(ctx, clip, tc, width, height);
     else if (isPaintLayer(clip)) drawPaintLayer(ctx, clip, tc, width, height, below);
+    else if (clip.solid) drawSolid(ctx, clip, width, height);
     return;
   }
   const src = lookup(clip, t);
@@ -180,6 +182,20 @@ function drawClipPixels(ctx: Ctx2D, clip: Clip, t: number, lookup: FrameLookup, 
     ctx.scale(p.frame.w / src.displayWidth, p.frame.h / src.displayHeight);
     drawPaint(ctx, clip.paint, keyTimeAt(clip, t), clip.id);
   }
+  ctx.restore();
+}
+
+/** A solid layer: the frame's size in its colour, around the clip's position. */
+function drawSolid(ctx: Ctx2D, clip: Clip, width: number, height: number) {
+  const tr = clip.transform;
+  if (tr.opacity <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= tr.opacity;
+  ctx.translate(width / 2 + tr.x * width, height / 2 + tr.y * height);
+  if (tr.rotation) ctx.rotate((tr.rotation * Math.PI) / 180);
+  ctx.scale(tr.scale, tr.scale);
+  ctx.fillStyle = clip.solid!.color;
+  ctx.fillRect(-width / 2, -height / 2, width, height);
   ctx.restore();
 }
 
@@ -254,11 +270,11 @@ function compoundDrawable(project: Project, clip: Clip, t: number, lookup: Frame
 function drawTracks(project: Project, t: number, ctx: Ctx2D, base: FrameLookup, depth: number) {
   const { width, height } = project.settings;
   const lookup: FrameLookup = (clip, tt) => (clip.sequenceId ? compoundDrawable(project, clip, tt, base, depth) : base(clip, tt));
-  // Keyframes first, then clips linked to a tracker are drawn where the tracked object takes them;
-  // masks move with them.
+  // Keyframes first, then clips linked to a tracker are drawn where the tracked object takes them,
+  // then a parent carries its children; masks move with them.
   const draw = (clip: Clip) => {
     const keyed = keyedClip(clip, t);
-    const moved = withMotion(project, keyed, t);
+    const moved = withParent(project, withMotion(project, keyed, t), t);
     drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, keyed, t, moved), project.luts);
   };
   for (const item of drawPlanAt(project, t)) {

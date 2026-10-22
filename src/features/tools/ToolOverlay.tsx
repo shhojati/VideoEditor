@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { applyAffine, composeAffine, invertAffine, layerAffine, mediaSize } from '../../engine/render/masks';
-import { withMotion } from '../../engine/render/motion';
-import { keyedClip } from '../../model/keyframes';
+import { drawnClip } from '../../engine/render/parenting';
 import type { MaskPreset } from '../../model/masks';
 import { keepsAspect } from '../../model/overlays';
 import { findClip } from '../../model/timeline';
@@ -99,7 +98,7 @@ export function ToolOverlay({ project, time, hitTest }: { project: Project; time
     setBoth(null);
     const clicked = Math.hypot(drag.b.x - drag.a.x, drag.b.y - drag.a.y) < DRAG;
     if (target) {
-      const S = layerAffine(project, withMotion(project, keyedClip(target, time), time));
+      const S = layerAffine(project, drawnClip(project, target, time));
       if (!S) return;
       const inv = invertAffine(composeAffine([view.k, 0, 0, view.k, view.ox, view.oy], S));
       const b = squareUp(applyAffine(inv, drag.a), applyAffine(inv, drag.b), drag.shift);

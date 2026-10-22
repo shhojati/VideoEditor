@@ -124,7 +124,11 @@
     "clearPaint": "Clear paint",
     "paintFrames": "Frame-by-frame",
     "clone": "Clone stamp",
-    "shapePath": "Edit shape path"
+    "shapePath": "Edit shape path",
+    "addSolid": "Add solid",
+    "addNull": "Add null object",
+    "parent": "Parent",
+    "moveTrack": "Move track"
   },
   "panels": {
     "media": "Media",
@@ -163,7 +167,9 @@
     "mute": "Mute",
     "lock": "Lock",
     "remove": "Remove track",
-    "empty": "No tracks"
+    "empty": "No tracks",
+    "up": "Move track up (drawn above)",
+    "down": "Move track down (drawn below)"
   },
   "lang": {
     "switch": "فارسی"
@@ -351,7 +357,9 @@
     "duckAmount": "Duck by",
     "duckAttack": "Go down",
     "duckRelease": "Come back",
-    "duckHint": "Gets quieter wherever another clip has speech (for music under a voiceover). Follows your edits."
+    "duckHint": "Gets quieter wherever another clip has speech (for music under a voiceover). Follows your edits.",
+    "parent": "Parent",
+    "noParent": "None"
   },
   "subtitles": {
     "lane": "Subtitles {{lang}}",
@@ -680,7 +688,9 @@
     "animatePathHint": "Keyframes for the path: change points at different times and the shape morphs between them",
     "addPathKey": "Add a path keyframe at the playhead",
     "removePathKey": "Remove the path keyframe at the playhead",
-    "pathHint": "Drag points to reshape; Alt-click a point for a curve or a corner; Ctrl-click the outline to add a point; Delete removes points."
+    "pathHint": "Drag points to reshape; Alt-click a point for a curve or a corner; Ctrl-click the outline to add a point; Delete removes points.",
+    "solid": "Solid colour",
+    "null": "Null object"
   },
   "blend": {
     "label": "Blend mode",

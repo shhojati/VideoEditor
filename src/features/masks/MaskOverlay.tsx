@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { applyAffine, composeAffine, invertAffine, layerAffine, mapPath, type Affine } from '../../engine/render/masks';
-import { withMotion } from '../../engine/render/motion';
-import { keyedClip } from '../../model/keyframes';
+import { drawnClip } from '../../engine/render/parenting';
 import { isActiveAt } from '../../engine/render/renderFrame';
 import { closestOnPath, insertVertex, removeVertices, toggleSmooth, type Pt } from '../../model/masks';
 import { isPathShape } from '../../model/overlays';
@@ -94,7 +93,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
   const ref = editId && time >= 0 ? findClip(project, editId) : undefined;
   const clip = ref && isActiveAt(ref.clip, time) && (maskClipId || isPathShape(ref.clip)) ? ref.clip : undefined;
   const { width: W, height: H } = project.settings;
-  const layer: Affine | undefined = shapePen ? [1, 0, 0, 1, W / 2, H / 2] : clip && layerAffine(project, withMotion(project, keyedClip(clip, time), time));
+  const layer: Affine | undefined = shapePen ? [1, 0, 0, 1, W / 2, H / 2] : clip && layerAffine(project, drawnClip(project, clip, time));
   const S: Affine | undefined = layer && composeAffine([view.k, 0, 0, view.k, view.ox, view.oy], layer);
   const mask = !pen && clip && active && maskClipId ? clip.masks?.find((m) => m.id === active.maskId) : undefined;
   const editable = !!ref && !ref.track.locked;

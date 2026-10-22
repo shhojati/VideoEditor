@@ -1,8 +1,7 @@
 import { layerAffine, applyAffine } from '../../engine/render/masks';
-import { withMotion } from '../../engine/render/motion';
+import { drawnClip } from '../../engine/render/parenting';
 import { outlineD, strokeOutline } from '../../engine/render/paint';
 import { isActiveAt } from '../../engine/render/renderFrame';
-import { keyedClip } from '../../model/keyframes';
 import { celStart } from '../../model/paint';
 import { keyTimeAt } from '../../model/remap';
 import { findClip } from '../../model/timeline';
@@ -25,7 +24,7 @@ export function OnionSkin({ project, time }: { project: Project; time: number })
   const clip = ref?.clip;
   const hold = clip?.paint?.frames?.hold;
   if (!clip || !hold || !isActiveAt(clip, time)) return null;
-  const layer = layerAffine(project, withMotion(project, keyedClip(clip, time), time));
+  const layer = layerAffine(project, drawnClip(project, clip, time));
   if (!layer) return null;
   const S = screenAffine(view, layer);
   const map = (x: number, y: number): [number, number] => {

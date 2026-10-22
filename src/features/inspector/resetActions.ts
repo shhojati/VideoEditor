@@ -44,7 +44,7 @@ export function resetClipSection(clipId: ID, section: ClipSection) {
         const asset = c.assetId ? p.assets[c.assetId] : undefined;
         const media = (asset?.kind === 'video' || asset?.kind === 'audio' || !!c.sequenceId) && !c.freeze;
         if (media && !c.speedCurve) c.inPoint = 0;
-        const length = c.adjustment ? ADJUSTMENT_DEFAULT_DURATION : isPaintLayer(c) ? PAINT_DEFAULT_DURATION : isOverlay(c) ? TEXT_DEFAULT_DURATION : IMAGE_DEFAULT_DURATION;
+        const length = c.adjustment || c.solid || c.nullObject ? ADJUSTMENT_DEFAULT_DURATION : isPaintLayer(c) ? PAINT_DEFAULT_DURATION : isOverlay(c) ? TEXT_DEFAULT_DURATION : IMAGE_DEFAULT_DURATION;
         trimClip(p, c.id, 'end', media ? Number.MAX_SAFE_INTEGER : c.start + length);
       });
     case 'speed':

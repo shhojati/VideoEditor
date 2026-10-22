@@ -381,6 +381,15 @@ export interface Clip {
   shape?: ShapeProps;
   /** Brush strokes painted on the clip, or, alone, a paint layer (see model/paint.ts). */
   paint?: PaintProps;
+  /** A solid layer: the frame filled with one colour (at scale 1, around the position). */
+  solid?: { color: string };
+  /** A null object: draws nothing; it is there to be a parent. */
+  nullObject?: true;
+  /**
+   * After Effects' parenting: this clip's transform is relative to that clip's (same timeline), so
+   * it moves, turns and scales with it. See engine/render/parenting.ts.
+   */
+  parentId?: ID;
   /** Default 'normal'. */
   blend?: BlendMode;
   /** Applied in order to the clip's pixels (see model/effects.ts). */

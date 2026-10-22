@@ -1,10 +1,9 @@
 // Painting with the brush and eraser: where a stroke goes (the selected video, photo or paint
 // layer, or a new paint layer), committing it as one undo step, and editing strokes afterwards.
 import { affineScale, composeAffine, layerAffine, mediaSize, type Affine } from '../../engine/render/masks';
-import { withMotion } from '../../engine/render/motion';
+import { drawnClip } from '../../engine/render/parenting';
 import { isActiveAt } from '../../engine/render/renderFrame';
 import { newId } from '../../model/factories';
-import { keyedClip } from '../../model/keyframes';
 import { isPaintLayer } from '../../model/overlays';
 import { celStep, newStrokeTiming, round3 } from '../../model/paint';
 import { keyTimeAt, keyToTimeline } from '../../model/remap';
@@ -34,7 +33,7 @@ export function paintTarget(p: Project, t: number): Clip | undefined {
  */
 export function paintAffine(p: Project, clip: Clip | undefined, t: number): Affine | undefined {
   if (!clip) return [1, 0, 0, 1, p.settings.width / 2, p.settings.height / 2];
-  return layerAffine(p, withMotion(p, keyedClip(clip, t), t));
+  return layerAffine(p, drawnClip(p, clip, t));
 }
 
 /** Layer units → screen for the preview view. */

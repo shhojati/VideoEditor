@@ -13,6 +13,7 @@ import { ShapeSection } from './ShapeSection';
 import { EffectsSection } from './EffectsSection';
 import { isPixelBlend } from '../../engine/render/blend';
 import { BLEND_GROUPS, isOverlay, isPaintLayer } from '../../model/overlays';
+import { parentCandidates, setParent } from '../timeline/parentActions';
 import { PaintSection } from '../paint/PaintSection';
 import { MotionSection, TrackingSection } from '../tracking/TrackingSection';
 import { MasksSection } from '../masks/MasksSection';
@@ -79,7 +80,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   return (
     <fieldset disabled={track.locked} className="min-w-0 disabled:opacity-60" data-testid="clip-inspector">
       <div className="truncate border-b border-line px-3 py-2 text-sm font-medium text-white" dir="auto">
-        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : isPaintLayer(clip) ? `🖌 ${t('paint.layer')}` : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
+        {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : isPaintLayer(clip) ? `🖌 ${t('paint.layer')}` : clip.solid ? `■ ${t('shapes.solid')}` : clip.nullObject ? `⌖ ${t('shapes.null')}` : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
         {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
       </div>
 
@@ -114,6 +115,11 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
 
       {isText && <TextSection clipId={clipId} text={clip.text!} set={set} />}
       {clip.paint && <PaintSection project={project} clip={clip} />}
+      {clip.solid && (
+        <Section id="solid" title={t('shapes.solid')}>
+          <ColorField label={t('inspector.fill')} value={clip.solid.color} onChange={(v) => v && set('solid.color', (c) => void (c.solid!.color = v))} />
+        </Section>
+      )}
       {clip.shape && (
         <ShapeSection
           clipId={clipId}
@@ -137,7 +143,10 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
           <NumberField label={t('inspector.y')} value={shown.transform.y} min={-0.5} max={0.5} factor={100} unit="%" onChange={(v) => setTransform('y', v)} />
           <NumberField label={t('inspector.scale')} value={shown.transform.scale} min={0.1} max={4} factor={100} unit="%" onChange={(v) => setTransform('scale', v)} />
           <NumberField label={t('inspector.rotation')} value={shown.transform.rotation} min={-180} max={180} step={1} unit="°" onChange={(v) => setTransform('rotation', v)} />
-          <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
+          {!clip.nullObject && (
+            <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
+          )}
+          <ParentField project={project} clip={clip} />
           {!isOverlay(clip) && (
             <>
               <Segmented
@@ -394,5 +403,33 @@ function TextSection({ clipId, text, set }: { clipId: ID; text: TextProps; set: 
         />
       )}
     </Section>
+  );
+}
+
+/** Display name of a clip in the parent picker. */
+function clipLabel(project: Project, clip: Clip, t: (k: string) => string) {
+  if (clip.nullObject) return `⌖ ${t('shapes.null')}`;
+  if (clip.solid) return `■ ${t('shapes.solid')}`;
+  if (clip.adjustment) return t('effects.adjustment');
+  if (clip.text) return clip.text.content.split('\n')[0].slice(0, 24) || t('inspector.textClip');
+  if (clip.shape) return t(`shapes.${clip.shape.kind}`);
+  if (isPaintLayer(clip)) return `🖌 ${t('paint.layer')}`;
+  if (clip.sequenceId) return `▣ ${project.sequences?.[clip.sequenceId]?.name ?? ''}`;
+  return (clip.assetId && project.assets[clip.assetId]?.name) || '?';
+}
+
+/** After Effects' Parent & Link: the clip moves, turns and scales with the chosen clip. */
+function ParentField({ project, clip }: { project: Project; clip: Clip }) {
+  const { t } = useTranslation();
+  const options = parentCandidates(project, clip);
+  // Same names (two clips of one video) get their start time to tell them apart.
+  const label = (c: Clip) => `${clipLabel(project, c, t)} · ${c.start.toFixed(1)}s`;
+  return (
+    <SelectField
+      label={`🔗 ${t('inspector.parent')}`}
+      value={clip.parentId ?? ''}
+      options={[{ value: '', label: t('inspector.noParent') }, ...options.map((c) => ({ value: c.id, label: label(c) }))]}
+      onChange={(v) => setParent(clip.id, v || null)}
+    />
   );
 }

@@ -22,6 +22,8 @@ const COLORS = {
   adjustment: 'bg-slate-600/80 border-slate-300 border-dashed',
   compound: 'bg-teal-800/90 border-teal-400',
   paint: 'bg-rose-800/90 border-rose-400',
+  solid: 'bg-zinc-600/90 border-zinc-300',
+  null: 'bg-transparent border-red-400 border-dashed',
 };
 
 interface Props {
@@ -59,7 +61,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
   const left = clip.start * pps;
   const width = Math.max(2, clip.duration * pps);
   const { t } = useTranslation();
-  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : isPaintLayer(clip) ? 'paint' : (asset?.kind ?? 'video');
+  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : isPaintLayer(clip) ? 'paint' : clip.solid ? 'solid' : clip.nullObject ? 'null' : (asset?.kind ?? 'video');
   const [fxHover, setFxHover] = useState(false);
   const live = clip.effects?.filter((e) => e.enabled) ?? [];
   // Only the on-screen part of the clip gets thumbnails / waveform.
@@ -116,7 +118,11 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
             ? `${SHAPE_ICONS[clip.shape.kind]} ${t(`shapes.${clip.shape.kind}`)}`
             : isPaintLayer(clip)
               ? `🖌 ${t('paint.layer')}`
-              : (clip.text?.content ?? asset?.name ?? '')}
+              : clip.solid
+                ? `■ ${t('shapes.solid')}`
+                : clip.nullObject
+                  ? `⌖ ${t('shapes.null')}`
+                  : (clip.text?.content ?? asset?.name ?? '')}
       </span>
       {live.length > 0 && (
         <span

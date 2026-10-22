@@ -16,10 +16,11 @@ export const BLEND_GROUPS: readonly (readonly BlendMode[])[] = [
 export const BLEND_MODES = BLEND_GROUPS.flat() as [BlendMode, ...BlendMode[]];
 
 /** A clip that is only brush strokes (no media under them). */
-export const isPaintLayer = (clip: Clip) => !!clip.paint && !clip.assetId && !clip.sequenceId && !clip.text && !clip.shape && !clip.adjustment;
+export const isPaintLayer = (clip: Clip) =>
+  !!clip.paint && !clip.assetId && !clip.sequenceId && !clip.text && !clip.shape && !clip.adjustment && !clip.solid && !clip.nullObject;
 
-/** Text, shape, paint or adjustment layer: no media file to decode. */
-export const isOverlay = (clip: Clip) => !!(clip.text || clip.shape || clip.adjustment) || isPaintLayer(clip);
+/** Text, shape, paint, solid, null or adjustment layer: no media file to decode. */
+export const isOverlay = (clip: Clip) => !!(clip.text || clip.shape || clip.adjustment || clip.solid || clip.nullObject) || isPaintLayer(clip);
 
 /** A shape drawn with the pen. */
 export const isPathShape = (clip: Clip) => clip.shape?.kind === 'path' && !!clip.shape.path;

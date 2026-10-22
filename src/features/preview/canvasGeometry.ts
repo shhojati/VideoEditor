@@ -27,6 +27,9 @@ export interface Box {
 
 type Measure = Parameters<typeof layoutText>[0];
 
+/** A null object's box on the canvas (project px at scale 1). */
+export const NULL_SIZE = 120;
+
 /** Smallest box a resize may produce (project px). */
 export const MIN_BOX = 4;
 
@@ -82,6 +85,8 @@ export function clipBox(project: Project, clip: Clip, measure: Measure, t = clip
     const e = adjustmentExtent(project, clip, t);
     return e ? { ...centre, w: e.w * tr.scale, h: e.h * tr.scale } : null;
   }
+  if (clip.solid) return { ...centre, w: W * tr.scale, h: H * tr.scale };
+  if (clip.nullObject) return { ...centre, w: NULL_SIZE * tr.scale, h: NULL_SIZE * tr.scale };
   if (isPaintLayer(clip)) {
     // A paint layer covers the frame at scale 1 (strokes may go anywhere on it).
     return { ...centre, w: W * tr.scale, h: H * tr.scale };

@@ -2,7 +2,7 @@
 // shape of `Project` changes in a way old documents would not satisfy.
 import { ellipsePath, rectPath } from './masks';
 
-export const CURRENT_VERSION = 6;
+export const CURRENT_VERSION = 7;
 
 /** migrations[n] upgrades a version-n document to version n+1. */
 export type MigrationTable = Record<number, (doc: Record<string, unknown>) => Record<string, unknown>>;
@@ -45,6 +45,8 @@ export const MIGRATIONS: MigrationTable = {
   4: (stored) => structuredClone(stored),
   // 5 → 6: shapes drawn with the pen (ShapeProps.path). Nothing to convert.
   5: (stored) => structuredClone(stored),
+  // 6 → 7: parenting (Clip.parentId), null objects and solid layers. Nothing to convert.
+  6: (stored) => structuredClone(stored),
 };
 
 export class MigrationError extends Error {}

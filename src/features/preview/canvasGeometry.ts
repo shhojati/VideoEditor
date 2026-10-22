@@ -4,7 +4,7 @@ import { layoutText } from '../../engine/render/text';
 import { arrowSize } from '../../engine/render/shapes';
 import { isActiveAt, placeMedia } from '../../engine/render/renderFrame';
 import { maskShapeAt } from '../../engine/render/masks';
-import { flatten } from '../../model/masks';
+import { flatten, pathAt } from '../../model/masks';
 import { isPaintLayer, keepsAspect } from '../../model/overlays';
 import { paintBounds } from '../../model/paint';
 import { applyAffine, invertAffine, layerAffine } from '../../engine/render/masks';
@@ -49,12 +49,29 @@ function adjustmentExtent(project: Project, clip: Clip, t: number) {
   return w > 0 && h > 0 ? { w, h } : undefined;
 }
 
-/** `t`: timeline time, for animated adjustment-layer masks. */
+/** A pen-drawn shape's extent at timeline time t: a box centred on its position that holds the path (layer units). */
+function pathExtent(clip: Clip, t: number) {
+  const s = clip.shape!;
+  let w = 0;
+  let h = 0;
+  for (const p of flatten(pathAt(s.path!, keyTimeAt(clip, t)), 8)) {
+    w = Math.max(w, 2 * Math.abs(p.x));
+    h = Math.max(h, 2 * Math.abs(p.y));
+  }
+  const pad = s.stroke ? s.strokeWidth : 0;
+  return { w: Math.max(MIN_BOX, w + pad), h: Math.max(MIN_BOX, h + pad) };
+}
+
+/** `t`: timeline time, for animated adjustment-layer masks and pen-drawn paths. */
 export function clipBox(project: Project, clip: Clip, measure: Measure, t = clip.start): Box | null {
   const { width: W, height: H } = project.settings;
   const tr = clip.transform;
   const rotation = (tr.rotation * Math.PI) / 180;
   const centre = { cx: W / 2 + tr.x * W, cy: H / 2 + tr.y * H, rotation };
+  if (clip.shape?.kind === 'path' && clip.shape.path) {
+    const e = pathExtent(clip, t);
+    return { ...centre, w: e.w * tr.scale, h: e.h * tr.scale };
+  }
   if (clip.shape) {
     const s = clip.shape;
     const k = tr.scale;
@@ -124,14 +141,14 @@ export function editableClipsAt(project: Project, t: number): { clip: Clip; trac
   return out;
 }
 
-/** Which handles a clip offers: media, text and adjustment layers scale uniformly, shapes resize freely. */
+/** Which handles a clip offers: media, text, paths and adjustment layers scale uniformly, other shapes resize freely. */
 export function handlesFor(clip: Clip): { corners: boolean; edges: boolean; rotate: boolean; ends: boolean } {
   if (clip.shape?.kind === 'line') return { corners: false, edges: false, rotate: false, ends: true };
-  return { corners: true, edges: !!clip.shape && !keepsAspect(clip.shape.kind), rotate: true, ends: false };
+  return { corners: true, edges: resizesFreely(clip), rotate: true, ends: false };
 }
 
-/** Free (non-uniform) resizing: shapes that need not keep their aspect. */
-export const resizesFreely = (clip: Clip) => !!clip.shape && !keepsAspect(clip.shape.kind);
+/** Free (non-uniform) resizing: shapes that need not keep their aspect (a path scales as a whole). */
+export const resizesFreely = (clip: Clip) => !!clip.shape && clip.shape.kind !== 'path' && !keepsAspect(clip.shape.kind);
 
 // ---- gestures -------------------------------------------------------------------------------------
 
@@ -236,7 +253,7 @@ const toDegrees = (rad: number) => {
 
 /**
  * Write a box back into the clip: position and rotation always; size as width/height for shapes,
- * otherwise as the uniform scale (relative to the box at gesture start, `from`).
+ * otherwise (paths too) as the uniform scale (relative to the box at gesture start, `from`).
  */
 export function applyBox(clip: Clip, from: Box, to: Box, W: number, H: number, fromScale: number) {
   clip.transform.x = (to.cx - W / 2) / W;
@@ -244,7 +261,7 @@ export function applyBox(clip: Clip, from: Box, to: Box, W: number, H: number, f
   clip.transform.rotation = toDegrees(to.rotation);
   const k = clip.transform.scale;
   const px = (v: number) => Math.round((v / k) * 10) / 10;
-  if (clip.shape) {
+  if (clip.shape && clip.shape.kind !== 'path') {
     clip.shape.width = px(to.w);
     if (clip.shape.kind !== 'line') clip.shape.height = px(keepsAspect(clip.shape.kind) ? to.w : to.h);
   } else if (from.w > 0) clip.transform.scale = Math.max(0.01, fromScale * (to.w / from.w));

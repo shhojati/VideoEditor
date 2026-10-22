@@ -27,6 +27,7 @@ const MASK_OF: Record<ShapeKind, MaskPreset> = {
   oval: 'ellipse',
   triangle: 'polygon',
   star: 'polygon',
+  path: 'polygon',
 };
 
 /** A clip the shape tool draws a mask on instead of a new shape (as After Effects does with a layer selected). */

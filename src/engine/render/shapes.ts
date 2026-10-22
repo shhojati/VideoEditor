@@ -1,5 +1,8 @@
 import type { Clip, ShapeProps } from '../../model/types';
+import { pathAt } from '../../model/masks';
+import { keyTimeAt } from '../../model/remap';
 import { fadeAlpha } from '../fade';
+import { tracePath } from './masks';
 import type { Ctx2D } from './renderFrame';
 
 type Pt = [number, number];
@@ -133,6 +136,33 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
       });
     if (s.arrowEnd) arrow(w / 2, 1);
     if (s.arrowStart) arrow(-w / 2, -1);
+    ctx.restore();
+    return;
+  }
+
+  if (s.kind === 'path') {
+    const path = s.path ? pathAt(s.path, keyTimeAt(clip, t)) : [];
+    if (path.length < 2) {
+      ctx.restore();
+      return;
+    }
+    // Points are project pixels at scale 1 around the position.
+    ctx.scale(k, k);
+    ctx.beginPath();
+    tracePath(ctx, path, !!s.closed);
+    ctx.lineCap = 'round';
+    if (s.fill && s.closed) {
+      ctx.globalAlpha = base * (s.fillOpacity ?? 1);
+      ctx.fillStyle = s.fill;
+      paint(() => ctx.fill());
+    }
+    if (s.stroke && s.strokeWidth > 0) {
+      ctx.globalAlpha = base * (s.strokeOpacity ?? 1);
+      setDash(ctx, s.dash, s.strokeWidth);
+      ctx.lineWidth = s.strokeWidth;
+      ctx.strokeStyle = s.stroke;
+      paint(() => ctx.stroke());
+    }
     ctx.restore();
     return;
   }

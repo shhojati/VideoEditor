@@ -5,25 +5,36 @@ import { SHAPE_ICONS } from '../shapes/shapesUi';
 import type { SetFn } from './ClipInspector';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
 import { resetClipSection } from './resetActions';
+import { setShapePathAnimated, toggleShapePathKey } from '../masks/maskService';
+import { keyIndexAt, keyTolerance } from '../../model/masks';
 
-/** Shape type, size, fill, stroke (colour, width, opacity, dashes), corners, star, arrows, shadow, fades. */
-export function ShapeSection({ clipId, shape, set, maxSize }: { clipId: ID; shape: ShapeProps; set: SetFn; maxSize: number }) {
+/**
+ * Shape type, size, fill, stroke (colour, width, opacity, dashes), corners, star, arrows, shadow,
+ * fades. A pen-drawn shape instead has open/closed and keyframes for its path (`keyAt`: the source
+ * time at the playhead).
+ */
+export function ShapeSection({ clipId, shape, set, maxSize, keyAt, fps }: { clipId: ID; shape: ShapeProps; set: SetFn; maxSize: number; keyAt: number; fps: number }) {
   const { t } = useTranslation();
+  const isPath = shape.kind === 'path';
   const setShape = <K extends keyof ShapeProps>(key: K, v: ShapeProps[K]) => set(`shape.${key}`, (c) => void (c.shape![key] = v));
-  const isLine = shape.kind === 'line';
+  const isLine = shape.kind === 'line' || (isPath && !shape.closed);
   const square = keepsAspect(shape.kind);
   const hasStroke = isLine || !!shape.stroke;
   const preset = FADE_PRESETS.find((p) => p.value === shape.fadeIn && p.value === shape.fadeOut)?.key ?? 'custom';
 
   return (
     <Section id="shape" title={t('inspector.shape')} onReset={() => resetClipSection(clipId, 'shape')}>
-      <SelectField
-        label={t('inspector.kind')}
-        value={shape.kind}
-        options={SHAPE_KINDS.map((k) => ({ value: k, label: `${SHAPE_ICONS[k]} ${t(`shapes.${k}`)}` }))}
-        onChange={(v) => set('shape.kind', (c) => setShapeKind(c.shape!, v))}
-      />
-      <NumberField
+      {isPath ? (
+        <PathControls clipId={clipId} shape={shape} set={set} keyAt={keyAt} fps={fps} />
+      ) : (
+        <SelectField
+          label={t('inspector.kind')}
+          value={shape.kind}
+          options={SHAPE_KINDS.map((k) => ({ value: k, label: `${SHAPE_ICONS[k]} ${t(`shapes.${k}`)}` }))}
+          onChange={(v) => set('shape.kind', (c) => setShapeKind(c.shape!, v))}
+        />
+      )}
+      {!isPath && <NumberField
         label={isLine ? t('inspector.length') : t('inspector.width')}
         value={shape.width}
         min={4}
@@ -36,8 +47,8 @@ export function ShapeSection({ clipId, shape, set, maxSize }: { clipId: ID; shap
             if (square) c.shape!.height = v;
           })
         }
-      />
-      {!isLine && !square && (
+      />}
+      {!isLine && !square && !isPath && (
         <NumberField label={t('inspector.height')} value={shape.height} min={4} max={maxSize} step={1} unit="px" onChange={(v) => setShape('height', v)} />
       )}
 
@@ -92,7 +103,7 @@ export function ShapeSection({ clipId, shape, set, maxSize }: { clipId: ID; shap
           <NumberField label={t('inspector.innerRadius')} value={shape.innerRadius ?? 0.5} min={0.1} max={0.95} factor={100} unit="%" onChange={(v) => setShape('innerRadius', v)} />
         </>
       )}
-      {isLine && (
+      {shape.kind === 'line' && (
         <Segmented
           label={t('inspector.arrows')}
           value={shape.arrowStart && shape.arrowEnd ? 'both' : shape.arrowStart ? 'start' : shape.arrowEnd ? 'end' : 'none'}
@@ -146,5 +157,50 @@ export function ShapeSection({ clipId, shape, set, maxSize }: { clipId: ID; shap
       <NumberField label={t('inspector.fadeIn')} value={shape.fadeIn} min={0} max={3} step={0.1} unit="s" onChange={(v) => setShape('fadeIn', v)} />
       <NumberField label={t('inspector.fadeOut')} value={shape.fadeOut} min={0} max={3} step={0.1} unit="s" onChange={(v) => setShape('fadeOut', v)} />
     </Section>
+  );
+}
+
+/** A pen-drawn shape: closed or open, and its path's stopwatch and keyframe at the playhead. */
+function PathControls({ clipId, shape, set, keyAt, fps }: { clipId: ID; shape: ShapeProps; set: SetFn; keyAt: number; fps: number }) {
+  const { t } = useTranslation();
+  const animated = !!shape.path?.keys;
+  const here = animated && keyIndexAt(shape.path!, keyAt, keyTolerance(fps)) >= 0;
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-2 text-xs text-neutral-300">
+        <input
+          type="checkbox"
+          checked={!!shape.closed}
+          onChange={(e) =>
+            set('shape.closed', (c) => {
+              c.shape!.closed = e.target.checked;
+              if (e.target.checked) c.shape!.fill ??= '#2563eb';
+              else if (!c.shape!.stroke || !c.shape!.strokeWidth) {
+                c.shape!.stroke ??= '#ffffff';
+                c.shape!.strokeWidth = c.shape!.strokeWidth || 8;
+              }
+            })
+          }
+        />
+        {t('shapes.closed')}
+      </label>
+      <div className="flex items-center gap-2 text-xs text-neutral-300">
+        <label className="flex items-center gap-2" title={t('shapes.animatePathHint')}>
+          <input type="checkbox" checked={animated} onChange={(e) => setShapePathAnimated(clipId, e.target.checked)} />
+          ⏱ {t('shapes.animatePath')}
+        </label>
+        {animated && (
+          <button
+            className={`rounded px-1.5 py-0.5 ${here ? 'bg-amber-500 text-black' : 'bg-surface-3 hover:bg-[#363c49]'}`}
+            title={t(here ? 'shapes.removePathKey' : 'shapes.addPathKey')}
+            aria-pressed={here}
+            onClick={() => toggleShapePathKey(clipId)}
+          >
+            ◆
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-neutral-400">{t('shapes.pathHint')}</p>
+    </div>
   );
 }

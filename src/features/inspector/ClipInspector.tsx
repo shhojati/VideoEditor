@@ -6,6 +6,7 @@ import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
 import { findClip, moveClips, trimClip } from '../../model/timeline';
 import type { BlendMode, Clip, ID, Project, TextAnimKind, TextProps, Transform } from '../../model/types';
 import { DEFAULT_ANIM_DURATION, TEXT_ANIMS } from '../../model/textAnim';
+import { keyTimeAt } from '../../model/remap';
 import { currentProject, useProjectStore } from '../../store/projectStore';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
 import { ShapeSection } from './ShapeSection';
@@ -113,7 +114,16 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
 
       {isText && <TextSection clipId={clipId} text={clip.text!} set={set} />}
       {clip.paint && <PaintSection project={project} clip={clip} />}
-      {clip.shape && <ShapeSection clipId={clipId} shape={shown.shape!} set={set} maxSize={4 * Math.max(project.settings.width, project.settings.height)} />}
+      {clip.shape && (
+        <ShapeSection
+          clipId={clipId}
+          shape={shown.shape!}
+          set={set}
+          maxSize={4 * Math.max(project.settings.width, project.settings.height)}
+          keyAt={keyTimeAt(clip, playheadIn(clip, time))}
+          fps={project.settings.fps}
+        />
+      )}
 
       {clip.adjustment && !clip.masks?.length && (
         <Section id="transform" title={t('inspector.transform')} onReset={() => resetClipSection(clipId, 'transform')}>

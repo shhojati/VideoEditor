@@ -154,16 +154,16 @@ export function resolveMasks(project: Project, clip: Clip, t: number, drawn: Cli
 
 type Ctx = OffscreenCanvasRenderingContext2D;
 
-export function tracePath(c: Ctx | CanvasRenderingContext2D | Path2D, path: MaskVertex[]) {
+export function tracePath(c: Ctx | CanvasRenderingContext2D | Path2D, path: MaskVertex[], closed = true) {
   const n = path.length;
   c.moveTo(path[0][0], path[0][1]);
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < (closed ? n : n - 1); i++) {
     const a = path[i];
     const b = path[(i + 1) % n];
     if (a[4] || a[5] || b[2] || b[3]) c.bezierCurveTo(a[0] + a[4], a[1] + a[5], b[0] + b[2], b[1] + b[3], b[0], b[1]);
     else c.lineTo(b[0], b[1]);
   }
-  c.closePath();
+  if (closed) c.closePath();
 }
 
 const pool: OffscreenCanvas[] = [];

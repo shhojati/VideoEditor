@@ -40,8 +40,12 @@ const textProps = z.object({
 
 const opacity = num.min(0).max(1);
 
+const animated = <T extends z.ZodType>(v: T) => z.object({ value: v, keys: z.array(z.object({ t: num, v })).optional() });
+
+const maskPath = z.array(z.tuple([num, num, num, num, num, num]));
+
 const shapeProps = z.object({
-  kind: z.enum(SHAPE_KINDS),
+  kind: z.enum([...SHAPE_KINDS, 'path']),
   width: num.positive(),
   height: num.positive(),
   fill: z.string().optional(),
@@ -55,15 +59,13 @@ const shapeProps = z.object({
   innerRadius: num.min(0.05).max(1).optional(),
   arrowStart: z.boolean().optional(),
   arrowEnd: z.boolean().optional(),
+  path: animated(maskPath).optional(),
+  closed: z.boolean().optional(),
   shadowColor: z.string().optional(),
   shadowBlur: nonNeg.optional(),
   fadeIn: nonNeg,
   fadeOut: nonNeg,
 });
-
-const animated = <T extends z.ZodType>(v: T) => z.object({ value: v, keys: z.array(z.object({ t: num, v })).optional() });
-
-const maskPath = z.array(z.tuple([num, num, num, num, num, num]));
 
 const rotoMask = z.object({
   id: z.string(),

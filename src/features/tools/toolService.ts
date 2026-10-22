@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { SHAPE_KINDS } from '../../model/overlays';
 import type { ID, ShapeKind } from '../../model/types';
-import { cancelPen, startPen, useMasks } from '../masks/maskService';
+import { cancelPen, startPen, startShapePen, useMasks } from '../masks/maskService';
 import { useTimelineUi } from '../timeline/timelineUi';
 
 export type Tool = 'select' | 'hand' | 'pen' | 'shape' | 'text' | 'brush' | 'clone' | 'eraser';
@@ -85,10 +85,11 @@ export function setTool(tool: Tool) {
   if (tool === 'pen') armPen();
 }
 
-/** The pen draws a mask on the selected clip; with nothing to draw on it falls back to selecting. */
+/** The pen draws a mask on the selected clip, or with nothing selected a new shape (as in After Effects). */
 function armPen() {
   const sel = useTimelineUi.getState().selection;
   if (sel.length === 1) startPen(sel[0]);
+  else if (!sel.length) startShapePen();
   if (!useMasks.getState().pen) useTool.setState({ tool: 'select' });
 }
 

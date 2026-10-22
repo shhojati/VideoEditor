@@ -12,7 +12,8 @@ import {
   type ClipboardItem,
 } from '../../model/timeline';
 import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
-import type { ID, Project, ShapeKind } from '../../model/types';
+import type { ID, MaskVertex, Project, ShapeKind } from '../../model/types';
+import { pathBounds } from '../../model/masks';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
 import { findTransition, removeTransitions } from '../../model/transitions';
@@ -178,6 +179,31 @@ export function addShape(kind: ShapeKind, at?: Placement) {
     if (at?.h && kind !== 'line') shape.height = Math.round(at.h);
     id = addShapeClip(d, useTransport.getState().time, shape);
     if (at) place(d, id, at);
+  });
+  select([id]);
+}
+
+/**
+ * New shape from a path drawn with the pen (points in project pixels around the frame centre):
+ * centred on its own middle, filled when closed, a white line when open. Selected.
+ */
+export function addPathShape(path: MaskVertex[], closed: boolean) {
+  const b = pathBounds(path);
+  const mx = b.x + b.width / 2;
+  const my = b.y + b.height / 2;
+  let id = '';
+  edit('ops.addShape', (d) => {
+    const shape = {
+      ...defaultShape('path'),
+      kind: 'path' as const,
+      width: Math.max(4, Math.round(b.width)),
+      height: Math.max(4, Math.round(b.height)),
+      path: { value: path.map(([x, y, ix, iy, ox, oy]): MaskVertex => [x - mx, y - my, ix, iy, ox, oy]) },
+      closed,
+      ...(closed ? { fill: '#2563eb', strokeWidth: 0 } : { fill: undefined, stroke: '#ffffff', strokeWidth: 8 }),
+    };
+    id = addShapeClip(d, useTransport.getState().time, shape);
+    place(d, id, { cx: d.settings.width / 2 + mx, cy: d.settings.height / 2 + my });
   });
   select([id]);
 }

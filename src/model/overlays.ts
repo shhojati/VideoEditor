@@ -21,6 +21,9 @@ export const isPaintLayer = (clip: Clip) => !!clip.paint && !clip.assetId && !cl
 /** Text, shape, paint or adjustment layer: no media file to decode. */
 export const isOverlay = (clip: Clip) => !!(clip.text || clip.shape || clip.adjustment) || isPaintLayer(clip);
 
+/** A shape drawn with the pen. */
+export const isPathShape = (clip: Clip) => clip.shape?.kind === 'path' && !!clip.shape.path;
+
 /** Shapes whose width and height are kept equal. */
 export const keepsAspect = (kind: ShapeKind) => kind === 'square' || kind === 'circle';
 

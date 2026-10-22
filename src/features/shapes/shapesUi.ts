@@ -8,4 +8,5 @@ export const SHAPE_ICONS: Record<ShapeKind, string> = {
   triangle: '▲',
   star: '★',
   line: '╱',
+  path: '✒',
 };

@@ -5,12 +5,26 @@ import { withMotion } from '../../engine/render/motion';
 import { keyedClip } from '../../model/keyframes';
 import { isActiveAt } from '../../engine/render/renderFrame';
 import { closestOnPath, insertVertex, removeVertices, toggleSmooth, type Pt } from '../../model/masks';
+import { isPathShape } from '../../model/overlays';
 import { findClip } from '../../model/timeline';
 import type { MaskVertex, Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
 import { usePreviewView } from '../preview/previewView';
 import { useTimelineUi } from '../timeline/timelineUi';
-import { cancelPen, drawnPath, editAllPaths, finishPen, selectVertices, setDrawnPath, setPenPoints, useMasks } from './maskService';
+import {
+  cancelPen,
+  drawnPath,
+  editAllPaths,
+  editAllShapePaths,
+  finishPen,
+  selectVertices,
+  setDrawnPath,
+  setPenPoints,
+  setShapePath,
+  shapePathAt,
+  useMasks,
+} from './maskService';
+import { useTool } from '../tools/toolService';
 
 /** Screen px: point size, closing distance for the pen, drag threshold, outline hit width. */
 const POINT = 8;
@@ -39,13 +53,26 @@ type Gesture =
   | { kind: 'move' | 'points'; path0: MaskVertex[]; at0: Pt; s0: Pt; moved: boolean; key: string }
   | { kind: 'handle'; path0: MaskVertex[]; index: number; side: 'in' | 'out'; s0: Pt; moved: boolean; key: string };
 
+/** A path being edited on the preview: a clip's mask, or a pen-drawn shape. */
+interface PathTarget {
+  path: MaskVertex[];
+  set: (path: MaskVertex[], mergeKey?: string) => void;
+  /** Change the points in every keyframe. */
+  all: (fn: (path: MaskVertex[]) => MaskVertex[], mergeKey?: string) => void;
+  closed: boolean;
+  /** Masks move as a whole by dragging inside; a shape moves with the selection tool instead. */
+  mask: boolean;
+  dim: boolean;
+}
+
 /**
- * Roto masks on the preview (inside the canvas overlay's SVG). With the pen: click to add points,
- * drag to pull out curve handles, click the first point (or Enter) to close; Backspace removes the
- * last point, Escape cancels. Editing the active mask of the selected clip: drag points (Shift:
- * select several), drag a handle (Alt: only that side), drag inside to move the whole mask, click
- * the outline to add a point, Alt-click a point for corner ↔ smooth, Delete removes points. When
- * the path is animated, an edit sets a keyframe at the playhead.
+ * Roto masks and pen-drawn shapes on the preview (inside the canvas overlay's SVG). With the pen:
+ * click to add points, drag to pull out curve handles, click the first point to close; Enter closes
+ * a mask or ends an open shape (a line); Backspace removes the last point, Escape cancels. Editing
+ * the active mask of the selected clip, or the selected pen-drawn shape: drag points (Shift: select
+ * several), drag a handle (Alt: only that side), drag inside a mask to move it, click the outline
+ * (a shape: Ctrl-click) to add a point, Alt-click a point for corner ↔ smooth, Delete removes
+ * points. When the path is animated, an edit sets a keyframe at the playhead.
  */
 export function MaskOverlay({ project, time }: { project: Project; time: number }) {
   const { t } = useTranslation();
@@ -58,13 +85,39 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
   const penDrag = useRef<{ index: number; s0: Pt; moved: boolean } | null>(null);
   const gesture = useRef<Gesture | null>(null);
 
-  const clipId = pen?.clipId ?? (active && selection.includes(active.clipId) ? active.clipId : undefined);
-  const ref = clipId && time >= 0 ? findClip(project, clipId) : undefined;
-  const clip = ref && isActiveAt(ref.clip, time) ? ref.clip : undefined;
-  const layer = clip && layerAffine(project, withMotion(project, keyedClip(clip, time), time));
+  const selecting = useTool((s) => s.tool) === 'select';
+  // A new shape being drawn has no clip yet: its points are project pixels around the frame centre.
+  const shapePen = pen?.kind === 'shape';
+  const maskClipId = shapePen ? undefined : (pen?.clipId ?? (active && selection.includes(active.clipId) ? active.clipId : undefined));
+  // Otherwise a selected pen-drawn shape shows its points to edit.
+  const editId = maskClipId ?? (!pen && selecting && selection.length === 1 ? selection[0] : undefined);
+  const ref = editId && time >= 0 ? findClip(project, editId) : undefined;
+  const clip = ref && isActiveAt(ref.clip, time) && (maskClipId || isPathShape(ref.clip)) ? ref.clip : undefined;
+  const { width: W, height: H } = project.settings;
+  const layer: Affine | undefined = shapePen ? [1, 0, 0, 1, W / 2, H / 2] : clip && layerAffine(project, withMotion(project, keyedClip(clip, time), time));
   const S: Affine | undefined = layer && composeAffine([view.k, 0, 0, view.k, view.ox, view.oy], layer);
-  const mask = !pen && clip && active ? clip.masks?.find((m) => m.id === active.maskId) : undefined;
+  const mask = !pen && clip && active && maskClipId ? clip.masks?.find((m) => m.id === active.maskId) : undefined;
   const editable = !!ref && !ref.track.locked;
+  const target: PathTarget | undefined =
+    clip && mask
+      ? {
+          path: drawnPath(project, clip, mask, time),
+          set: (p, key) => setDrawnPath(clip.id, mask.id, time, p, key),
+          all: (fn, key) => editAllPaths(clip.id, mask.id, fn, key),
+          closed: true,
+          mask: true,
+          dim: !!mask.off,
+        }
+      : clip && !pen && !maskClipId
+        ? {
+            path: shapePathAt(clip, time),
+            set: (p, key) => setShapePath(clip.id, time, p, key),
+            all: (fn, key) => editAllShapePaths(clip.id, fn, key),
+            closed: !!clip.shape!.closed,
+            mask: false,
+            dim: false,
+          }
+        : undefined;
 
   const cancelGesture = () => {
     const g = gesture.current;
@@ -75,7 +128,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
 
   // Keys while drawing or editing: captured before the app's shortcuts (Delete would remove the clip).
   useEffect(() => {
-    if (!pen && !mask) return;
+    if (!pen && !target) return;
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
       const stop = () => {
@@ -86,7 +139,8 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
       if (st.pen) {
         if (e.key === 'Enter') {
           stop();
-          finishPen(t('masks.nameN', { n: (clip?.masks?.length ?? 0) + 1 }));
+          // A mask always closes; a shape left open is a line.
+          finishPen(t('masks.nameN', { n: (clip?.masks?.length ?? 0) + 1 }), st.pen.kind !== 'shape');
         } else if (e.key === 'Escape') {
           stop();
           cancelPen();
@@ -102,10 +156,11 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
       } else if (e.key === 'Escape' && st.selected.length) {
         stop();
         selectVertices([]);
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && st.selected.length && st.active && editable) {
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && st.selected.length && target && editable) {
         stop();
         const gone = new Set(st.selected);
-        editAllPaths(st.active.clipId, st.active.maskId, (p) => removeVertices(p, gone));
+        // A path keeps enough points to be one (3 closed, 2 open).
+        if (target.path.length - gone.size >= (target.closed ? 3 : 2)) target.all((p) => removeVertices(p, gone));
         selectVertices([]);
       }
     };
@@ -113,7 +168,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
     return () => window.removeEventListener('keydown', onKey, true);
   });
 
-  if (!clip || !S) return null;
+  if (!S || (!clip && !shapePen)) return null;
   const Sinv = invertAffine(S);
   const toLayer = (s: Pt) => applyAffine(Sinv, s);
   const local = (e: React.PointerEvent): Pt => {
@@ -144,7 +199,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
       // The store, not this render's points: quick clicks can come before a re-render.
       const cur = useMasks.getState().pen?.points ?? [];
       if (nearFirst(s, cur)) {
-        finishPen(t('masks.nameN', { n: (clip.masks?.length ?? 0) + 1 }));
+        finishPen(t('masks.nameN', { n: (clip?.masks?.length ?? 0) + 1 }));
         return;
       }
       const p = toLayer(s);
@@ -203,12 +258,11 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
     );
   }
 
-  if (!mask) return null;
+  if (!target || !clip) return null;
 
-  // ---- editing the active mask --------------------------------------------------------------------------
-  const path = drawnPath(project, clip, mask, time);
+  // ---- editing the active mask or the selected shape's path ----------------------------------------------
+  const path = target.path;
   const screen = mapPath(path, S);
-  const ids = { clipId: clip.id, maskId: mask.id };
 
   const begin = (e: React.PointerEvent, g: Gesture) => {
     capture(e);
@@ -220,12 +274,13 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
     begin(e, { kind: 'move', path0: path, at0: toLayer(s), s0: s, moved: false, key: `mask:${++gestureSeq}` });
   };
   const onDownOutline = (e: React.PointerEvent) => {
-    if (e.button !== 0 || !editable) return;
+    // On a shape a plain click selects and moves it (the canvas below); Ctrl-click adds a point.
+    if (e.button !== 0 || !editable || (!target.mask && !e.ctrlKey && !e.metaKey)) return;
     const s = local(e);
     const c = closestOnPath(path, toLayer(s));
     const key = `mask:${++gestureSeq}`;
     // Add a point there (in every keyframe) and keep dragging it, all one undo step.
-    editAllPaths(ids.clipId, ids.maskId, (p) => insertVertex(p, c.seg, c.u), key);
+    target.all((p) => insertVertex(p, c.seg, c.u), key);
     selectVertices([c.seg + 1]);
     begin(e, { kind: 'points', path0: insertVertex(path, c.seg, c.u), at0: toLayer(s), s0: s, moved: true, key });
   };
@@ -233,7 +288,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
     if (e.button !== 0 || !editable) return;
     if (e.altKey) {
       e.stopPropagation();
-      setDrawnPath(ids.clipId, ids.maskId, time, toggleSmooth(path, i));
+      target.set(toggleSmooth(path, i));
       return;
     }
     if (e.shiftKey) {
@@ -278,11 +333,11 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
       const moving = g.kind === 'move' ? null : new Set(useMasks.getState().selected);
       next = g.path0.map((v, i) => (!moving || moving.has(i) ? [v[0] + dx, v[1] + dy, v[2], v[3], v[4], v[5]] : v));
     }
-    setDrawnPath(ids.clipId, ids.maskId, time, next, g.key);
+    target.set(next, g.key);
   };
   const onUp = () => (gesture.current = null);
 
-  const others = (clip.masks ?? []).filter((m) => m.id !== mask.id && !m.off);
+  const others = mask ? (clip.masks ?? []).filter((m) => m.id !== mask.id && !m.off) : [];
   // Handles of the selected points (none for a corner).
   const handles = (editable ? selected.filter((i) => i < screen.length) : []).flatMap((i) => {
     const v = screen[i];
@@ -293,20 +348,22 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
     });
   });
   return (
-    <g data-testid="mask-editor" data-mask-id={mask.id} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+    <g data-testid={target.mask ? 'mask-editor' : 'path-editor'} data-mask-id={mask?.id} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
       {others.map((m) => (
         <path key={m.id} d={pathD(mapPath(drawnPath(project, clip, m, time), S), true)} fill="none" className="stroke-yellow-300/40" strokeWidth={1} style={{ pointerEvents: 'none' }} />
       ))}
+      {target.mask && (
+        <path
+          d={pathD(screen, true)}
+          fill="transparent"
+          stroke="none"
+          style={{ pointerEvents: editable ? 'fill' : 'none', cursor: 'move' }}
+          aria-label={t('masks.editHint')}
+          onPointerDown={onDownInside}
+        />
+      )}
       <path
-        d={pathD(screen, true)}
-        fill="transparent"
-        stroke="none"
-        style={{ pointerEvents: editable ? 'fill' : 'none', cursor: 'move' }}
-        aria-label={t('masks.editHint')}
-        onPointerDown={onDownInside}
-      />
-      <path
-        d={pathD(screen, true)}
+        d={pathD(screen, target.closed)}
         fill="none"
         stroke="transparent"
         strokeWidth={HIT}
@@ -314,7 +371,7 @@ export function MaskOverlay({ project, time }: { project: Project; time: number 
         style={{ pointerEvents: editable ? 'stroke' : 'none', cursor: 'copy' }}
         onPointerDown={onDownOutline}
       />
-      <path d={pathD(screen, true)} fill="none" className={mask.off ? 'stroke-yellow-300/40' : 'stroke-yellow-300'} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />
+      <path d={pathD(screen, target.closed)} fill="none" className={target.dim ? 'stroke-yellow-300/40' : target.mask ? 'stroke-yellow-300' : 'stroke-sky-300'} strokeWidth={1.5} style={{ pointerEvents: 'none' }} />
       {handles.map((h) => (
         <g key={`${h.i}:${h.side}`}>
           <line x1={h.vx} y1={h.vy} x2={h.x} y2={h.y} className="stroke-yellow-200/70" style={{ pointerEvents: 'none' }} />

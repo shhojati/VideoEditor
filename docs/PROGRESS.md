@@ -717,3 +717,20 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 ### Known issues / not done
 - The source is always the same frame; After Effects' source time offset (copying from another moment) is not done.
 - Clone strokes are applied after the eraser and before brush strokes, whatever order they were painted in.
+
+## Post-MVP 27 — Shapes drawn with the pen ✅ (2026-10-22)
+
+### Done
+- **Pen (G) with nothing selected draws a new shape** (After Effects' shape layer from the pen); with a clip selected it still draws a mask on it. Click to add points, drag to pull out curve handles; clicking the first point closes the shape (filled, blue), Enter ends it open (a white line). Finishing goes back to Select.
+- The shape is centred on its own middle and is a normal shape clip (`ShapeKind 'path'`, `ShapeProps.path` + `closed`): fill, stroke, dashes, shadow, fades, blend modes, masks, effects and keyframes like the others; it scales as a whole with the corner handles and rotates.
+- **Editing its points** with the selection tool when it is selected: drag points or handles, Alt-click a point for curve ↔ corner, **Ctrl-click** the outline to add a point (a plain click still selects and moves the shape), Delete removes points (a path keeps 3 closed / 2 open).
+- **Inspector → Shape**: "Closed (filled)", and a ⏱ stopwatch + ◆ keyframe at the playhead for the path, so the shape can morph over time (keyframes as for mask paths, linear).
+- Project version 6.
+
+### Verified
+- Unit test: with nothing selected the pen makes a closed path shape of the drawn size, centred on its middle, and Select comes back.
+- In the browser: three clicks and a click on the first point make a filled triangle of the drawn size; its points show for editing.
+
+### Known issues / not done
+- One path per shape clip (After Effects shape layers can hold several).
+- Path keyframes are linear (no ease), like mask paths.

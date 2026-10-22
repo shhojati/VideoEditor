@@ -123,7 +123,8 @@
     "strokeProp": "Change stroke",
     "clearPaint": "Clear paint",
     "paintFrames": "Frame-by-frame",
-    "clone": "Clone stamp"
+    "clone": "Clone stamp",
+    "shapePath": "Edit shape path"
   },
   "panels": {
     "media": "Media",
@@ -595,7 +596,7 @@
       "previewPan": "Pan the zoomed preview",
       "previewShift": "Preview: move on one axis, keep proportions, rotate in 15° steps",
       "previewAlt": "Preview: resize from the centre / move without snapping",
-      "maskPen": "Pen tool: draw a mask on the selected clip",
+      "maskPen": "Pen tool: a mask on the selected clip, or a new shape with nothing selected",
       "keyframe": "Add/remove a keyframe on the selected clip",
       "keyframeJump": "Previous/next keyframe",
       "marker": "Add/remove a marker at the playhead",
@@ -672,7 +673,14 @@
     "oval": "Oval",
     "triangle": "Triangle",
     "star": "Star",
-    "line": "Line"
+    "line": "Line",
+    "path": "Pen shape",
+    "closed": "Closed (filled)",
+    "animatePath": "Animate path",
+    "animatePathHint": "Keyframes for the path: change points at different times and the shape morphs between them",
+    "addPathKey": "Add a path keyframe at the playhead",
+    "removePathKey": "Remove the path keyframe at the playhead",
+    "pathHint": "Drag points to reshape; Alt-click a point for a curve or a corner; Ctrl-click the outline to add a point; Delete removes points."
   },
   "blend": {
     "label": "Blend mode",
@@ -1503,7 +1511,7 @@
     "title": "Tools",
     "select": "Select",
     "hand": "Hand (pan the preview)",
-    "pen": "Pen (mask on the selected clip)",
+    "pen": "Pen (mask on the selected clip, or a new shape)",
     "shape": "Shape",
     "text": "Type",
     "shapeKind": "Shape to draw",

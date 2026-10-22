@@ -244,12 +244,13 @@ export interface TextProps {
 
 export type TextAnimKind = 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'slideRight' | 'pop' | 'zoom' | 'typewriter' | 'wordByWord' | 'blurIn' | 'wipe';
 
-export type ShapeKind = 'rectangle' | 'square' | 'circle' | 'oval' | 'triangle' | 'star' | 'line';
+export type ShapeKind = 'rectangle' | 'square' | 'circle' | 'oval' | 'triangle' | 'star' | 'line' | 'path';
 
 /**
  * A vector shape, centred on the clip transform's position. Sizes are project pixels at scale 1.
  * Square and circle keep width = height. A line runs along the width (its angle is the rotation);
- * its height is ignored.
+ * its height is ignored. A path (drawn with the pen) is `path`, in project pixels at scale 1 around
+ * the position; its width and height are only its size when drawn.
  */
 export interface ShapeProps {
   kind: ShapeKind;
@@ -273,6 +274,9 @@ export interface ShapeProps {
   /** Line: arrowheads. */
   arrowStart?: boolean;
   arrowEnd?: boolean;
+  /** Path: Bézier points like a mask's (keyframes in the clip's source time), and whether it closes. */
+  path?: Animated<MaskVertex[]>;
+  closed?: boolean;
   shadowColor?: string;
   /** Blur radius in project pixels at scale 1. */
   shadowBlur?: number;

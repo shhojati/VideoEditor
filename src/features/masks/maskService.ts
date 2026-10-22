@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { affineScale, invertAffine, mapPath, maskCarry, maskShapeAt, mediaSize } from '../../engine/render/masks';
 import {
+  pathAt,
   clipKeyTimes,
   createMask,
   keyTolerance,
@@ -25,13 +26,17 @@ import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { clipBox } from '../preview/canvasGeometry';
 import { setActiveTracker, startTracking } from '../tracking/trackingService';
+import { addPathShape } from '../timeline/actions';
 import { keyRate, keyTimeAt, keyToTimeline } from '../../model/remap';
 
 interface MaskUiState {
   /** The mask whose points are shown and edited on the canvas. */
   active: { clipId: ID; maskId: ID } | null;
-  /** A mask being drawn with the pen: its points so far, in layer units. */
-  pen: { clipId: ID; points: MaskVertex[] } | null;
+  /**
+   * A path being drawn with the pen, its points so far in layer units: a mask on `clipId`, or a new
+   * shape (no clip: project pixels around the frame centre).
+   */
+  pen: { clipId: ID | null; kind: 'mask' | 'shape'; points: MaskVertex[] } | null;
   /** Selected points of the active mask. */
   selected: number[];
 }
@@ -114,18 +119,28 @@ export function startPen(clipId: ID) {
   const clip = ref?.clip;
   if (!clip || ref.track.locked || (!isOverlay(clip) && !mediaSize(p!, clip))) return;
   playheadIn(clip);
-  useMasks.setState({ pen: { clipId, points: [] }, selected: [] });
+  useMasks.setState({ pen: { clipId, kind: 'mask', points: [] }, selected: [] });
 }
+
+/** Draw a new shape with the pen. */
+export const startShapePen = () => useMasks.setState({ pen: { clipId: null, kind: 'shape', points: [] }, selected: [] });
 
 export const cancelPen = () => useMasks.setState({ pen: null });
 
 export const setPenPoints = (points: MaskVertex[]) => useMasks.setState((s) => (s.pen ? { pen: { ...s.pen, points } } : s));
 
-/** Close the pen path into a new mask (needs three points). */
-export function finishPen(name: string) {
+/**
+ * Finish the pen path: a new mask (closed; needs three points), or a new shape, `closed` or open
+ * (a line; two points are enough).
+ */
+export function finishPen(name: string, closed = true) {
   const pen = useMasks.getState().pen;
   useMasks.setState({ pen: null });
-  if (!pen || pen.points.length < 3) return;
+  if (pen?.kind === 'shape') {
+    if (pen.points.length >= (closed ? 3 : 2)) addPathShape(pen.points, closed);
+    return;
+  }
+  if (!pen?.clipId || pen.points.length < 3) return;
   const p = project();
   const clip = p && findClip(p, pen.clipId)?.clip;
   if (!clip) return;
@@ -334,4 +349,50 @@ export function trackMask(clipId: ID, maskId: ID, dir: 1 | -1, trackerName: stri
   }
   setActiveTracker(clipId, trackerId);
   startTracking(clipId, trackerId, dir);
+}
+
+// ---- pen-drawn shapes -------------------------------------------------------------------------------
+
+/** The path of a pen-drawn shape at timeline time t (project pixels at scale 1 around its position). */
+export const shapePathAt = (clip: Clip, t: number): MaskVertex[] => pathAt(clip.shape!.path!, srcTime(clip, t));
+
+function editShapePath(clipId: ID, recipe: (path: Animated<MaskVertex[]>, clip: Clip, p: Project) => void, mergeKey?: string) {
+  useProjectStore.getState().edit(
+    'ops.shapePath',
+    (d) => {
+      const ref = findClip(d, clipId);
+      const path = ref?.clip.shape?.path;
+      if (ref && path && !ref.track.locked) recipe(path, ref.clip, d);
+    },
+    mergeKey ? { mergeKey, gesture: true } : undefined,
+  );
+}
+
+/** Store a pen-drawn shape's path at timeline time t (a keyframe there when animated). */
+export function setShapePath(clipId: ID, t: number, path: MaskVertex[], mergeKey?: string) {
+  editShapePath(clipId, (a, clip, p) => setAt(a, srcTime(clip, t), path, tolerance(p, clip)), mergeKey);
+}
+
+/** Change a pen-drawn shape's points in every keyframe (add or remove a point). */
+export function editAllShapePaths(clipId: ID, fn: (path: MaskVertex[]) => MaskVertex[], mergeKey?: string) {
+  editShapePath(
+    clipId,
+    (a) => {
+      a.value = fn(a.value);
+      for (const k of a.keys ?? []) k.v = fn(k.v);
+    },
+    mergeKey,
+  );
+}
+
+/** The stopwatch: animate a pen-drawn shape's path from the playhead, or stop (keeping the path there). */
+export function setShapePathAnimated(clipId: ID, on: boolean) {
+  const time = useTransport.getState().time;
+  editShapePath(clipId, (a, clip) => setAnimated(a, on, srcTime(clip, time), lerpPath));
+}
+
+/** Add a keyframe at the playhead for a pen-drawn shape's path, or remove the one there. */
+export function toggleShapePathKey(clipId: ID) {
+  const time = useTransport.getState().time;
+  editShapePath(clipId, (a, clip, p) => toggleKeyAt(a, srcTime(clip, time), tolerance(p, clip), lerpPath));
 }

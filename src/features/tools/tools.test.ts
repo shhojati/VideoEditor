@@ -8,6 +8,7 @@ import { useTimelineUi } from '../timeline/timelineUi';
 import { finishTextEdit } from './TextEditBox';
 import { squareUp } from './ToolOverlay';
 import { editText, setTool, shapeToolKey, useTool } from './toolService';
+import { finishPen, setPenPoints, useMasks } from '../masks/maskService';
 
 beforeEach(() => {
   const p: Project = createProject('t');
@@ -24,9 +25,25 @@ describe('tools', () => {
     expect(useTool.getState().shapeKind).toBe('square');
   });
 
-  it('the pen needs a clip to draw on', () => {
+  it('the pen with nothing selected draws a new shape; finishing goes back to selecting', () => {
     setTool('pen');
+    expect(useTool.getState().tool).toBe('pen');
+    expect(useMasks.getState().pen).toMatchObject({ kind: 'shape', clipId: null });
+    // Three points in project pixels around the frame centre, closed.
+    setPenPoints([
+      [100, 100, 0, 0, 0, 0],
+      [300, 100, 0, 0, 0, 0],
+      [300, 200, 0, 0, 0, 0],
+    ]);
+    finishPen('x');
     expect(useTool.getState().tool).toBe('select');
+    const p = currentProject()!;
+    const clip = findClip(p, useTimelineUi.getState().selection[0])!.clip;
+    expect(clip.shape).toMatchObject({ kind: 'path', closed: true, width: 200, height: 100 });
+    // Centred on its own middle: the points move by (-200, -150) and the clip sits there.
+    expect(clip.shape!.path!.value[0].slice(0, 2)).toEqual([-100, -50]);
+    expect(clip.transform.x * p.settings.width).toBeCloseTo(200);
+    expect(clip.transform.y * p.settings.height).toBeCloseTo(150);
   });
 
   it('a dragged box: corners in any order, Shift makes a square on the longer side', () => {

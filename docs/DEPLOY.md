@@ -9,11 +9,11 @@ The `Dockerfile` builds the app and serves it with nginx using the headers below
 On the server, in `/srv/video-editor`, put `docker-compose.yml`, `scripts/fetch-models.mjs` (as `fetch-models.mjs`) and a `.env` made from `deploy/.env.example`. Then:
 
 ```bash
-docker compose --profile tools run --rm fetch-models   # once: downloads ~1.8 GB into ./models
+docker compose --profile tools run --rm fetch-models   # once: downloads ~3.6 GB into ./models
 docker compose up -d
 ```
 
-The same command also downloads the English→Persian translator (`Xenova/m2m100_418M`, 8-bit, ~630 MB, MIT; the 16-bit version, ~1.2 GB, only with `fetch-models.mjs translate-fp16`) and the person detector for auto reframe (`Xenova/yolos-tiny`, ~10 MB, Apache-2.0). The Whisper models are the `whisper-<size>_timestamped` exports, which also give word timings for animated captions. A server that still has only the older `whisper-<size>` folders keeps working, but with segment timings only. To upgrade, run the `fetch-models` command again: the deploy job keeps `fetch-models.mjs` up to date on the server, and the command downloads only the new folders. The old ones can then be deleted. Downloads retry a dropped connection and continue where they stopped (also across runs: a cut-off file is kept as `<name>.part` and continued next time), and every file already there is checked against its size on Hugging Face, so if the command still fails, just run it again.
+The same command also downloads the English→Persian translator (`Xenova/m2m100_418M`, 8-bit, ~630 MB, MIT; the 16-bit version, ~1.2 GB, only with `fetch-models.mjs translate-fp16`) and the person detector for auto reframe (`Xenova/yolos-tiny`, ~10 MB, Apache-2.0). Whisper comes in four sizes; `large-v3-turbo` (~1.8 GB on disk, 0.76 GB download per user on WebGPU, 1.1 GB on WASM) is the most accurate for Persian (docs/SPIKES.md, spike 4b) and the default on computers once installed; `fetch-models.mjs large-v3-turbo` adds just that one. The Whisper models are the `whisper-<size>_timestamped` exports, which also give word timings for animated captions. A server that still has only the older `whisper-<size>` folders keeps working, but with segment timings only. To upgrade, run the `fetch-models` command again: the deploy job keeps `fetch-models.mjs` up to date on the server, and the command downloads only the new folders. The old ones can then be deleted. Downloads retry a dropped connection and continue where they stopped (also across runs: a cut-off file is kept as `<name>.part` and continued next time), and every file already there is checked against its size on Hugging Face, so if the command still fails, just run it again.
 
 Add a site to the host's Caddy (`/etc/caddy/Caddyfile`) and reload it with `sudo systemctl reload caddy`; Caddy gets the certificate itself:
 
@@ -97,7 +97,7 @@ node scripts/fetch-models.mjs        # once, on a machine that can reach hugging
 npm run build                        # -> dist/
 ```
 
-`dist/` contains the app (~55 MB) plus `dist/models/` (Whisper tiny/base/small ~1.1 GB, translation ~630 MB, person detector ~10 MB). Copy the whole folder to the web server. To save space, delete model sizes you do not want from `public/models/` before building (the app shows missing models as "not installed").
+`dist/` contains the app (~55 MB) plus `dist/models/` (Whisper tiny/base/small ~1.1 GB + large-v3-turbo ~1.8 GB, translation ~630 MB, person detector ~10 MB). Copy the whole folder to the web server. To save space, delete model sizes you do not want from `public/models/` before building (the app shows missing models as "not installed").
 
 ## 2. Server requirements
 

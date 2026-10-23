@@ -1,8 +1,8 @@
 // Downloads the ONNX models into public/models/ so speech-to-text, auto reframe and translation run
 // fully offline. Run ONCE on a machine with internet access, then copy public/models/ to the target machine.
 //
-//   node scripts/fetch-models.mjs                 # Whisper tiny + base + small, person detector, translation (8-bit)
-//   node scripts/fetch-models.mjs base            # just one Whisper size
+//   node scripts/fetch-models.mjs                 # Whisper tiny + base + small + large-v3-turbo, person detector, translation (8-bit)
+//   node scripts/fetch-models.mjs base            # just one Whisper size (tiny, base, small, large-v3-turbo ~1.8 GB)
 //   node scripts/fetch-models.mjs detect          # just the person detector (auto reframe)
 //   node scripts/fetch-models.mjs translate       # just the English→Persian translator, 8-bit (~630 MB)
 //   node scripts/fetch-models.mjs translate-fp16  # its higher-precision 16-bit version (~1.2 GB, for WebGPU)
@@ -15,7 +15,7 @@ import { pipeline } from 'node:stream/promises';
 const endpoint = process.env.HF_ENDPOINT ?? 'https://huggingface.co';
 const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const args = process.argv.slice(2);
-const WHISPER_SIZES = ['tiny', 'base', 'small'];
+const WHISPER_SIZES = ['tiny', 'base', 'small', 'large-v3-turbo'];
 const sizes = args.length ? args.filter((a) => WHISPER_SIZES.includes(a)) : WHISPER_SIZES;
 const detector = !args.length || args.includes('detect');
 const translate = !args.length || args.includes('translate');
@@ -26,8 +26,11 @@ const META = [
   'tokenizer_config.json', 'special_tokens_map.json', 'added_tokens.json', 'vocab.json',
   'merges.txt', 'normalizer.json',
 ];
-// encoder fp32 + decoder q8 (WASM) and q4 (WebGPU). Must match DTYPES in src/engine/stt.
-const WEIGHTS = ['onnx/encoder_model.onnx', 'onnx/decoder_model_merged_quantized.onnx', 'onnx/decoder_model_merged_q4.onnx'];
+// Decoder q8 (WASM) and q4 (WebGPU); encoder fp32, but turbo's quantized like its decoder (fp32 is
+// 2.5 GB). Must match dtypes() in src/engine/stt/models.ts.
+const DECODERS = ['onnx/decoder_model_merged_quantized.onnx', 'onnx/decoder_model_merged_q4.onnx'];
+const weights = (size) =>
+  size === 'large-v3-turbo' ? ['onnx/encoder_model_quantized.onnx', 'onnx/encoder_model_q4.onnx', ...DECODERS] : ['onnx/encoder_model.onnx', ...DECODERS];
 
 const TRIES = 10;
 const sizeOf = (f) => (existsSync(f) ? statSync(f).size : 0);
@@ -101,7 +104,7 @@ async function fetchRepo(repo, files) {
 
 for (const size of sizes) {
   // The "_timestamped" exports also output cross-attentions, which word-level timestamps need.
-  await fetchRepo(`onnx-community/whisper-${size}_timestamped`, [...META, ...WEIGHTS]);
+  await fetchRepo(`onnx-community/whisper-${size}_timestamped`, [...META, ...weights(size)]);
 }
 // Person detector for auto reframe (YOLOS-tiny, Apache-2.0), quantized: ~10 MB.
 if (detector) await fetchRepo('Xenova/yolos-tiny', ['config.json', 'preprocessor_config.json', 'onnx/model_quantized.onnx']);

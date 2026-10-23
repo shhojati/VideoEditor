@@ -99,8 +99,8 @@ test('edit a cue from the inspector and by double-clicking it on the timeline', 
   expect((await cues(page))[1].text).toBe('second, fixed');
 });
 
-// Real speech-to-text with the tiny model on 70 s of Persian speech. Needs the model files in
-// public/models and takes a few minutes, so it only runs with STT_E2E=1.
+// Real speech-to-text on 70 s of Persian speech, with the tiny model (or STT_MODEL, e.g.
+// large-v3-turbo). Needs the model files in public/models and takes minutes, so it only runs with STT_E2E=1.
 test('auto subtitles from Persian speech (STT_E2E=1)', async ({ page }) => {
   test.skip(!process.env.STT_E2E, 'set STT_E2E=1 to run speech-to-text end to end');
   test.setTimeout(15 * 60_000);
@@ -120,7 +120,7 @@ test('auto subtitles from Persian speech (STT_E2E=1)', async ({ page }) => {
   await page.locator('[data-testid=asset-card]').dragTo(page.locator('[data-testid=track][data-track-kind=video] [data-lane]'), { targetPosition: { x: 2, y: 20 } });
   await page.getByTestId('tab-subtitles').click();
   await page.getByTestId('auto-subtitles').getByRole('button').first().click();
-  await page.getByTestId('stt-model').selectOption('tiny');
+  await page.getByTestId('stt-model').selectOption(process.env.STT_MODEL ?? 'tiny');
   page.on('console', (m) => m.type() === 'error' && console.log('[page]', m.text()));
   page.on('load', () => console.log('[page] (re)loaded'));
   const status = setInterval(() => {

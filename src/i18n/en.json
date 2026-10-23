@@ -461,7 +461,8 @@
     "models": {
       "tiny": "Fastest (tiny)",
       "base": "Fast (base)",
-      "small": "More accurate (small)"
+      "small": "More accurate (small)",
+      "large-v3-turbo": "Most accurate (turbo)"
     },
     "notInstalled": "not installed",
     "language": "Spoken language",
@@ -483,7 +484,7 @@
       "missingModel": "Model files not found. Put them in public/models (see public/models/README.md).",
       "failed": "Speech recognition failed."
     },
-    "smallOnPhone": "small needs over 1 GB of memory and may close the page on a phone. If it does, try base.",
+    "heavyOnPhone": "small and turbo need over 1 GB of memory and may close the page on a phone. If they do, try base.",
     "installHint": "Download missing models with scripts/fetch-models.mjs into public/models.",
     "noWordTimings": "This model is an older version without word timings. Animated captions will use estimated timing. Download the new models with scripts/fetch-models.mjs."
   },

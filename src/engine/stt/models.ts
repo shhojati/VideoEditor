@@ -1,16 +1,23 @@
 // Whisper model files the app can use; must match scripts/fetch-models.mjs.
 
-export type WhisperSize = 'tiny' | 'base' | 'small';
+export type WhisperSize = 'tiny' | 'base' | 'small' | 'large-v3-turbo';
 export type SttDevice = 'webgpu' | 'wasm';
+type Dtype = 'fp32' | 'q8' | 'q4';
 
-export const WHISPER_SIZES: WhisperSize[] = ['tiny', 'base', 'small'];
+/** Smallest to most accurate. */
+export const WHISPER_SIZES: WhisperSize[] = ['tiny', 'base', 'small', 'large-v3-turbo'];
 
-/** Decoder weights per device (q4 runs well on WebGPU, q8 on WASM). The encoder is always fp32. */
-export const DECODER_DTYPE: Record<SttDevice, 'q4' | 'q8'> = { webgpu: 'q4', wasm: 'q8' };
-const DECODER_FILE: Record<SttDevice, string> = {
-  webgpu: 'decoder_model_merged_q4.onnx',
-  wasm: 'decoder_model_merged_quantized.onnx',
-};
+/**
+ * Weights per model and device: decoders q4 on WebGPU, q8 on WASM; encoders fp32, except turbo's
+ * (2.5 GB in fp32), which is quantized the same way as its decoder. fp16 is not used: many GPUs
+ * (e.g. older NVIDIA) cannot run it. Persian accuracy of these choices: docs/SPIKES.md, spike 4b.
+ */
+export function dtypes(size: WhisperSize, device: SttDevice): { encoder: Dtype; decoder: Dtype } {
+  const decoder = device === 'webgpu' ? 'q4' : 'q8';
+  return { encoder: size === 'large-v3-turbo' ? decoder : 'fp32', decoder };
+}
+
+const SUFFIX: Record<Dtype, string> = { fp32: '', q8: '_quantized', q4: '_q4' };
 
 /**
  * Model repo name. The "_timestamped" exports also output cross-attentions, which word-level
@@ -22,24 +29,34 @@ export const modelDir = (size: WhisperSize, words = true) => `/models/onnx-commu
 /** Files a model needs on this device, relative to the site root. */
 export function requiredFiles(size: WhisperSize, device: SttDevice, words = true): string[] {
   const dir = modelDir(size, words);
+  const { encoder, decoder } = dtypes(size, device);
   return [
     `${dir}/config.json`,
     `${dir}/tokenizer.json`,
     `${dir}/preprocessor_config.json`,
-    `${dir}/onnx/encoder_model.onnx`,
-    `${dir}/onnx/${DECODER_FILE[device]}`,
+    `${dir}/onnx/encoder_model${SUFFIX[encoder]}.onnx`,
+    `${dir}/onnx/decoder_model_merged${SUFFIX[decoder]}.onnx`,
   ];
 }
 
 export const preferredDevice = (): SttDevice =>
   typeof navigator !== 'undefined' && 'gpu' in navigator ? 'webgpu' : 'wasm';
 
-/** Phones and tablets, where small (over 1 GB while running) tends to get the tab closed. */
+/** Phones and tablets, where small and turbo (over 1 GB while running) tend to get the tab closed. */
 export function isPhone(): boolean {
   if (typeof navigator === 'undefined') return false;
   const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
   return nav.userAgentData?.mobile || /Android|iPhone|iPad|Mobi/i.test(nav.userAgent ?? '');
 }
 
-/** Model to start with: small is best for Persian (docs/SPIKES.md), base fits in a phone's memory. */
-export const defaultSize = (): WhisperSize => (isPhone() ? 'base' : 'small');
+/** Too big for a phone's memory (see isPhone). */
+export const heavyModel = (size: WhisperSize) => size === 'small' || size === 'large-v3-turbo';
+
+/**
+ * Model to start with: the most accurate installed one (turbo, then small; docs/SPIKES.md), but
+ * base on a phone. `installed` is what checkModels found (turbo only once it is known to be there).
+ */
+export function defaultSize(installed: Partial<Record<WhisperSize, boolean>> = {}): WhisperSize {
+  if (isPhone()) return 'base';
+  return installed['large-v3-turbo'] ? 'large-v3-turbo' : 'small';
+}

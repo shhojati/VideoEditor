@@ -35,6 +35,10 @@ EXPECTED="
 352825870 onnx-community/whisper-small/onnx/encoder_model.onnx
 156750845 onnx-community/whisper-small/onnx/decoder_model_merged_quantized.onnx
 233149327 onnx-community/whisper-small/onnx/decoder_model_merged_q4.onnx
+644883359 onnx-community/whisper-large-v3-turbo_timestamped/onnx/encoder_model_quantized.onnx
+425003939 onnx-community/whisper-large-v3-turbo_timestamped/onnx/encoder_model_q4.onnx
+439997434 onnx-community/whisper-large-v3-turbo_timestamped/onnx/decoder_model_merged_quantized.onnx
+334207912 onnx-community/whisper-large-v3-turbo_timestamped/onnx/decoder_model_merged_q4.onnx
 "
 echo "$EXPECTED" | while read -r size path; do
   [ -z "$path" ] && continue

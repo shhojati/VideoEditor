@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BinAccumulator, describeMix, mixClip, STT_RATE, type AudioChunk } from './audio16k';
+import { defaultSize, requiredFiles } from './models';
 import { collapseRepeats, segmentsToCues } from './postprocess';
 import { planWindows } from './windows';
 
@@ -147,5 +148,26 @@ describe('segmentsToCues with word timings', () => {
     expect(cue.text).toBe('از از از خانه');
     expect(cue.words!.map((x) => x.text)).toEqual(['از', 'از', 'از', 'خانه']);
     expect(cue.review).toBe(true);
+  });
+});
+
+describe('Whisper model files', () => {
+  const weights = (files: string[]) => files.filter((f) => f.endsWith('.onnx')).map((f) => f.split('/').pop());
+
+  it('uses an fp32 encoder for the small models and a quantized one for turbo', () => {
+    expect(weights(requiredFiles('small', 'webgpu'))).toEqual(['encoder_model.onnx', 'decoder_model_merged_q4.onnx']);
+    expect(weights(requiredFiles('small', 'wasm'))).toEqual(['encoder_model.onnx', 'decoder_model_merged_quantized.onnx']);
+    expect(weights(requiredFiles('large-v3-turbo', 'webgpu'))).toEqual(['encoder_model_q4.onnx', 'decoder_model_merged_q4.onnx']);
+    expect(weights(requiredFiles('large-v3-turbo', 'wasm'))).toEqual(['encoder_model_quantized.onnx', 'decoder_model_merged_quantized.onnx']);
+    expect(requiredFiles('large-v3-turbo', 'wasm')[0]).toBe('/models/onnx-community/whisper-large-v3-turbo_timestamped/config.json');
+  });
+
+  it('starts on turbo once it is known to be installed, and on base on a phone', () => {
+    expect(defaultSize()).toBe('small');
+    expect(defaultSize({ 'large-v3-turbo': false, small: true })).toBe('small');
+    expect(defaultSize({ 'large-v3-turbo': true })).toBe('large-v3-turbo');
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile' });
+    expect(defaultSize({ 'large-v3-turbo': true })).toBe('base');
+    vi.unstubAllGlobals();
   });
 });

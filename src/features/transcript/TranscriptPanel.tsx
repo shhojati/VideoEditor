@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { formatDuration } from '../../lib/time';
-import { defaultSize, isPhone, WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
+import { heavyModel, isPhone, WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
 import { isFiller } from '../../model/transcript';
 import type { Project } from '../../model/types';
 import { useTransport } from '../../store/transport';
@@ -28,8 +28,9 @@ export function TranscriptPanel({ project }: { project: Project }) {
   const clips = useMemo(() => transcriptClips(project), [project]);
   const busy = stt.target === 'transcript' && (stt.stage === 'extracting' || stt.stage === 'loading' || stt.stage === 'transcribing');
   const audible = selection.filter((id) => project.tracks.some((tr) => tr.kind !== 'text' && tr.clips.some((c) => c.id === id && c.assetId)));
-  // The largest installed model, but not small on a phone (see isPhone).
-  const model: WhisperSize = (isPhone() ? (['base', 'tiny', 'small'] as const) : [...WHISPER_SIZES].reverse()).find((s) => stt.models[s]) ?? defaultSize();
+  // The most accurate installed model; on a phone the most accurate one that fits (see isPhone).
+  const fits = [...WHISPER_SIZES].reverse().filter((s) => !isPhone() || !heavyModel(s));
+  const model: WhisperSize = fits.find((s) => stt.models[s]) ?? fits[0];
 
   useEffect(() => void checkModels(), []);
 

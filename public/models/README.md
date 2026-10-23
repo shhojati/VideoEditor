@@ -2,8 +2,8 @@
 
 Not committed (too large). On a machine with internet access run:
 
-    node scripts/fetch-models.mjs            # tiny + base + small (~1 GB)
-    node scripts/fetch-models.mjs small      # just one
+    node scripts/fetch-models.mjs                  # tiny + base + small + large-v3-turbo (~3 GB)
+    node scripts/fetch-models.mjs large-v3-turbo   # just one (turbo is the most accurate for Persian)
 
 then copy this folder to the target machine. Set `HF_ENDPOINT` to use a mirror.
 Expected layout: `public/models/onnx-community/whisper-<size>_timestamped/{config.json,…,onnx/*.onnx}`.

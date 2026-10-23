@@ -2,7 +2,7 @@
 // Whisper speech-to-text, fully offline: model files and ONNX Runtime WASM come from our own origin
 // (public/models, public/wasm), never from the Hugging Face hub or a CDN. Audio never leaves the device.
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
-import { DECODER_DTYPE, modelName, type SttDevice, type WhisperSize } from '../engine/stt/models';
+import { dtypes, modelName, type SttDevice, type WhisperSize } from '../engine/stt/models';
 import type { Segment, Word } from '../engine/stt/postprocess';
 
 env.allowRemoteModels = false;
@@ -46,11 +46,12 @@ self.onmessage = async (e: MessageEvent<SttRequest>) => {
   const { pcm, windows, model, device, language, words } = e.data;
   try {
     const t0 = performance.now();
+    const { encoder, decoder } = dtypes(model, device);
     const asr = (await pipeline('automatic-speech-recognition', `onnx-community/${modelName(model, words)}`, {
       device,
       // `model` is the key transformers.js's progress pre-scan looks the encoder up by; without it the
       // pre-scan asks for encoder_model_quantized.onnx (a harmless 404) and leaves the encoder out of the total.
-      dtype: { model: 'fp32', encoder_model: 'fp32', decoder_model_merged: DECODER_DTYPE[device] },
+      dtype: { model: encoder, encoder_model: encoder, decoder_model_merged: decoder },
       progress_callback: (p: { status: string; file?: string; progress?: number }) => {
         if (p.status === 'progress') post({ type: 'loading', file: p.file, progress: p.progress });
       },

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
-import { defaultSize, isPhone, WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
+import { defaultSize, heavyModel, isPhone, WHISPER_SIZES, type WhisperSize } from '../../engine/stt/models';
 import { findClip } from '../../model/timeline';
 import type { Project } from '../../model/types';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { cancelAutoSubtitles, checkModels, startAutoSubtitles, useStt } from './sttService';
 
 const LANGS = ['fa', 'en', 'ar', 'auto'] as const;
-const MODEL_SIZE_MB: Record<WhisperSize, number> = { tiny: 150, base: 250, small: 700 };
+// Download per device (WebGPU, WASM): encoder + that device's decoder.
+const MODEL_SIZE_MB: Record<WhisperSize, [number, number]> = { tiny: [120, 65], base: [210, 140], small: [590, 510], 'large-v3-turbo': [760, 1090] };
 
 export function AutoSubtitles({ project }: { project: Project }) {
   const { t } = useTranslation();
@@ -16,10 +17,12 @@ export function AutoSubtitles({ project }: { project: Project }) {
   // Transcripts for text-based editing share the speech-to-text worker; their progress shows there.
   const stt = all.target === 'transcript' ? { ...all, stage: 'idle' as const } : all;
   const [open, setOpen] = useState(false);
-  const [picked, setModel] = useState<WhisperSize>(defaultSize);
+  // Until the user picks one: the most accurate installed model (turbo once checkModels finds it).
+  const [picked, setModel] = useState<WhisperSize | null>(null);
+  const wanted = picked ?? defaultSize(stt.models);
   // If the picked model is not installed, use the best one that is.
   const model =
-    stt.models[picked] === false ? ([...WHISPER_SIZES].reverse().find((s) => stt.models[s]) ?? picked) : picked;
+    stt.models[wanted] === false ? ([...WHISPER_SIZES].reverse().find((s) => stt.models[s]) ?? wanted) : wanted;
   const [lang, setLang] = useState<(typeof LANGS)[number]>('fa');
   const [selectedOnly, setSelectedOnly] = useState(false);
   const hasSelectedClip = useTimelineUi((s) => s.selection.some((id) => findClip(project, id)));
@@ -44,14 +47,14 @@ export function AutoSubtitles({ project }: { project: Project }) {
             <select className="flex-1 rounded bg-surface-3 px-1 py-1" value={model} disabled={busy} onChange={(e) => setModel(e.target.value as WhisperSize)} data-testid="stt-model">
               {WHISPER_SIZES.map((s) => (
                 <option key={s} value={s} disabled={stt.models[s] === false}>
-                  {t(`stt.models.${s}`)} · ~{MODEL_SIZE_MB[s]} MB {stt.models[s] === false ? `— ${t('stt.notInstalled')}` : stt.models[s] ? '✓' : ''}
+                  {t(`stt.models.${s}`)} · ~{MODEL_SIZE_MB[s][stt.device === 'wasm' ? 1 : 0]} MB {stt.models[s] === false ? `— ${t('stt.notInstalled')}` : stt.models[s] ? '✓' : ''}
                 </option>
               ))}
             </select>
           </label>
-          {model === 'small' && isPhone() && (
-            <p className="text-[11px] text-amber-300" data-testid="stt-small-phone">
-              {t('stt.smallOnPhone')}
+          {heavyModel(model) && isPhone() && (
+            <p className="text-[11px] text-amber-300" data-testid="stt-heavy-phone">
+              {t('stt.heavyOnPhone')}
             </p>
           )}
           <label className="flex items-center gap-2">

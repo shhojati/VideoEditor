@@ -4,7 +4,7 @@ A browser-based video editor (CapCut-style MVP) with first-class **Persian / RTL
 
 - Import video, audio and images; multi-track timeline with move, trim, split, ripple delete, snapping, copy/paste and undo/redo.
 - Real-time preview (audio-clocked), text overlays with Persian fonts, transforms, crop, speed and volume/fades.
-- Subtitles: cue editor, quality checks, SRT/VTT import and export (RTL-safe), styled burn-in, and **automatic subtitles with Whisper** (tiny/base/small, WebGPU or WASM).
+- Subtitles: cue editor, quality checks, SRT/VTT import and export (RTL-safe), styled burn-in, and **automatic subtitles with Whisper** (tiny/base/small/large-v3-turbo, WebGPU or WASM).
 - Export to MP4 (H.264 + AAC) at 720p/1080p, streamed to disk; AAC works even where the browser has no AAC encoder (bundled WASM fallback).
 - Persian (default, RTL) and English UI.
 
@@ -12,7 +12,7 @@ A browser-based video editor (CapCut-style MVP) with first-class **Persian / RTL
 
 ```bash
 npm ci
-node scripts/fetch-models.mjs   # optional: Whisper models for auto-subtitles (~1 GB, needs internet once)
+node scripts/fetch-models.mjs   # optional: Whisper models for auto-subtitles (~3 GB, needs internet once)
 npm run dev                     # http://localhost:5173
 ```
 

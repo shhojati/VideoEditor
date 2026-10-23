@@ -75,6 +75,23 @@ Notes: `BlobSource` reads the `File` lazily, so whole files are never loaded int
 - Hallucination/repetition at window ends: mitigated with `no_repeat_ngram_size: 4`; Phase 6d should also (a) cut windows on silence (VAD) rather than fixed 30 s, (b) drop segments whose text repeats or whose timestamps run past the audio end.
 - Disk: tiny ≈ 0.1 GB, base ≈ 0.25 GB, small ≈ 0.7 GB (encoder fp32 + q8 & q4 decoders).
 
+## Spike 4b — Persian accuracy, small vs large-v3-turbo (2026-10-23)
+
+`spikes/stt-bench.html` (driven with `window.bench({...})`): the same 12 clips through the app's own pipeline (mixdown, `planWindows`, the worker's options, `_timestamped` models), scored against `public/spike-data/ref.json` after normalising Persian letters, diacritics, ZWNJ and punctuation. Chrome on an old NVIDIA Kepler GPU (WebGPU without fp16).
+
+| Model | Device | Encoder / decoder | WER | CER | RTF |
+|---|---|---|---|---|---|
+| small | WebGPU | fp32 / q4 | 73% | 31% | 1.0× |
+| small | WASM | fp32 / q8 | 72% | 28% | 1.1× |
+| small | WebGPU | fp32 / q8 | 111% | 72% | 3.5× (repetition loop) |
+| **large-v3-turbo** | **WebGPU** | **q4 / q4** | **43%** | **18%** | 1.8× |
+| large-v3-turbo | WASM | q8 / q8 | 46% | 22% | 1.5× |
+
+- The app's box-filter resampling scores the same as the browser's `decodeAudioData` at 16 kHz; word-timestamped and plain exports give identical text. Errors come from the model, not the pipeline.
+- small writes Persian phonetically ("ایکاس مصبد" for "انعکاس مثبت"); turbo gets most sentences right. Shipped turbo as the most accurate size (q4 on WebGPU, q8 on WASM; `dtypes()` in src/engine/stt/models.ts).
+- q8 decoders on WebGPU loop; keep q4 there. The fp16 turbo encoder (1.27 GB) could not run on this GPU (no `shader-f16`), so it is untested and not shipped.
+- Beam search is not implemented in transformers.js generation (`num_beams` > 1), so decoding stays greedy.
+
 ## Plan changes / open items
 
 1. **No plan blockers.** Mediabunny covers decode, encode and MP4 muxing; mp4box.js / ffmpeg.wasm fallbacks are not needed.

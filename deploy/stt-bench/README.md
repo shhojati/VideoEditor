@@ -37,6 +37,20 @@ processing seconds per audio second), peak RAM and the text with timings.
 Other options: `--models tiny,small,large-v3-turbo`, `--prompt "names and product words"`,
 `--beam 1` (faster, a little less accurate), `--compute int8_float32`.
 
+## Servers that cannot reach PyPI or Hugging Face
+
+`.github/workflows/stt-bench.yml` builds this image on GitHub with large-v3-turbo and large-v3
+inside (~6 GB) and pushes it as `ghcr.io/shhojati/videoeditor-stt-bench` (push to the `stt-bench`
+branch, or run the workflow by hand). The server then only needs ghcr.io:
+
+```bash
+sudo docker pull ghcr.io/shhojati/videoeditor-stt-bench:latest
+cd ~/stt-bench && sudo docker run --rm -v "$PWD/data:/data" ghcr.io/shhojati/videoeditor-stt-bench /data/test.mp4
+```
+
+Do not mount `models/` with this image: it would hide the models inside it. A private package needs
+`docker login ghcr.io` with a GitHub token that has `read:packages` first.
+
 ## If a download is blocked
 
 - `Temporary failure in name resolution` during `pip install`: containers do not see the host's

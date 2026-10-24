@@ -1,0 +1,40 @@
+# Builds the speech-to-text benchmark image (deploy/stt-bench) with the Whisper models baked in and
+# pushes it to ghcr.io, for servers that cannot reach PyPI or Hugging Face themselves. Runs on a
+# push to the stt-bench branch (main deploys are not touched) or by hand.
+
+name: STT bench image
+
+on:
+  push:
+    branches: [stt-bench]
+    paths: [deploy/stt-bench/**, .github/workflows/stt-bench.yml]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/shhojati/videoeditor-stt-bench
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # The image is ~6 GB (two models); make room on the runner.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: deploy/stt-bench
+          push: true
+          build-args: PRELOAD=large-v3-turbo,large-v3
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest

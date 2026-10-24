@@ -39,6 +39,10 @@ Other options: `--models tiny,small,large-v3-turbo`, `--prompt "names and produc
 
 ## If a download is blocked
 
+- `Temporary failure in name resolution` during `pip install`: containers do not see the host's
+  DNS (systemd-resolved). Build and run with the host's network: `docker build --network host ...`
+  and `docker run --network host ...`.
+
 - `docker build` fails pulling `python:3.12-slim` (403 from Docker Hub): use the cloud provider's
   Docker Hub mirror, e.g. `--build-arg BASE=docker.arvancloud.ir/library/python:3.12-slim`, or set
   it in `/etc/docker/daemon.json` as `{"registry-mirrors": ["https://docker.arvancloud.ir"]}` and

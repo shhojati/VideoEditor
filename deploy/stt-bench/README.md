@@ -42,6 +42,11 @@ Other options: `--models tiny,small,large-v3-turbo`, `--prompt "names and produc
 - `Temporary failure in name resolution` during `pip install`: containers do not see the host's
   DNS (systemd-resolved). Build and run with the host's network: `docker build --network host ...`
   and `docker run --network host ...`.
+- The host itself cannot resolve `files.pythonhosted.org` (`getent ahostsv4 files.pythonhosted.org`
+  prints nothing; some providers' DNS filters it): give containers another DNS server in
+  `/etc/docker/daemon.json`, e.g. `{"dns": ["178.22.122.100", "185.51.200.2"]}`, then
+  `sudo systemctl restart docker`. Check first that it answers:
+  `dig +short files.pythonhosted.org @178.22.122.100`.
 
 - `docker build` fails pulling `python:3.12-slim` (403 from Docker Hub): use the cloud provider's
   Docker Hub mirror, e.g. `--build-arg BASE=docker.arvancloud.ir/library/python:3.12-slim`, or set

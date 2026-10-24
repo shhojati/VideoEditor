@@ -10,6 +10,7 @@ import { paintBounds } from '../../model/paint';
 import { applyAffine, invertAffine, layerAffine } from '../../engine/render/masks';
 import type { Clip, Project, Track } from '../../model/types';
 import { keyTimeAt } from '../../model/remap';
+import { trackShows } from '../../model/visibility';
 
 export interface Pt {
   x: number;
@@ -140,7 +141,7 @@ export function editableClipsAt(project: Project, t: number): { clip: Clip; trac
   const out: { clip: Clip; track: Track }[] = [];
   for (let i = project.tracks.length - 1; i >= 0; i--) {
     const track = project.tracks[i];
-    if (track.kind === 'audio' || track.locked) continue;
+    if (track.kind === 'audio' || track.locked || !trackShows(project, track)) continue;
     for (const clip of track.clips) if (isActiveAt(clip, t)) out.push({ clip, track });
   }
   return out;

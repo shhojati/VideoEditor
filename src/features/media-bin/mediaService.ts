@@ -2,7 +2,7 @@
 // and loading/generating thumbnails + waveforms (generated in media.worker, cached in IndexedDB).
 // Everything here is UI state; the project document only gains/loses Asset entries via edit().
 import { create } from 'zustand';
-import { looksLikeMedia, type ProbeErrorCode } from '../../engine/decode/classify';
+import { ACCEPT_ATTR, looksLikeMedia, type ProbeErrorCode } from '../../engine/decode/classify';
 import { ProbeError, probeFile } from '../../engine/decode/probe';
 import { newId } from '../../model/factories';
 import { deleteClipsOfAsset } from '../../model/timeline';
@@ -240,4 +240,14 @@ export function removeAsset(id: ID) {
     deleteClipsOfAsset(p, id);
     delete p.assets[id];
   });
+}
+
+/** Ctrl+I: the file picker of the media bin's Import button, from anywhere. */
+export function openImportPicker() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.accept = ACCEPT_ATTR;
+  input.onchange = () => void importFiles([...(input.files ?? [])]);
+  input.click();
 }

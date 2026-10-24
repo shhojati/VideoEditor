@@ -15,6 +15,7 @@ import {
   nearestFreeStart,
   pasteClips,
   setClipSpeed,
+  detachAudio,
   splitClips,
   trimClip,
   trimLimits,
@@ -200,5 +201,44 @@ describe('text clips and speed', () => {
     expect(setClipSpeed(p, 'a', 0.01)).toBe(0.1); // clamped
     expect(clip(p, 'a').duration).toBe(6); // would be 40, next clip starts at 6
     expect(setClipSpeed(p, 'a', 50)).toBe(10);
+  });
+});
+
+describe('detachAudio', () => {
+  const film: Asset = { id: 'f', kind: 'video', name: 'f.mp4', duration: 10, hasAudio: true, fileRef: {} };
+  const mute: Asset = { id: 'm', kind: 'video', name: 'm.mp4', duration: 10, fileRef: {} };
+  function setup() {
+    const p = createProject('t');
+    p.assets = { f: film, m: mute };
+    p.tracks = [createTrack('video')];
+    p.tracks[0].clips = [
+      { ...createClip(film, 1), id: 'a', inPoint: 2, duration: 4, speed: 1.5, keyframes: [{ t: 2, v: { volume: 0.5, x: 0.1 } }] },
+      { ...createClip(mute, 6), id: 'b' },
+    ];
+    p.tracks[0].clips[0].audio.volume = 0.8;
+    return p;
+  }
+
+  it('moves the sound onto an audio clip with the same timing and silences the video', () => {
+    const p = setup();
+    const [id] = detachAudio(p, ['a', 'b']);
+    expect(p.tracks.map((t) => t.kind)).toEqual(['audio', 'video']);
+    const sound = p.tracks[0].clips[0];
+    expect(sound).toMatchObject({ id, assetId: 'f', start: 1, duration: 4, inPoint: 2, speed: 1.5 });
+    expect(sound.audio.volume).toBe(0.8);
+    // Only the sound's keyframed values go with it.
+    expect(sound.keyframes).toEqual([{ t: 2, v: { volume: 0.5 } }]);
+    expect(clip(p, 'a').audioDetached).toBe(true);
+    // A video without sound has nothing to detach; detaching twice does nothing.
+    expect(clip(p, 'b').audioDetached).toBeUndefined();
+    expect(detachAudio(p, ['a'])).toEqual([]);
+  });
+
+  it('reuses a free audio track', () => {
+    const p = setup();
+    p.tracks.unshift(createTrack('audio'));
+    detachAudio(p, ['a']);
+    expect(p.tracks.length).toBe(2);
+    expect(p.tracks[0].clips.length).toBe(1);
   });
 });

@@ -60,6 +60,7 @@ test('cut words from the transcript; find and remove pauses', async ({ page }) =
   });
   const before = await state(page);
   const [talk0, music0] = [endOf(before, 'talk.mp4'), endOf(before, 'music.mp4')];
+  await page.getByTestId('tab-subtitles').click();
   await page.getByTestId('tab-transcript').click();
   const text = page.getByTestId('transcript-text');
   await expect(text.locator('[data-word]')).toHaveCount(4);
@@ -114,6 +115,7 @@ test('transcribe a Persian clip for text editing (STT_E2E=1)', async ({ page }) 
   await expect(page.locator('[data-testid=asset-card][data-status=ready]')).toBeVisible({ timeout: 60_000 });
   await page.getByTestId('asset-add').click();
   await page.locator('[data-testid=clip]').first().click({ position: { x: 20, y: 10 } });
+  await page.getByTestId('tab-subtitles').click();
   await page.getByTestId('tab-transcript').click();
   await page.getByTestId('transcribe').click();
   await expect(page.getByTestId('transcript-clip')).toBeVisible({ timeout: 14 * 60_000 });

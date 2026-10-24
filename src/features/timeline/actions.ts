@@ -6,6 +6,7 @@ import {
   addTextClip,
   copyClips,
   deleteClips,
+  detachAudio,
   editPoints,
   findClip,
   pasteClips,
@@ -68,6 +69,26 @@ export function addText(content: string, at?: Placement, mergeKey?: string): ID 
   );
   select([id]);
   return id;
+}
+
+/** Selected video clips that still play their own sound (what "Detach audio" can work on). */
+export function detachableClips(p: Project, selection: readonly ID[]): ID[] {
+  return selection.filter((id) => {
+    const ref = findClip(p, id);
+    const asset = ref?.clip.assetId ? p.assets[ref.clip.assetId] : undefined;
+    return !!ref && ref.track.kind !== 'audio' && !ref.track.locked && asset?.kind === 'video' && !!asset.hasAudio && !ref.clip.audioDetached && !ref.clip.freeze;
+  });
+}
+
+/** The selected video clips' sound onto their own audio clips; the new audio clips are selected. */
+export function detachSelectedAudio() {
+  const p = project();
+  if (!p) return;
+  const ids = detachableClips(p, useTimelineUi.getState().selection);
+  if (!ids.length) return;
+  let created: ID[] = [];
+  edit('ops.detachAudio', (d) => void (created = detachAudio(d, ids)));
+  if (created.length) select(created);
 }
 
 export function splitAtPlayhead() {

@@ -17,11 +17,15 @@ const TOOLS: { tool: Tool; key: string; icon?: string }[] = [
 
 const btn = 'flex h-7 w-7 items-center justify-center rounded text-sm leading-none';
 
-/** The preview's tool strip (top-left); beside it, the shape tool's shapes or the brush settings. */
+/**
+ * The preview's tool strip (top-left); beside it, the shape tool's shapes or the brush settings,
+ * until the tool has been used (a shape drawn goes back to Select; a stroke folds the brush settings).
+ */
 export function ToolBar() {
   const { t } = useTranslation();
   const tool = useTool((s) => s.tool);
   const kind = useTool((s) => s.shapeKind);
+  const optionsOpen = useTool((s) => s.optionsOpen);
   return (
     <div data-preview-ui className="absolute start-2 top-2 z-10 flex items-start gap-1" dir="ltr">
       <div role="toolbar" aria-label={t('tools.title')} aria-orientation="vertical" className="flex flex-col gap-0.5 rounded border border-line bg-surface-2/90 p-0.5 shadow">
@@ -40,7 +44,7 @@ export function ToolBar() {
           </button>
         ))}
       </div>
-      {tool === 'shape' && (
+      {tool === 'shape' && optionsOpen && (
         <div role="radiogroup" aria-label={t('tools.shapeKind')} className="mt-[92px] flex gap-0.5 rounded border border-line bg-surface-2/90 p-0.5 shadow">
           {SHAPE_KINDS.map((k) => (
             <button
@@ -59,7 +63,7 @@ export function ToolBar() {
           ))}
         </div>
       )}
-      {(tool === 'brush' || tool === 'eraser' || tool === 'clone') && <BrushOptions />}
+      {(tool === 'brush' || tool === 'eraser' || tool === 'clone') && optionsOpen && <BrushOptions />}
     </div>
   );
 }

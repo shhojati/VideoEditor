@@ -5,10 +5,11 @@ import { createTrack } from '../../model/factories';
 import { findClip, moveTrack, timelineDuration } from '../../model/timeline';
 import type { Project, Track, TrackKind } from '../../model/types';
 import { formatDuration } from '../../lib/time';
+import { trackShows, trackSounds } from '../../model/visibility';
 import { useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
-import { addText, deleteSelection, splitAtPlayhead, zoomBy, zoomToFit } from './actions';
-import { cutSelectionToBeat } from './beatActions';
+import { addText, deleteSelection, detachableClips, detachSelectedAudio, splitAtPlayhead, zoomBy, zoomToFit } from './actions';
+import { cutSelectionToBeat, fitSelectionToBeat } from './beatActions';
 import { Breadcrumb, MakeCompoundButton, MarkersMenu } from './CompoundBar';
 import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
@@ -16,6 +17,7 @@ import { Ruler } from './Ruler';
 import { SubtitleLane } from './SubtitleLane';
 import { CutMarkers } from './CutMarkers';
 import { ShapeMenu } from '../shapes/ShapeMenu';
+import { TimecodeField } from '../preview/TimecodeField';
 import { KeyframeButton } from '../keyframes/KeyframeButton';
 import { onTransitionDragOver, onTransitionDrop } from '../transitions/transitionActions';
 import { HEADER_WIDTH, RULER_HEIGHT, select, TRACK_HEIGHT, useTimelineUi } from './timelineUi';
@@ -67,6 +69,7 @@ export function TimelinePanel({ project }: { project: Project }) {
           🗑 {t('timeline.delete')}
         </Button>
         <MakeCompoundButton />
+        <DetachAudioButton project={project} />
         <CutToBeat project={project} enabled={hasSelection} />
         <MarkersMenu project={project} />
         <Button
@@ -77,7 +80,7 @@ export function TimelinePanel({ project }: { project: Project }) {
         >
           🧲 {t('timeline.snap')}
         </Button>
-        <Timecode duration={duration} />
+        <Timecode duration={duration} fps={project.settings.fps} />
         <div className="ms-auto flex items-center gap-1" dir="ltr">
           <Button className="text-xs" onClick={() => zoomBy(1 / 1.5)} aria-label={t('timeline.zoomOut')}>
             −
@@ -95,11 +98,14 @@ export function TimelinePanel({ project }: { project: Project }) {
   );
 }
 
-function Timecode({ duration }: { duration: number }) {
-  const time = useTransport((s) => s.time);
+/** m:ss.cc */
+const clock = (time: number) => `${formatDuration(Math.floor(time))}.${String(Math.floor((time % 1) * 100)).padStart(2, '0')}`;
+
+function Timecode({ duration, fps }: { duration: number; fps: number }) {
   return (
-    <span className="ms-2 font-mono text-neutral-300" dir="ltr" data-testid="timecode">
-      {formatDuration(Math.floor(time))}.{String(Math.floor((time % 1) * 100)).padStart(2, '0')} / {formatDuration(duration)}
+    <span className="ms-2 flex items-center font-mono text-neutral-300" dir="ltr" data-testid="timecode">
+      <TimecodeField format={clock} fps={fps} testId="timeline-timecode" />
+      <span>/ {formatDuration(duration)}</span>
     </span>
   );
 }
@@ -131,12 +137,18 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
     const el = scrollRef.current!;
     const ro = new ResizeObserver(() => useTimelineUi.setState({ viewportWidth: el.clientWidth }));
     ro.observe(el);
-    // Ctrl+wheel zooms around the pointer (non-passive so the page does not zoom).
+    // The wheel zooms around the pointer; Shift+wheel scrolls sideways, Ctrl+wheel up and down
+    // (non-passive, so neither the page nor the box scrolls on its own).
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
-      const x = e.clientX - el.getBoundingClientRect().left - useTimelineUi.getState().headerWidth;
-      zoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2, Math.max(0, x));
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1;
+      if (e.ctrlKey || e.metaKey) el.scrollTop += (e.deltaY || e.deltaX) * unit;
+      // A sideways swipe on a touchpad scrolls sideways too.
+      else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) el.scrollLeft += (e.deltaX || e.deltaY) * unit;
+      else if (e.deltaY) {
+        const x = e.clientX - el.getBoundingClientRect().left - useTimelineUi.getState().headerWidth;
+        zoomBy(e.deltaY < 0 ? 1.2 : 1 / 1.2, Math.max(0, x));
+      }
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
@@ -215,14 +227,16 @@ const TrackRow = memo(function TrackRow({
     ([id, c]) => c.trackId === track.id && !track.clips.some((x) => x.id === id),
   );
   const assetGhost = drag?.asset && drag.asset.trackId === track.id ? drag.asset : undefined;
+  // Hidden, or left out by another track's solo: drawn faded.
+  const off = track.kind === 'audio' ? !trackSounds(project, track) : !trackShows(project, track);
 
   return (
-    <div className="flex border-b border-line" style={{ height: TRACK_HEIGHT }} data-testid="track" data-track-kind={track.kind}>
+    <div className="flex border-b border-line" style={{ height: TRACK_HEIGHT }} data-testid="track" data-track-kind={track.kind} data-off={off || undefined}>
       <TrackHeader track={track} edit={edit} />
       <div
         data-lane
         data-track-id={track.id}
-        className={`relative flex-1 ${track.locked ? 'bg-[repeating-linear-gradient(45deg,#15171c,#15171c_6px,#1a1d23_6px,#1a1d23_12px)]' : 'bg-surface-0'}`}
+        className={`relative flex-1 ${off ? 'opacity-40' : ''} ${track.locked ? 'bg-[repeating-linear-gradient(45deg,#15171c,#15171c_6px,#1a1d23_6px,#1a1d23_12px)]' : 'bg-surface-0'}`}
         onPointerDown={(e) => {
           if (e.target === e.currentTarget && !e.shiftKey && !e.ctrlKey) select([]);
         }}
@@ -306,10 +320,16 @@ function NewTrackZone({ pps, project }: { pps: number; project: Project }) {
 
 function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof useProjectStore.getState>['edit'] }) {
   const { t } = useTranslation();
-  const flip = (key: 'muted' | 'locked') =>
-    edit(key === 'muted' ? 'ops.toggleMute' : 'ops.toggleLock', (p) => {
+  const LABELS = { muted: 'ops.toggleMute', locked: 'ops.toggleLock', hidden: 'ops.toggleHidden', solo: 'ops.toggleSolo' } as const;
+  const flip = (key: keyof typeof LABELS) =>
+    edit(LABELS[key], (p) => {
       const tr = p.tracks.find((x) => x.id === track.id);
-      if (tr) tr[key] = !tr[key];
+      if (!tr) return;
+      if (key === 'hidden' || key === 'solo') {
+        // Off is stored as absent, as in older projects.
+        if (tr[key]) delete tr[key];
+        else tr[key] = true;
+      } else tr[key] = !tr[key];
     });
   const headerWidth = useTimelineUi((s) => s.headerWidth);
   const compact = headerWidth < HEADER_WIDTH;
@@ -321,10 +341,21 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
     >
       <span className={`h-3 w-1 rounded ${KIND_COLOR[track.kind]}`} />
       <span className="min-w-0 flex-1 truncate">{!compact && t(`track.${track.kind}`)}</span>
-      <Toggle label={t('track.mute')} on={track.muted} onClick={() => flip('muted')}>
+      {track.kind !== 'audio' && (
+        <Toggle label={t('track.visible')} on={!track.hidden} onClick={() => flip('hidden')} testId="track-eye" small={compact}>
+          👁
+        </Toggle>
+      )}
+      {/* Solo is a desktop tool; the phone header has no room for it. */}
+      {(!compact || track.solo) && (
+        <Toggle label={t('track.solo')} on={!!track.solo} onClick={() => flip('solo')} testId="track-solo" small={compact}>
+          S
+        </Toggle>
+      )}
+      <Toggle label={t('track.mute')} on={track.muted} onClick={() => flip('muted')} small={compact}>
         M
       </Toggle>
-      <Toggle label={t('track.lock')} on={track.locked} onClick={() => flip('locked')}>
+      <Toggle label={t('track.lock')} on={track.locked} onClick={() => flip('locked')} small={compact}>
         L
       </Toggle>
       {!compact && (
@@ -359,14 +390,15 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
   );
 }
 
-function Toggle(props: { label: string; on: boolean; onClick: () => void; children: string }) {
+function Toggle(props: { label: string; on: boolean; onClick: () => void; children: string; testId?: string; small?: boolean }) {
   return (
     <button
       aria-label={props.label}
       aria-pressed={props.on}
       title={props.label}
+      data-testid={props.testId}
       onClick={props.onClick}
-      className={`w-6 rounded py-0.5 font-mono ${props.on ? 'bg-accent text-white' : 'bg-surface-3 text-neutral-400'}`}
+      className={`${props.small ? 'w-5 text-[10px]' : 'w-6'} rounded py-0.5 font-mono ${props.on ? 'bg-accent text-white' : 'bg-surface-3 text-neutral-400'}`}
     >
       {props.children}
     </button>
@@ -388,7 +420,19 @@ function Playhead({ pps }: { pps: number }) {
   );
 }
 
-/** Re-time the selected clips to the music's beats, every 1, 2 or 4 beats. */
+/** Premiere's unlink: the selected videos' sound onto its own audio clips. */
+function DetachAudioButton({ project }: { project: Project }) {
+  const { t } = useTranslation();
+  const selection = useTimelineUi((s) => s.selection);
+  const can = detachableClips(project, selection).length > 0;
+  return (
+    <Button className="text-xs" disabled={!can} onClick={detachSelectedAudio} title={t('timeline.detachAudioHint')} data-testid="btn-detach-audio">
+      🔊✂ {t('timeline.detachAudio')}
+    </Button>
+  );
+}
+
+/** Cut the selected clips at the music's beats, or fit them end to end on the beats; every 1, 2 or 4 beats. */
 function CutToBeat({ project, enabled }: { project: Project; enabled: boolean }) {
   const { t } = useTranslation();
   const [every, setEvery] = useState(2);
@@ -398,6 +442,9 @@ function CutToBeat({ project, enabled }: { project: Project; enabled: boolean })
     <span className="flex items-center gap-0.5">
       <Button className="text-xs" disabled={!enabled} onClick={() => cutSelectionToBeat(every)} title={t('beats.cutHint')} data-testid="cut-to-beat">
         ♪ {t('beats.cut')}
+      </Button>
+      <Button className="text-xs" disabled={!enabled} onClick={() => fitSelectionToBeat(every)} title={t('beats.fitHint')} data-testid="fit-to-beat">
+        {t('beats.fit')}
       </Button>
       <select
         className="rounded bg-surface-3 px-1 py-1 text-xs"

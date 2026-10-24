@@ -72,7 +72,7 @@ const centrePixel = (page: Page, t: number) =>
 
 const near = (got: number[], want: number[], tol = 8) => expect(got.every((v, i) => Math.abs(v - want[i]) <= tol), `${got} ≈ ${want}`).toBe(true);
 
-test('preview zoom: Ctrl+wheel at the pointer, Space+drag pans without playing, Fit restores', async ({ page }) => {
+test('preview zoom: the wheel at the pointer, Space+drag pans without playing, Fit restores', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'English' }).click();
   const frame = page.getByTestId('preview-frame');
@@ -85,9 +85,7 @@ test('preview zoom: Ctrl+wheel at the pointer, Space+drag pans without playing, 
   const py = vp.y + vp.height * 0.5;
   const rel = (px - fit.x) / fit.width;
   await page.mouse.move(px, py);
-  await page.keyboard.down('Control');
   await page.mouse.wheel(0, -400);
-  await page.keyboard.up('Control');
   await expect.poll(async () => (await frame.boundingBox())!.width).toBeGreaterThan(fit.width * 1.5);
   const zoomed = (await frame.boundingBox())!;
   expect(Math.abs(zoomed.x + rel * zoomed.width - px)).toBeLessThan(2);

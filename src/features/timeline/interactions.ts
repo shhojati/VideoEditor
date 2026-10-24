@@ -247,6 +247,18 @@ export function addAssetAtPlayhead(assetId: ID) {
   addAssetClip(assetId, target?.id ?? null, start);
 }
 
+/** A library background at the playhead: on the bottom video track, or on a new one under the others. */
+export function addBackgroundAtPlayhead(assetId: ID) {
+  const p = project();
+  const asset = p.assets[assetId];
+  if (!asset) return;
+  const start = useTransport.getState().time;
+  const duration = createClip(asset, start).duration;
+  const bottom = p.tracks.find((t) => t.kind === 'video');
+  const free = bottom && !bottom.locked && isFree(bottom, start, duration);
+  addAssetClip(assetId, free ? bottom.id : null, start, true);
+}
+
 /**
  * Place an asset that was dropped before it was ready: on `trackId` if that track takes it (at the
  * nearest free spot), otherwise on a new track.
@@ -261,8 +273,8 @@ export function placeAssetAt(assetId: ID, trackId: ID | null, time: number) {
   else addAssetClip(assetId, null, time);
 }
 
-/** One undo step: a clip of the asset at `start`, on `target` or (null) a new track. */
-function addAssetClip(assetId: ID, target: ID | null, start: number) {
+/** One undo step: a clip of the asset at `start`, on `target` or (null) a new track (`under`: below the other video tracks). */
+function addAssetClip(assetId: ID, target: ID | null, start: number, under = false) {
   let clipId = '';
   useProjectStore.getState().edit('ops.addClip', (d) => {
     const asset = d.assets[assetId];
@@ -271,7 +283,10 @@ function addAssetClip(assetId: ID, target: ID | null, start: number) {
       track = createTrack(trackKindFor(asset.kind));
       // New video tracks go on top of the stack; new audio tracks at the bottom, under the video.
       if (track.kind === 'audio') d.tracks.unshift(track);
-      else d.tracks.push(track);
+      else if (under) {
+        const firstVisual = d.tracks.findIndex((t) => t.kind !== 'audio');
+        d.tracks.splice(firstVisual < 0 ? d.tracks.length : firstVisual, 0, track);
+      } else d.tracks.push(track);
     }
     const clip = createClip(asset, start);
     clipId = clip.id;

@@ -1,7 +1,7 @@
 // Pure timeline operations on the project document. They mutate the given project, so call them
 // inside useProjectStore().edit() (Immer draft) — or on a plain object in tests.
 // Invariant: clips on one track never overlap and are kept sorted by start.
-import { newId } from './factories';
+import { createTrack, newId } from './factories';
 import { isOverlay } from './overlays';
 import type { Asset, AssetKind, Clip, Effect, ID, PaintProps, Project, ShapeProps, TextProps, Track, TrackKind } from './types';
 import { handles, isLinear, retime, sourceLength, SPEED_RANGE } from './remap';
@@ -35,7 +35,8 @@ export function createClip(asset: Asset, start: number): Clip {
     inPoint: 0,
     speed: 1,
     // A sticker starts small instead of filling the frame.
-    transform: { x: 0, y: 0, scale: asset.library?.kind === 'stickers' ? 0.35 : 1, rotation: 0, opacity: 1 },
+    // A library background fills the frame.
+    transform: { x: 0, y: 0, scale: asset.library?.kind === 'stickers' ? 0.35 : 1, rotation: 0, opacity: 1, ...(asset.library?.kind === 'backgrounds' && { fit: 'cover' as const }) },
     audio: { volume: 1, fadeIn: 0, fadeOut: 0 },
     // Library overlays (light leaks, dust, particles on black) are meant to be screened over the picture.
     ...(asset.library?.kind === 'overlays' && { blend: 'screen' as const }),
@@ -379,6 +380,50 @@ export const addPaintClip = (p: Project, time: number, paint: PaintProps): ID =>
 export const addAdjustmentClipAbove = (p: Project, trackIndex: number, start: number, duration: number, props: Pick<Clip, 'effects' | 'masks' | 'transform'>): ID =>
   addOverlayClip(p, { ...createOverlayClip(Math.max(0, start), { adjustment: true, effects: props.effects }), duration, masks: props.masks, transform: props.transform }, trackIndex);
 
+
+/** Keyframed properties that belong to the sound (they go with it when it is detached). */
+const SOUND_KEY = (k: string) => k === 'volume' || k.startsWith('voice.') || k.startsWith('space.');
+
+/**
+ * Premiere's "unlink": the sound of each given video clip becomes its own clip (same timing, speed
+ * and audio settings) on a free audio track, and the video clip goes silent. Returns the new ids.
+ */
+export function detachAudio(p: Project, clipIds: readonly ID[]): ID[] {
+  const created: ID[] = [];
+  for (const id of clipIds) {
+    const ref = findClip(p, id);
+    if (!ref || ref.track.locked || ref.track.kind === 'audio') continue;
+    const { clip } = ref;
+    const asset = clip.assetId ? p.assets[clip.assetId] : undefined;
+    if (asset?.kind !== 'video' || !asset.hasAudio || clip.audioDetached || clip.freeze) continue;
+    const copy = cloneClip(clip);
+    const sound: Clip = {
+      id: newId(),
+      assetId: asset.id,
+      start: clip.start,
+      duration: clip.duration,
+      inPoint: clip.inPoint,
+      speed: clip.speed,
+      ...(copy.speedCurve && { speedCurve: copy.speedCurve, speedPreset: copy.speedPreset }),
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      audio: copy.audio,
+    };
+    const keys = copy.keyframes
+      ?.map((kf) => ({ ...kf, v: Object.fromEntries(Object.entries(kf.v).filter(([k]) => SOUND_KEY(k))) }))
+      .filter((kf) => Object.keys(kf.v).length);
+    if (keys?.length) sound.keyframes = keys;
+    let track = p.tracks.find((t) => t.kind === 'audio' && !t.locked && isFree(t, sound.start, sound.duration));
+    if (!track) {
+      // New audio tracks stack at the bottom, under the video.
+      track = createTrack('audio');
+      p.tracks.unshift(track);
+    }
+    insertClip(track, sound);
+    clip.audioDetached = true;
+    created.push(sound.id);
+  }
+  return created;
+}
 
 /**
  * Change playback speed keeping the same source range, so the clip gets shorter/longer on the

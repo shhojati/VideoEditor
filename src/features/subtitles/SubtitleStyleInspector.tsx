@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
+import { fontChoices, resolveWeight } from '../../lib/fonts';
+import { FontField } from '../fonts/FontField';
 import { presetOf, SUBTITLE_PRESETS, type SubtitlePresetId } from '../../model/subtitlePresets';
 import type { ID, Project, SubtitleAnimation, SubtitleStyle } from '../../model/types';
-import { useProjectStore } from '../../store/projectStore';
+import { useProjectStore, useRootProject } from '../../store/projectStore';
 import { ColorField, NumberField, Section, Segmented, SelectField } from '../inspector/controls';
 import { RTL_LANGUAGES, SUBTITLE_LANGUAGES } from './subtitleActions';
 import { resetSubtitleSection } from '../inspector/resetActions';
@@ -25,7 +26,8 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
       { mergeKey: `${trackId}:style.${prop}` },
     );
   const setKey = <K extends keyof SubtitleStyle>(k: K, v: SubtitleStyle[K]) => set(k, (s) => void (s[k] = v));
-  const font = FONT_CHOICES.find((f) => f.family === style.fontFamily) ?? FONT_CHOICES[0];
+  const choices = fontChoices(useRootProject()?.fonts);
+  const font = choices.find((f) => f.family === style.fontFamily) ?? choices[0];
   const preset = presetOf(style);
   const animation = style.animation ?? 'none';
 
@@ -48,7 +50,7 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
         </div>
       </Section>
       <Section id="subText" title={t('subtitles.textStyle')} onReset={() => resetSubtitleSection(trackId, 'textStyle')}>
-        <SelectField label={t('inspector.font')} value={style.fontFamily} options={FONT_CHOICES.map((f) => ({ value: f.family, label: f.label }))} onChange={(v) => set('font', (s) => {
+        <FontField label={t('inspector.font')} value={style.fontFamily} onChange={(v) => set('font', (s) => {
           s.fontFamily = v;
           s.fontWeight = resolveWeight(v, s.fontWeight ?? 600);
         })} />

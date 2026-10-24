@@ -25,7 +25,7 @@ editor.example.com {
 
 The app container already sends the COOP/COEP headers and MIME types; the proxy passes them through unchanged.
 
-### Media library (Stickers, Sound effects, Overlays, Templates panes)
+### Media library (Assets tab: Stickers, Sound effects, Backgrounds; Overlays, Templates; fonts)
 
 The library panes list files from `/srv/video-editor/library`, mounted read-only into the container at `/library` (`deploy/docker-compose.yml`). nginx lists each folder as JSON (`autoindex_format json`), so adding a file is all it takes; there is no manifest. One level of subfolders becomes categories in the pane.
 
@@ -34,11 +34,13 @@ The library panes list files from `/srv/video-editor/library`, mounted read-only
   stickers/    .png .gif (animated GIFs play and loop)    e.g. stickers/emoji/smile.gif
   sounds/      .ogg .mp3                                  e.g. sounds/whoosh/fast.mp3
   overlays/    .mp4 .webm .mov (short clips; added with blend mode Screen, so shoot them on black)
+  backgrounds/ .jpg .jpeg .png .webp .mp4 .webm (added full frame on the bottom video track)
   templates/   .json (titles, lower thirds… in the format below; shown after the built-in ones)
+  fonts/       .ttf .otf .woff .woff2 (listed in every font picker; the family name is the file name)
 ```
 
 ```bash
-mkdir -p /srv/video-editor/library/{stickers,sounds,overlays,templates}
+mkdir -p /srv/video-editor/library/{stickers,sounds,overlays,backgrounds,templates,fonts}
 docker compose up -d   # once, after the volume was added to docker-compose.yml
 ```
 

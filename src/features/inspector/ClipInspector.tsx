@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { detectRtl } from '../../engine/render/textLayout';
 import { DEFAULT_TEXT_MAX_WIDTH } from '../../engine/render/text';
-import { FONT_CHOICES, resolveWeight } from '../../lib/fonts';
-import { findClip, moveClips, trimClip } from '../../model/timeline';
+import { fontChoices, resolveWeight } from '../../lib/fonts';
+import { FontField } from '../fonts/FontField';
+import { findClip } from '../../model/timeline';
 import type { BlendMode, Clip, ID, Project, TextAnimKind, TextProps, Transform } from '../../model/types';
 import { DEFAULT_ANIM_DURATION, TEXT_ANIMS } from '../../model/textAnim';
 import { keyTimeAt } from '../../model/remap';
-import { currentProject, useProjectStore } from '../../store/projectStore';
+import { currentProject, useProjectStore, useRootProject } from '../../store/projectStore';
 import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField } from './controls';
 import { ShapeSection } from './ShapeSection';
 import { EffectsSection } from './EffectsSection';
@@ -71,9 +72,10 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
   const shown = keyedClip(clip, playheadIn(clip, time));
   const isText = !!clip.text;
   const compound = !!clip.sequenceId;
-  const visual = isOverlay(clip) || compound || asset?.kind === 'video' || asset?.kind === 'image';
+  // A video's detached sound (on an audio track) is audio only; the silent video is picture only.
+  const visual = track.kind !== 'audio' && (isOverlay(clip) || compound || asset?.kind === 'video' || asset?.kind === 'image');
   const timed = asset?.kind === 'video' || asset?.kind === 'audio';
-  const audible = asset?.kind === 'audio' || (asset?.kind === 'video' && asset.hasAudio);
+  const audible = !clip.audioDetached && (asset?.kind === 'audio' || (asset?.kind === 'video' && asset.hasAudio));
   const setTransform = <K extends keyof Transform>(key: K, v: Transform[K]) =>
     set(`transform.${key}`, (c) => void (c.transform[key] = v));
 
@@ -82,39 +84,13 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       <div className="truncate border-b border-line px-3 py-2 text-sm font-medium text-white" dir="auto">
         {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : isPaintLayer(clip) ? `🖌 ${t('paint.layer')}` : clip.solid ? `■ ${t('shapes.solid')}` : clip.nullObject ? `⌖ ${t('shapes.null')}` : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
         {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
+        {clip.freeze && <p className="text-[11px] font-normal text-sky-300" data-testid="freeze-note">❄ {t('speed.freezeNote')}</p>}
       </div>
 
+      {/* What the clip is first, then the owner's order: transform, effects, masks, speed, keyframes,
+          motion tracking, audio, paint. */}
       {compound && <CompoundSection project={project} clip={clip} />}
-      {(visual || audible) && <KeyframesSection project={project} clip={clip} time={time} />}
-
-      <Section id="timing" title={t('inspector.timing')} onReset={() => resetClipSection(clipId, 'timing')}>
-        <NumberField
-          label={t('inspector.start')}
-          value={clip.start}
-          min={0}
-          max={Math.max(clip.start + 600, 3600)}
-          step={1 / project.settings.fps}
-          unit="s"
-          onChange={(v) =>
-            // Only free spots are accepted; moveClips keeps the track sorted.
-            set('start', (c, p) => void moveClips(p, [{ clipId: c.id, trackId: track.id, start: v }]))
-          }
-        />
-        <NumberField
-          label={t('inspector.duration')}
-          value={clip.duration}
-          min={0.1}
-          max={Math.max(clip.duration * 4, 60)}
-          step={1 / project.settings.fps}
-          unit="s"
-          onChange={(v) => set('duration', (c, p) => void trimClip(p, c.id, 'end', c.start + v))}
-        />
-        {clip.freeze && <p className="text-[11px] text-sky-300" data-testid="freeze-note">❄ {t('speed.freezeNote')}</p>}
-      </Section>
-      {timed && asset && !clip.freeze && <SpeedSection clip={clip} asset={asset} audible={!!audible} set={set} />}
-
       {isText && <TextSection clipId={clipId} text={shown.text!} set={set} />}
-      {clip.paint && <PaintSection project={project} clip={clip} />}
       {clip.solid && (
         <Section id="solid" title={t('shapes.solid')}>
           <ColorField label={t('inspector.fill')} value={clip.solid.color} onChange={(v) => v && set('solid.color', (c) => void (c.solid!.color = v))} />
@@ -134,6 +110,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {clip.adjustment && !clip.masks?.length && (
         <Section id="transform" title={t('inspector.transform')} onReset={() => resetClipSection(clipId, 'transform')}>
           <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
+          <BlendField clip={clip} set={set} />
         </Section>
       )}
 
@@ -146,6 +123,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
           {!clip.nullObject && (
             <NumberField label={t('inspector.opacity')} value={shown.transform.opacity} min={0} max={1} factor={100} unit="%" onChange={(v) => setTransform('opacity', v)} />
           )}
+          {!clip.nullObject && <BlendField clip={clip} set={set} />}
           <ParentField project={project} clip={clip} />
           {!isOverlay(clip) && (
             <>
@@ -164,12 +142,18 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
         </Section>
       )}
 
-      {visual && !compound && <MasksSection project={project} clip={clip} />}
-      {visual && <MotionSection project={project} clip={clip} />}
-      {asset?.kind === 'video' && <ReframeSection project={project} clip={clip} />}
-      {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
-      {visual && <BlendSection clip={clip} set={set} />}
       {visual && <EffectsSection clip={shown} asset={asset} set={set} />}
+      {visual && !compound && <MasksSection project={project} clip={clip} />}
+      {timed && asset && !clip.freeze && <SpeedSection clip={clip} asset={asset} audible={!!audible} visual={visual} set={set} />}
+      {(visual || audible) && <KeyframesSection project={project} clip={clip} time={time} />}
+
+      {visual && (
+        <Section id="motionTracking" title={t('inspector.motionTracking')}>
+          <MotionSection project={project} clip={clip} />
+          {asset?.kind === 'video' && <TrackingSection project={project} clip={clip} />}
+          {asset?.kind === 'video' && <ReframeSection project={project} clip={clip} />}
+        </Section>
+      )}
 
       {(audible || compound) && (
         <Section id="audio" title={t('inspector.audio')} onReset={() => resetClipSection(clipId, 'audio')}>
@@ -199,23 +183,25 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
               <p className="text-[11px] text-neutral-400">{t('inspector.duckHint')}</p>
             </>
           )}
+          {audible && <CleanupSection project={project} clip={clip} set={set} />}
+          {audible && <VoiceSection clip={shown} set={set} />}
+          {audible && asset && <BeatsSection clip={clip} asset={asset} />}
         </Section>
       )}
-      {audible && <CleanupSection project={project} clip={clip} set={set} />}
-      {audible && asset && <BeatsSection clip={clip} asset={asset} />}
-      {audible && <VoiceSection clip={shown} set={set} />}
+
+      {clip.paint && <PaintSection project={project} clip={clip} />}
     </fieldset>
   );
 }
 
 export type SetFn = ReturnType<typeof useClipEditor>;
 
-/** Blend mode picker, grouped as in After Effects. */
-function BlendSection({ clip, set }: { clip: Clip; set: SetFn }) {
+/** Blend mode picker (under Opacity in Transform), grouped as in After Effects. */
+function BlendField({ clip, set }: { clip: Clip; set: SetFn }) {
   const { t } = useTranslation();
   const mode = clip.blend ?? 'normal';
   return (
-    <Section id="blend" title={t('inspector.blending')} onReset={() => resetClipSection(clip.id, 'blend')}>
+    <>
       <label className="flex flex-col gap-1 text-xs">
         <span className="text-neutral-400">{t('blend.label')}</span>
         <select
@@ -242,7 +228,7 @@ function BlendSection({ clip, set }: { clip: Clip; set: SetFn }) {
         </select>
       </label>
       {isPixelBlend(mode) && <p className="text-[11px] text-neutral-400">{t('blend.slowHint')}</p>}
-    </Section>
+    </>
   );
 }
 
@@ -279,7 +265,8 @@ function CropFields({ clip, set }: { clip: Clip; set: SetFn }) {
 function TextSection({ clipId, text, set }: { clipId: ID; text: TextProps; set: SetFn }) {
   const { t } = useTranslation();
   const setText = <K extends keyof TextProps>(key: K, v: TextProps[K]) => set(`text.${key}`, (c) => void (c.text![key] = v));
-  const font = FONT_CHOICES.find((f) => f.family === text.fontFamily) ?? FONT_CHOICES[0];
+  const choices = fontChoices(useRootProject()?.fonts);
+  const font = choices.find((f) => f.family === text.fontFamily) ?? choices[0];
   const preset = FADE_PRESETS.find((p) => p.value === text.fadeIn && p.value === text.fadeOut)?.key ?? 'custom';
 
   return (
@@ -303,10 +290,9 @@ function TextSection({ clipId, text, set }: { clipId: ID; text: TextProps; set: 
           });
         }}
       />
-      <SelectField
+      <FontField
         label={t('inspector.font')}
         value={text.fontFamily}
-        options={FONT_CHOICES.map((f) => ({ value: f.family, label: f.label }))}
         onChange={(v) => set('text.fontFamily', (c) => {
           c.text!.fontFamily = v;
           c.text!.fontWeight = resolveWeight(v, c.text!.fontWeight);

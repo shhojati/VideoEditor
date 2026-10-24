@@ -68,8 +68,16 @@ const deselect = async (page: Page) => {
   await page.getByTestId('timeline').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('Escape');
 };
-/** Duration of the selected clip, from the inspector. */
-const setDuration = (page: Page, v: string) => setField(page.getByTestId('clip-inspector'), 'Duration', v);
+/** Duration of the adjustment layer that starts at the playhead (the inspector has no Timing section). */
+const setDuration = (page: Page, v: string) =>
+  page.evaluate((d) => {
+    type Edit = { edit: (label: string, fn: (p: { tracks: { clips: { start: number; duration: number; adjustment?: boolean }[] }[] }) => void) => void };
+    const w = window as unknown as { __stores: { project: { getState: () => Edit }; transport: { getState: () => { time: number } } } };
+    const time = w.__stores.transport.getState().time;
+    w.__stores.project.getState().edit('test.duration', (p) => {
+      for (const t of p.tracks) for (const c of t.clips) if (c.adjustment && Math.abs(c.start - time) < 1e-3) c.duration = d;
+    });
+  }, Number(v));
 
 test('effects on a clip and on adjustment layers, a filter, drag onto a clip; preview = export', async ({ page }) => {
   test.setTimeout(3 * 60_000);

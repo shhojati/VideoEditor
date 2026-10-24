@@ -92,13 +92,21 @@ test('detect beats, cut photos to the beat, toggle markers', async ({ page }) =>
   expect(Math.abs(music.beats!.times.find((t) => t > 1)! - 1.25)).toBeLessThan(0.02);
   await expect(page.locator('[data-testid=clip]', { hasText: 'music.wav' }).getByTestId('beat-ticks')).toHaveAttribute('data-count', /^1[5-9]$|^20$/);
 
-  // Select the three photos and cut them to every 2 beats (1 s each).
+  // Cut to beat splits the selected clip at every beat inside it: a.png (0.1–2.6 s) at 0.25 … 2.25 s.
+  await page.locator('[data-testid=clip]', { hasText: 'a.png' }).click({ position: { x: 10, y: 10 } });
+  const before = (await state(page)).tracks.find((t) => t.kind === 'video')!.clips.map((c) => c.start);
+  await page.getByTestId('cut-every').selectOption('1');
+  await page.getByTestId('cut-to-beat').click();
+  expect((await state(page)).tracks.find((t) => t.kind === 'video')!.clips.filter((c) => c.start < 2.6)).toHaveLength(6);
+  await page.keyboard.press('Control+z');
+  expect((await state(page)).tracks.find((t) => t.kind === 'video')!.clips.map((c) => c.start)).toEqual(before);
+
+  // Select the three photos and fit them to every 2 beats (1 s each).
   await page.locator('[data-testid=clip]', { hasText: 'a.png' }).click({ position: { x: 10, y: 10 } });
   await page.locator('[data-testid=clip]', { hasText: 'b.png' }).click({ position: { x: 10, y: 10 }, modifiers: ['Shift'] });
   await page.locator('[data-testid=clip]', { hasText: 'c.png' }).click({ position: { x: 10, y: 10 }, modifiers: ['Shift'] });
-  const before = (await state(page)).tracks.find((t) => t.kind === 'video')!.clips.map((c) => c.start);
   await page.getByTestId('cut-every').selectOption('2');
-  await page.getByTestId('cut-to-beat').click();
+  await page.getByTestId('fit-to-beat').click();
   const photos = (await state(page)).tracks.find((t) => t.kind === 'video')!.clips;
   const beat = (t: number) => music.beats!.times.reduce((a, b) => (Math.abs(b - t) < Math.abs(a - t) ? b : a));
   expect(photos.map((c) => c.start)).toEqual([beat(0.25), beat(1.25), beat(2.25)].map((t) => expect.closeTo(t, 3)));

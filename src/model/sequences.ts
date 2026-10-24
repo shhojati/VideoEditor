@@ -175,17 +175,20 @@ export function flattenForMedia(p: Project): Project {
   let flat = flatCache.get(p);
   if (!flat) {
     const out: Track[] = [];
-    const expand = (tracks: { kind: Track['kind']; muted?: boolean; clips: Clip[] }[], gain: number, muted: boolean, depth: number) => {
+    // A compound's tracks take the eye and solo of the root track that holds it.
+    type Root = Pick<Track, 'hidden' | 'solo'>;
+    const expand = (tracks: { kind: Track['kind']; muted?: boolean; hidden?: boolean; clips: Clip[] }[], gain: number, muted: boolean, root: Root, depth: number) => {
       for (const t of tracks) {
         const plain = t.clips.filter((c) => !c.sequenceId).map((c) => (gain === 1 ? c : { ...c, audio: { ...c.audio, volume: c.audio.volume * gain } }));
-        if (plain.length) out.push({ id: newId(), kind: t.kind, muted: muted || !!t.muted, locked: false, clips: plain });
+        const hidden = !!root.hidden || !!t.hidden;
+        if (plain.length) out.push({ id: newId(), kind: t.kind, muted: muted || !!t.muted, locked: false, ...(hidden && { hidden }), ...(root.solo && { solo: true }), clips: plain });
         if (depth >= MAX_NEST) continue;
-        for (const c of t.clips) if (c.sequenceId) expand(placedInner(p, c), gain * c.audio.volume, muted || !!t.muted, depth + 1);
+        for (const c of t.clips) if (c.sequenceId) expand(placedInner(p, c), gain * c.audio.volume, muted || !!t.muted, { ...root, hidden }, depth + 1);
       }
     };
     // Root tracks keep their identity (transitions, ids); compounds are taken out of them.
     for (const t of p.tracks) out.push(t.clips.some((c) => c.sequenceId) ? { ...t, clips: t.clips.filter((c) => !c.sequenceId) } : t);
-    for (const t of p.tracks) for (const c of t.clips) if (c.sequenceId) expand(placedInner(p, c), c.audio.volume, !!t.muted, 1);
+    for (const t of p.tracks) for (const c of t.clips) if (c.sequenceId) expand(placedInner(p, c), c.audio.volume, !!t.muted, t, 1);
     flat = { ...p, tracks: out };
     flatCache.set(p, flat);
   }

@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import {
+  addNull,
+  addSolid,
   copySelection,
   deleteSelection,
   duplicateSelection,
@@ -11,12 +13,22 @@ import {
   stepFrames,
   zoomBy,
 } from '../features/timeline/actions';
+import i18n from '../i18n';
+import { addAdjustmentLayer } from '../features/effects/effectActions';
+import { makeCompoundFromSelection } from '../features/timeline/compoundActions';
+import { saveProjectFile } from '../features/projects/projectFile';
+import { useNewProjectDialog } from '../features/projects/NewProjectDialog';
+import { openImportPicker } from '../features/media-bin/mediaService';
+import { useExport } from '../features/export/exportService';
+import { toggleFullscreen } from '../features/preview/fullscreen';
+import { useSubtitlesUi } from '../features/subtitles/subtitlesUi';
+import { friendlyError, showToast } from './toasts';
 import { select, useTimelineUi } from '../features/timeline/timelineUi';
 import { setTool, shapeToolKey, useTool } from '../features/tools/toolService';
 import { stepDrawing } from '../features/paint/paintService';
 import { jumpSelectedKeyframe, toggleSelectedKeyframe } from '../features/keyframes/keyframeService';
 import { spaceDown } from '../features/preview/spaceHand';
-import { useProjectStore } from '../store/projectStore';
+import { currentProject, useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
 import { useShortcutSheet } from './ShortcutSheet';
 import { toggleMarkerAtPlayhead } from '../features/timeline/beatActions';
@@ -28,14 +40,40 @@ function stepSelectedDrawing(dir: -1 | 1) {
   if (sel.length === 1) stepDrawing(sel[0], dir);
 }
 
-// Keyed by KeyboardEvent.code so letters also work with a Persian keyboard layout.
+/** Ctrl+S: the project as a file, like Project → Save. */
+function saveProject() {
+  const project = useProjectStore.getState().history?.present;
+  if (!project) return;
+  saveProjectFile(project, false).then(
+    (missing) => missing?.length && showToast(i18n.t('projectFile.notIncluded', { count: missing.length })),
+    (err) => showToast(friendlyError(err, i18n.t)),
+  );
+}
+
+// Keyed by KeyboardEvent.code so letters also work with a Persian keyboard layout. After Effects'
+// keys where it has one: Ctrl+Y a solid (so redo is Ctrl+Shift+Z only), Ctrl+Alt+Y an adjustment
+// layer, Ctrl+Alt+Shift+Y a null, Ctrl+Shift+D split, Ctrl+Shift+C precompose (a compound clip),
+// Ctrl+I import, Ctrl+M render (export). Ctrl+Alt combos are looked up as 'Alt+<code>'.
 const WITH_CTRL: Record<string, Handler> = {
   KeyZ: (e) => (e.shiftKey ? useProjectStore.getState().redo() : useProjectStore.getState().undo()),
-  KeyY: () => useProjectStore.getState().redo(),
-  KeyC: copySelection,
+  KeyY: () => addSolid(),
+  'Alt+KeyY': (e) => (e.shiftKey ? addNull() : addAdjustmentLayer()),
+  KeyC: (e) => (e.shiftKey ? makeCompoundFromSelection() : copySelection()),
+  KeyX: () => {
+    copySelection();
+    deleteSelection();
+  },
   KeyV: () => paste(),
-  KeyD: duplicateSelection,
+  KeyD: (e) => (e.shiftKey ? splitAtPlayhead() : duplicateSelection()),
   KeyA: selectAll,
+  KeyS: saveProject,
+  // Chrome keeps Ctrl+N for a new window; it reaches the page in the installed app.
+  KeyN: () => useNewProjectDialog.setState({ open: true }),
+  KeyI: () => {
+    useSubtitlesUi.setState({ tab: 'media' });
+    openImportPicker();
+  },
+  KeyM: () => currentProject() && useExport.setState({ open: true }),
   Equal: () => zoomBy(1.5),
   NumpadAdd: () => zoomBy(1.5),
   Minus: () => zoomBy(1 / 1.5),
@@ -75,6 +113,8 @@ const PLAIN: Record<string, Handler> = {
   BracketRight: () => jumpSelectedKeyframe(1),
   // '?' (Shift + /); the same physical key gives '؟' on a Persian layout.
   Slash: (e) => e.shiftKey && useShortcutSheet.setState({ open: true }),
+  // ` / ~ (the key left of 1): the preview full screen.
+  Backquote: toggleFullscreen,
 };
 
 function isTypingTarget(el: EventTarget | null) {
@@ -85,8 +125,11 @@ function isTypingTarget(el: EventTarget | null) {
 export function useGlobalShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target) || e.altKey) return;
-      const handler = (e.ctrlKey || e.metaKey ? WITH_CTRL : PLAIN)[e.code];
+      if (isTypingTarget(e.target)) return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      // Alt alone is left to the browser; with Ctrl it picks the 'Alt+' entries.
+      if (e.altKey && !ctrl) return;
+      const handler = ctrl ? WITH_CTRL[e.altKey ? `Alt+${e.code}` : e.code] : PLAIN[e.code];
       if (!handler) return;
       e.preventDefault();
       handler(e);

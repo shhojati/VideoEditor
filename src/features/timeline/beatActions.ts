@@ -1,7 +1,7 @@
 // Beats and markers: detect a music clip's beats, toggle markers at the playhead, cut clips to the beat.
 import { showToast } from '../../app/toasts';
 import i18n from '../../i18n';
-import { cutToBeat, toggleMarker } from '../../model/beats';
+import { cutToBeat, splitAtBeats, toggleMarker } from '../../model/beats';
 import { findClip } from '../../model/timeline';
 import type { ID } from '../../model/types';
 import { currentProject, useProjectStore } from '../../store/projectStore';
@@ -41,10 +41,18 @@ export function removeMarker(id: ID) {
   useProjectStore.getState().edit('ops.marker', (d) => void (d.markers = d.markers?.filter((m) => m.id !== id)));
 }
 
-/** Re-time the selected clips to the beat (every 1, 2 or 4 beats). */
+/** Cut to beat: split the selected clips at the beats inside them (every 1, 2 or 4 beats). */
 export function cutSelectionToBeat(every: number) {
   const ids = useTimelineUi.getState().selection;
+  let result: ReturnType<typeof splitAtBeats> | undefined;
+  useProjectStore.getState().edit('ops.cutToBeat', (d) => void (result = splitAtBeats(d, ids, every)));
+  if (result && !result.ok) showToast(i18n.t(`beats.errors.${result.reason}`));
+}
+
+/** Fit to beat: re-time the selected clips end to end on the beat (every 1, 2 or 4 beats). */
+export function fitSelectionToBeat(every: number) {
+  const ids = useTimelineUi.getState().selection;
   let result: ReturnType<typeof cutToBeat> | undefined;
-  useProjectStore.getState().edit('ops.cutToBeat', (d) => void (result = cutToBeat(d, ids, every)));
+  useProjectStore.getState().edit('ops.fitToBeat', (d) => void (result = cutToBeat(d, ids, every)));
   if (result && !result.ok) showToast(i18n.t(`beats.errors.${result.reason}`));
 }

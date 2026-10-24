@@ -54,7 +54,7 @@ import {
 import { drawWatermark, type WatermarkSpec } from '../engine/render/watermark';
 import { clipVisibleRange } from '../model/transitions';
 import { isOverlay } from '../model/overlays';
-import { ensureFont } from '../lib/fonts';
+import { ensureFont, setCustomFonts } from '../lib/fonts';
 import { getMediaFile } from '../lib/opfs';
 import { ZipWriter } from '../lib/zip';
 import { timelineDuration } from '../model/timeline';
@@ -644,6 +644,7 @@ async function run(
     for (const st of project.subtitleTracks)
       if (!st.hidden) fonts.add(`${st.style.fontFamily}|${st.style.fontWeight ?? 600}`);
   if (watermark && !watermark.image) fonts.add(`${watermark.config.fontFamily}|${watermark.config.fontWeight}`);
+  setCustomFonts(project.fonts);
   if (settings.format !== 'mp3')
     await Promise.all([...fonts].map((f) => ensureFont(f.split('|')[0], Number(f.split('|')[1]))));
 

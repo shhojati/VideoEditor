@@ -128,7 +128,12 @@
     "addSolid": "Add solid",
     "addNull": "Add null object",
     "parent": "Parent",
-    "moveTrack": "Move track"
+    "moveTrack": "Move track",
+    "toggleHidden": "Show / hide track",
+    "toggleSolo": "Toggle solo",
+    "detachAudio": "Detach audio",
+    "fitToBeat": "Fit to beat",
+    "addFont": "Add font"
   },
   "panels": {
     "media": "Media",
@@ -148,9 +153,11 @@
     "fx": "Effects",
     "effects": "Effects",
     "filters": "Filters",
-    "transcript": "Text",
+    "transcript": "Edit by text",
     "templates": "Templates",
-    "layouts": "Layouts"
+    "layouts": "Layouts",
+    "assets": "Assets",
+    "backgrounds": "Backgrounds"
   },
   "settings": {
     "title": "Project settings",
@@ -169,7 +176,9 @@
     "remove": "Remove track",
     "empty": "No tracks",
     "up": "Move track up (drawn above)",
-    "down": "Move track down (drawn below)"
+    "down": "Move track down (drawn below)",
+    "visible": "Show / hide track (also in the export)",
+    "solo": "Solo: only soloed tracks are seen and heard (also in the export)"
   },
   "lang": {
     "switch": "فارسی"
@@ -214,7 +223,9 @@
     "fit": "Fit",
     "dropHint": "Drag media here from the Media panel",
     "newTrackHint": "Drop here to create a new track",
-    "tapHint": "Open Media below and tap + on a file to add it at the playhead"
+    "tapHint": "Open Media below and tap + on a file to add it at the playhead",
+    "detachAudio": "Detach audio",
+    "detachAudioHint": "Move the selected videos' sound onto its own clip on an audio track (the video goes silent)"
   },
   "transport": {
     "play": "Play",
@@ -228,7 +239,8 @@
     "fit": "Fit",
     "fill": "Fill",
     "fitHint": "Show the selected clips whole inside the frame",
-    "fillHint": "Make the selected clips fill the frame (edges are cropped)"
+    "fillHint": "Make the selected clips fill the frame (edges are cropped)",
+    "goTo": "Click to type a time (seconds, m:ss or hh:mm:ss:ff), Enter to jump there"
   },
   "text": {
     "add": "Text",
@@ -271,8 +283,6 @@
     "textClip": "Text clip",
     "locked": "track is locked",
     "multi": "{{count}} clips selected",
-    "timing": "Timing",
-    "start": "Start",
     "duration": "Duration",
     "speed": "Speed",
     "transform": "Transform",
@@ -351,7 +361,6 @@
     "arrowStart": "Start",
     "arrowEnd": "End",
     "none": "None",
-    "blending": "Blending",
     "length": "Length",
     "duck": "Duck under voice",
     "duckAmount": "Duck by",
@@ -359,7 +368,8 @@
     "duckRelease": "Come back",
     "duckHint": "Gets quieter wherever another clip has speech (for music under a voiceover). Follows your edits.",
     "parent": "Parent",
-    "noParent": "None"
+    "noParent": "None",
+    "motionTracking": "Motion tracking"
   },
   "subtitles": {
     "lane": "Subtitles {{lang}}",
@@ -541,7 +551,9 @@
     "cancel": "Cancel",
     "close": "Close",
     "start": "Start export",
-    "softwareAac": "This browser has no AAC encoder; the audio was encoded with the app's built-in AAC encoder."
+    "softwareAac": "This browser has no AAC encoder; the audio was encoded with the app's built-in AAC encoder.",
+    "hiddenWarning": "{{count}} hidden track(s) (eye off) will be left out of the export.",
+    "soloWarning": "A track is soloed: only soloed tracks will be in the export."
   },
   "caps": {
     "blockedTitle": "This browser cannot run the editor",
@@ -599,7 +611,7 @@
       "duplicate": "Duplicate",
       "selectAll": "Select all",
       "zoom": "Zoom timeline",
-      "zoomWheel": "Zoom timeline or preview at the pointer",
+      "zoomWheel": "Zoom the timeline or preview at the pointer",
       "noSnap": "Disable snapping while dragging",
       "deselect": "Back to the selection tool / clear selection",
       "help": "Show this list",
@@ -616,7 +628,20 @@
       "toolText": "Type tool",
       "toolBrush": "Brush / eraser",
       "drawingStep": "Previous/next drawing (frame-by-frame paint)",
-      "toolClone": "Clone stamp"
+      "toolClone": "Clone stamp",
+      "scrollSideways": "Scroll the timeline / pan the preview sideways",
+      "scrollUpDown": "Scroll the timeline / pan the preview up and down",
+      "cut": "Cut (copy, then delete)",
+      "splitAe": "Split at playhead (After Effects)",
+      "save": "Save the project as a file",
+      "newProject": "New project (in the installed app; the browser keeps Ctrl+N)",
+      "import": "Import media",
+      "export": "Export",
+      "solid": "New solid colour layer",
+      "adjustment": "New adjustment layer",
+      "null": "New null object",
+      "compound": "Make a compound clip from the selection",
+      "fullscreen": "Preview full screen"
     }
   },
   "transitions": {
@@ -672,7 +697,9 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fit": "Fit",
-    "canvasHint": "Preview: click a clip to select it, drag to move, use the handles to resize and rotate"
+    "canvasHint": "Preview: click a clip to select it, drag to move, use the handles to resize and rotate",
+    "fullscreen": "Full screen",
+    "exitFullscreen": "Exit full screen"
   },
   "shapes": {
     "add": "Shape",
@@ -779,7 +806,9 @@
     "empty": {
       "stickers": "No stickers on this server yet.",
       "sounds": "No sound effects on this server yet.",
-      "overlays": "No overlays on this server yet."
+      "overlays": "No overlays on this server yet.",
+      "backgrounds": "No backgrounds on this server yet.",
+      "fonts": "No fonts on this server yet."
     }
   },
   "effects": {
@@ -1349,15 +1378,18 @@
     "none": "No steady beat found.",
     "hint": "Beats show as ticks on the clip; clips and the playhead snap to them.",
     "cut": "Cut to beat",
-    "cutHint": "Lay the selected clips end to end on the music’s beats (photos stretch, videos are trimmed)",
+    "cutHint": "Cut the selected clips at the music’s beats",
     "every": "Beats per clip",
     "everyN_one": "every beat",
     "everyN_other": "every {{count}} beats",
     "errors": {
       "noClips": "Select video or photo clips on one track first.",
       "noBeats": "Detect the beats of a music clip first (inspector → Beats).",
-      "blocked": "Not enough room: another clip on the track is in the way."
-    }
+      "blocked": "Not enough room: another clip on the track is in the way.",
+      "noCuts": "No beats fall inside the selected clips."
+    },
+    "fit": "Fit to beat",
+    "fitHint": "Lay the selected clips end to end on the music’s beats (photos stretch, videos are trimmed)"
   },
   "speed": {
     "title": "Speed",
@@ -1596,5 +1628,13 @@
     "cloneHint": "Clone stamp: Alt-click (or click) where to copy from, then paint",
     "cloneReady": "Source set: paint to copy it. Alt-click to pick another source.",
     "cloneReset": "Pick a new source"
+  },
+  "fonts": {
+    "server": "Server fonts",
+    "upload": "Upload a font… (.ttf, .otf, .woff)",
+    "errors": {
+      "type": "That is not a font file (.ttf, .otf, .woff, .woff2).",
+      "unreadable": "The browser cannot read this font file."
+    }
   }
 }

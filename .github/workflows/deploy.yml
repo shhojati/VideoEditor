@@ -117,8 +117,8 @@ jobs:
           script_stop: true
           script: |
             cd "$APP_DIR"
-            # Library folders for the Stickers / Sound effects / Overlays panes (files are added by hand).
-            mkdir -p library/stickers library/sounds library/overlays library/templates
+            # Library folders for the Stickers / Sound effects / Overlays / Backgrounds panes and fonts (files are added by hand).
+            mkdir -p library/stickers library/sounds library/overlays library/backgrounds library/templates library/fonts
             # Account database (back it up) and owner settings (never overwritten once edited).
             mkdir -p data config
             cp -n config-defaults/* config/ 2>/dev/null || true

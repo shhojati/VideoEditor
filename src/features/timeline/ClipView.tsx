@@ -61,7 +61,8 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
   const left = clip.start * pps;
   const width = Math.max(2, clip.duration * pps);
   const { t } = useTranslation();
-  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : isPaintLayer(clip) ? 'paint' : clip.solid ? 'solid' : clip.nullObject ? 'null' : (asset?.kind ?? 'video');
+  // A video's detached sound sits on an audio track: drawn as audio (its waveform).
+  const kind = clip.sequenceId ? 'compound' : clip.adjustment ? 'adjustment' : clip.text ? 'text' : clip.shape ? 'shape' : isPaintLayer(clip) ? 'paint' : clip.solid ? 'solid' : clip.nullObject ? 'null' : track.kind === 'audio' ? 'audio' : (asset?.kind ?? 'video');
   const [fxHover, setFxHover] = useState(false);
   const live = clip.effects?.filter((e) => e.enabled) ?? [];
   // Only the on-screen part of the clip gets thumbnails / waveform.

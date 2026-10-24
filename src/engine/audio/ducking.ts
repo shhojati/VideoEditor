@@ -5,6 +5,7 @@
 import { peakVolume } from '../../model/keyframes';
 import type { Clip, ClipDuck, Project } from '../../model/types';
 import { timelineTimeAt } from '../../model/remap';
+import { trackSounds } from '../../model/visibility';
 
 export type Interval = [number, number];
 /** Speech intervals in source seconds for an asset, or undefined while its waveform is not ready. */
@@ -73,10 +74,10 @@ export function duckPlan(project: Project, activityOf: ActivityOf): DuckPlan {
   const voice: Interval[] = [];
   const ducked: Clip[] = [];
   for (const track of project.tracks) {
-    if (track.muted || track.kind === 'text') continue;
+    if (!trackSounds(project, track) || track.kind === 'text') continue;
     for (const clip of track.clips) {
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
-      if (!asset || asset.kind === 'image' || (asset.kind === 'video' && !asset.hasAudio) || clip.freeze) continue;
+      if (!asset || asset.kind === 'image' || (asset.kind === 'video' && !asset.hasAudio) || clip.freeze || clip.audioDetached) continue;
       if (clip.audio.duck) ducked.push(clip);
       else if (peakVolume(clip) > 0) voice.push(...clipActivity(clip, activityOf(asset.id) ?? []));
     }

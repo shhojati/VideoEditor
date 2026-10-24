@@ -77,7 +77,7 @@ test('build, split, trim and move clips with undo and persistence', async ({ pag
   // Undo the move, redo it.
   await page.keyboard.press('Control+z');
   expect((await clips(page))[1].start).toBeCloseTo(3, 2);
-  await page.keyboard.press('Control+y');
+  await page.keyboard.press('Control+Shift+z');
   expect((await clips(page))[1].start).toBeCloseTo(5, 1);
 
   // Everything survives a reload.

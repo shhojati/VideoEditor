@@ -1,11 +1,11 @@
-// Library panes (Stickers, Sound effects, Overlays): listing the server folders, and turning an
+// Library panes (Stickers, Sound effects, Overlays, Backgrounds): listing the server folders, and turning an
 // item into a project asset — downloaded and imported once, then reused (matched by library path).
 import { create } from 'zustand';
 import { fetchLibraryFile, LibraryUnavailable, listLibrary, type LibraryItem } from '../../lib/library';
 import type { ID, LibraryKind } from '../../model/types';
 import { currentProject } from '../../store/projectStore';
 import { importFileAs } from '../media-bin/mediaService';
-import { addAssetAtPlayhead, placeAssetAt } from '../timeline/interactions';
+import { addAssetAtPlayhead, addBackgroundAtPlayhead, placeAssetAt } from '../timeline/interactions';
 import { assetDrag } from '../timeline/timelineUi';
 
 export interface LibraryListing {
@@ -64,10 +64,15 @@ export function ensureLibraryAsset(item: LibraryItem): Promise<ID | null> {
   return p;
 }
 
-/** Click: add at the playhead (stickers/overlays on a free video track, sounds on an audio track). */
+/**
+ * Click: add at the playhead (stickers/overlays on a free video track, sounds on an audio track,
+ * backgrounds on the bottom video track).
+ */
 export async function addLibraryItem(item: LibraryItem) {
   const id = await ensureLibraryAsset(item);
-  if (id) addAssetAtPlayhead(id);
+  if (!id) return;
+  if (item.kind === 'backgrounds') addBackgroundAtPlayhead(id);
+  else addAssetAtPlayhead(id);
 }
 
 /**

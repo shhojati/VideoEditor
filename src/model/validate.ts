@@ -115,6 +115,7 @@ const clip = z.object({
     .optional(),
   speedPreset: z.enum(['montage', 'hero', 'bullet', 'flashIn', 'flashOut', 'jumpCut', 'custom']).optional(),
   freeze: z.literal(true).optional(),
+  audioDetached: z.literal(true).optional(),
   transcript: z.object({ language: z.string(), rtl: z.boolean(), words: z.array(z.object({ text: z.string(), s: nonNeg, e: nonNeg })) }).optional(),
   sequenceId: z.string().optional(),
   transform: z.object({
@@ -190,6 +191,8 @@ const track = z.object({
   kind: z.enum(['video', 'audio', 'text']),
   muted: z.boolean(),
   locked: z.boolean(),
+  hidden: z.boolean().optional(),
+  solo: z.boolean().optional(),
   clips: z.array(clip),
   transitions: z
     .array(
@@ -217,7 +220,7 @@ const asset = z.object({
   mimeType: z.string().optional(),
   codecs: z.object({ video: z.string().optional(), audio: z.string().optional() }).optional(),
   fileRef: z.object({ opfsPath: z.string().optional(), handleKey: z.string().optional() }),
-  library: z.object({ kind: z.enum(['stickers', 'sounds', 'overlays']), path: z.string() }).optional(),
+  library: z.object({ kind: z.enum(['stickers', 'sounds', 'overlays', 'backgrounds']), path: z.string() }).optional(),
   beats: z.object({ bpm: nonNeg, times: z.array(nonNeg) }).optional(),
   reverseOf: z.object({ assetId: z.string(), from: nonNeg, to: nonNeg }).optional(),
 });
@@ -277,6 +280,7 @@ export const projectSchema = z.object({
   sequences: z.record(z.string(), z.object({ id: z.string(), name: z.string(), tracks: z.array(track) })).optional(),
   subtitleTracks: z.array(subtitleTrack),
   luts: z.record(z.string(), z.object({ name: z.string(), size: num.int().min(2).max(65), data: z.string() })).optional(),
+  fonts: z.array(z.object({ id: z.string(), family: z.string().min(1), fileName: z.string(), library: z.string().optional() })).optional(),
   markers: z.array(z.object({ id: z.string(), t: nonNeg, label: z.string().optional(), color: z.string().optional() })).optional(),
 });
 

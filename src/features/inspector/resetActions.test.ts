@@ -58,10 +58,7 @@ describe('section reset', () => {
     expect(clip(ids.video.id).audio.voice).toBeUndefined();
   });
 
-  it('gives a trimmed, sped-up clip its whole source back', () => {
-    edit(ids.video.id, (c) => Object.assign(c, { inPoint: 2, duration: 3 }));
-    resetClipSection(ids.video.id, 'timing');
-    expect(clip(ids.video.id)).toMatchObject({ inPoint: 0, duration: 10 });
+  it('gives a sped-up clip its normal speed back', () => {
     edit(ids.video.id, (c) => Object.assign(c, { speed: 2, duration: 5 }));
     resetClipSection(ids.video.id, 'speed');
     expect(clip(ids.video.id)).toMatchObject({ speed: 1, duration: 10 });

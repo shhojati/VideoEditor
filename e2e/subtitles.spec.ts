@@ -57,7 +57,7 @@ test('import SRT, edit cues on the list and timeline, export SRT', async ({ page
   // Undo the split, redo it.
   await page.keyboard.press('Control+z');
   expect(await cues(page)).toHaveLength(3);
-  await page.keyboard.press('Control+y');
+  await page.keyboard.press('Control+Shift+z');
   expect(await cues(page)).toHaveLength(4);
 
   // Persian digits style applies to the exported file too.

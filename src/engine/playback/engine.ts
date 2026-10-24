@@ -7,7 +7,7 @@ import { useTransport } from '../../store/transport';
 import { AudioEngine } from '../audio/audioEngine';
 import type { AudioAux } from '../audio/audioAux';
 import { readers } from '../decode/mediaReader';
-import { ensureFont, isFontReady } from '../../lib/fonts';
+import { ensureFont, isFontReady, setCustomFonts } from '../../lib/fonts';
 import { renderFrame, visualClipsAt } from '../render/renderFrame';
 import { VideoFrames } from './videoFrames';
 
@@ -166,6 +166,7 @@ class PlaybackEngine {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     // Fonts load on first use; draw now with the fallback and again once the real font is in.
+    setCustomFonts(project.fonts);
     const fonts = [
       ...visualClipsAt(flattenForMedia(project), t).flatMap(({ clip }) => (clip.text ? [[clip.text.fontFamily, clip.text.fontWeight] as const] : [])),
       ...project.subtitleTracks.map((st) => [st.style.fontFamily, st.style.fontWeight ?? 600] as const),

@@ -74,8 +74,10 @@ export async function deleteProject(id: ID): Promise<void> {
 export async function referencedAssetIds(): Promise<Set<ID>> {
   const ids = new Set<ID>();
   for (const rec of await (await db()).getAll('projects')) {
-    const assets = (rec.data as { assets?: unknown })?.assets;
+    const { assets, fonts } = (rec.data ?? {}) as { assets?: unknown; fonts?: unknown };
     if (assets && typeof assets === 'object') for (const id of Object.keys(assets)) ids.add(id);
+    // Uploaded fonts keep their files in the same place as media.
+    if (Array.isArray(fonts)) for (const f of fonts as { id?: unknown }[]) if (typeof f?.id === 'string') ids.add(f.id);
   }
   return ids;
 }

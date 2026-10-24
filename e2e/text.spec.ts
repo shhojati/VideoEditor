@@ -75,7 +75,7 @@ test('Persian and English text: create, style live, undo/redo every property', a
   expect((await undo()).fontFamily).toBe('Vazirmatn');
   expect((await undo()).color).toBe('#ffffff');
   expect((await undo()).fontSize).toBe(72);
-  for (let i = 0; i < 5; i++) await page.keyboard.press('Control+y');
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Control+Shift+z');
   [fa] = await texts(page);
   expect(fa).toMatchObject({ fontSize: 120, color: '#ff0000', fontFamily: 'Lalezar', bgColor: '#000000' });
 

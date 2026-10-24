@@ -9,12 +9,21 @@ export const LIBRARY_EXTENSIONS: Record<LibraryKind, string[]> = {
   stickers: ['png', 'gif'],
   sounds: ['ogg', 'mp3'],
   overlays: ['mp4', 'webm', 'mov'],
+  backgrounds: ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'webm'],
   templates: ['json'],
+  fonts: ['ttf', 'otf', 'woff', 'woff2'],
 };
 
 export const LIBRARY_MIME: Record<string, string> = {
   png: 'image/png',
   gif: 'image/gif',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
   ogg: 'audio/ogg',
   mp3: 'audio/mpeg',
   mp4: 'video/mp4',

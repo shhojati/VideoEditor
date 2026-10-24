@@ -1,7 +1,7 @@
 // Project files on disk, to keep or move a project outside the browser:
 // - `.vproj`: the project document as JSON. Media stays where it is; on another browser the files
 //   show as missing and are relinked with "Choose file".
-// - `.vprojz`: a stored (uncompressed) ZIP with `project.json` plus every media file, so the
+// - `.vprojz`: a stored (uncompressed) ZIP with `project.json` plus every media file (and uploaded font), so the
 //   project opens anywhere as it was.
 // Opening either kind adds the project as a new copy (new id), so nothing existing is overwritten.
 import { create } from 'zustand';
@@ -111,6 +111,12 @@ export async function saveProjectFile(project: Project, withMedia: boolean): Pro
       if (file) files.push({ id: asset.id, file, entry: `media/${asset.id}-${safeFileName(asset.name)}` });
       else missing.push(asset.id);
     }
+    // Uploaded fonts travel with the media (server fonts are fetched again).
+    for (const font of project.fonts ?? []) {
+      if (font.library) continue;
+      const file = await getMediaFile(mediaPathFor(font.id));
+      if (file) files.push({ id: font.id, file, entry: `fonts/${font.id}-${safeFileName(font.fileName)}` });
+    }
     const media = Object.fromEntries(files.map((f) => [f.id, f.entry]));
     const total = files.reduce((n, f) => n + f.file.size, 0) || 1;
     let done = 0;
@@ -151,16 +157,17 @@ export async function openProjectFile(file: File): Promise<{ id: ID; missing: nu
       const doc = entries.get(PROJECT_ENTRY);
       if (!doc) throw new ProjectFileError(`${PROJECT_ENTRY} missing`);
       parsed = parseProjectFile(await doc.blob.text());
+      const fonts = new Set(parsed.project.fonts?.filter((f) => !f.library).map((f) => f.id));
       const media = Object.entries(parsed.media).flatMap(([id, name]) => {
         const e = entries.get(name);
-        return e && parsed.project.assets[id] ? [{ id, blob: e.blob }] : [];
+        return e && (parsed.project.assets[id] || fonts.has(id)) ? [{ id, blob: e.blob }] : [];
       });
       const total = media.reduce((n, m) => n + m.blob.size, 0) || 1;
       if (!(await hasRoomFor(total))) throw new DOMException('Not enough storage', 'QuotaExceededError');
       let done = 0;
       for (const m of media) {
         const asset = parsed.project.assets[m.id];
-        const path = asset.fileRef.opfsPath ?? mediaPathFor(asset.id);
+        const path = asset?.fileRef.opfsPath ?? mediaPathFor(m.id);
         const existing = await getMediaFile(path);
         if (existing?.size !== m.blob.size)
           await writeMediaFile(path, m.blob, (f) => useProjectFileTask.setState({ task: { kind: 'open', progress: (done + f * m.blob.size) / total } }));

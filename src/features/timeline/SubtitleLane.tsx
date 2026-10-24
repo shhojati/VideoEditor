@@ -37,7 +37,7 @@ export const SubtitleLane = memo(function SubtitleLane({
         <button
           className="flex-1 truncate text-start hover:underline"
           onClick={() => {
-            useSubtitlesUi.setState({ activeTrackId: track.id, tab: 'subtitles' });
+            useSubtitlesUi.setState({ activeTrackId: track.id, tab: 'subtitles', subtitlesView: 'subtitles' });
             useMobileUi.setState({ sheet: 'panels' });
           }}
         >

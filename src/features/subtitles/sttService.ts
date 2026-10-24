@@ -90,7 +90,7 @@ function mixItems(project: Project, only?: ReadonlySet<ID>): MixItem[] {
       if (only && !only.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
       // Reversed speech cannot be transcribed; a freeze frame is silent.
-      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || asset.reverseOf || clip.freeze) continue;
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || asset.reverseOf || clip.freeze || clip.audioDetached) continue;
       if (!(asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio))) continue;
       items.push({
         opfsPath: asset.fileRef.opfsPath,
@@ -259,6 +259,6 @@ function finish(segments: Segment[], language: string | null) {
   // Whisper segments touch each other; leave the minimum gap and sane durations from the start.
   autoFixTiming(track);
   useProjectStore.getState().edit('ops.autoSubtitles', (p) => void p.subtitleTracks.push(track));
-  useSubtitlesUi.setState({ activeTrackId: track.id, tab: 'subtitles' });
+  useSubtitlesUi.setState({ activeTrackId: track.id, tab: 'subtitles', subtitlesView: 'subtitles' });
   useStt.setState({ stage: 'done', created: track.cues.length, progress: 1 });
 }

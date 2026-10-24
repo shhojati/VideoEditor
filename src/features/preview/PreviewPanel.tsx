@@ -11,6 +11,7 @@ import { Scopes } from './Scopes';
 import { ToolBar } from '../tools/ToolBar';
 import { TextEditBox } from '../tools/TextEditBox';
 import { useTool } from '../tools/toolService';
+import { setFullscreenTarget } from './fullscreen';
 
 /**
  * Zoomable, pannable preview. The canvas covers the whole viewport; the engine draws the picture
@@ -49,8 +50,8 @@ export function PreviewPanel({ project }: { project: Project }) {
   useViewportGestures(boxRef);
 
   return (
-    <Panel title={t('panels.preview')}>
-      <div className="flex h-full flex-col bg-surface-0" dir="ltr">
+    <Panel title={t('panels.preview')} hideTitle>
+      <div ref={setFullscreenTarget} className="flex h-full flex-col bg-surface-0" dir="ltr" data-testid="preview-panel">
         <div ref={boxRef} className="relative min-h-0 flex-1 touch-none overflow-hidden" data-testid="preview-viewport">
           <canvas ref={canvasRef} data-testid="preview-canvas" className="absolute inset-0" style={{ width: viewport.w, height: viewport.h }} />
           {/* The picture's rectangle on screen; also what layout tests measure. */}
@@ -71,8 +72,9 @@ export function PreviewPanel({ project }: { project: Project }) {
 }
 
 /**
- * Ctrl+wheel (or pinch) zooms about the pointer; wheel, Space+drag, middle-drag and the hand tool
- * pan. Two touch pointers pinch-zoom and pan together; one pans with the hand tool.
+ * The wheel zooms about the pointer (Shift+wheel pans sideways, Ctrl+wheel up and down);
+ * Space+drag, middle-drag and the hand tool pan. Two touch pointers pinch-zoom and pan together;
+ * one pans with the hand tool.
  */
 function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -86,11 +88,14 @@ function useViewportGestures(boxRef: React.RefObject<HTMLDivElement | null>) {
       e.preventDefault();
       // Lines/pages to pixels.
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? box.clientHeight : 1;
-      if (e.ctrlKey || e.metaKey) {
+      if (e.ctrlKey || e.metaKey) panBy(-e.deltaX * unit, -e.deltaY * unit);
+      else if (e.shiftKey) panBy(-(e.deltaX || e.deltaY) * unit, 0);
+      // A sideways swipe on a touchpad pans; the wheel zooms.
+      else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) panBy(-e.deltaX * unit, 0);
+      else {
         const { x, y } = local(e);
         zoomTo(usePreviewView.getState().view.k * Math.exp(-e.deltaY * unit * 0.0015), x, y);
-      } else if (e.shiftKey && !e.deltaX) panBy(-e.deltaY * unit, 0);
-      else panBy(-e.deltaX * unit, -e.deltaY * unit);
+      }
     };
 
     const pointers = new Map<number, { x: number; y: number }>();

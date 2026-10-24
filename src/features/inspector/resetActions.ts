@@ -3,9 +3,9 @@
 // keyframe overrides would not look reset).
 import { defaultParams } from '../../model/effects';
 import { ASPECT_PRESETS, DEFAULT_SUBTITLE_STYLE } from '../../model/factories';
-import { defaultShape, isOverlay, isPaintLayer, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
+import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
 import { setSpeedCurve } from '../../model/speed';
-import { ADJUSTMENT_DEFAULT_DURATION, findClip, IMAGE_DEFAULT_DURATION, PAINT_DEFAULT_DURATION, setClipSpeed, TEXT_DEFAULT_DURATION, trimClip } from '../../model/timeline';
+import { findClip, setClipSpeed } from '../../model/timeline';
 import { DEFAULT_TRANSITION_DURATION, TRANSITION_KINDS, updateTransition } from '../../model/transitions';
 import type { Clip, ID, Project, SubtitleStyle } from '../../model/types';
 import { setKeepPitch } from '../../model/voiceFx';
@@ -32,21 +32,12 @@ function resetClip(clipId: ID, keys: readonly string[], recipe: (clip: Clip, p: 
   });
 }
 
-export type ClipSection = 'timing' | 'speed' | 'text' | 'shape' | 'transform' | 'blend' | 'effects' | 'audio' | 'cleanup' | 'voice' | 'masks' | 'tracking' | 'reframe';
+export type ClipSection = 'speed' | 'text' | 'shape' | 'transform' | 'effects' | 'audio' | 'cleanup' | 'voice' | 'masks' | 'tracking' | 'reframe';
 
 const TRANSFORM_KEYS = ['x', 'y', 'scale', 'rotation', 'opacity'];
 
 export function resetClipSection(clipId: ID, section: ClipSection) {
   switch (section) {
-    case 'timing':
-      // The full source from the clip's start (media), or the length a new clip of its kind gets.
-      return resetClip(clipId, [], (c, p) => {
-        const asset = c.assetId ? p.assets[c.assetId] : undefined;
-        const media = (asset?.kind === 'video' || asset?.kind === 'audio' || !!c.sequenceId) && !c.freeze;
-        if (media && !c.speedCurve) c.inPoint = 0;
-        const length = c.adjustment || c.solid || c.nullObject ? ADJUSTMENT_DEFAULT_DURATION : isPaintLayer(c) ? PAINT_DEFAULT_DURATION : isOverlay(c) ? TEXT_DEFAULT_DURATION : IMAGE_DEFAULT_DURATION;
-        trimClip(p, c.id, 'end', media ? Number.MAX_SAFE_INTEGER : c.start + length);
-      });
     case 'speed':
       return resetClip(clipId, [], (c, p) => {
         if (c.speedCurve) setSpeedCurve(p, c.id, null, 'custom');
@@ -66,9 +57,9 @@ export function resetClipSection(clipId: ID, section: ClipSection) {
       return resetClip(clipId, TRANSFORM_KEYS, (c, p) => {
         const sticker = !!c.assetId && p.assets[c.assetId]?.library?.kind === 'stickers';
         c.transform = { x: 0, y: c.text ? 0.3 : 0, scale: sticker ? 0.35 : 1, rotation: 0, opacity: 1 };
+        // The blend mode sits in Transform, under Opacity.
+        delete c.blend;
       });
-    case 'blend':
-      return resetClip(clipId, [], (c) => void delete c.blend);
     case 'effects':
       // Every effect keeps its place in the stack, with its default settings (a filter keeps its look).
       return resetClip(clipId, ['fx.'], (c) => {

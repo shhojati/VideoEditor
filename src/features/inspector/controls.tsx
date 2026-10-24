@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
 
@@ -34,15 +34,24 @@ function toggleSection(id: string) {
   }
 }
 
+/** True inside a Section: a Section there is a sub-section (Cleanup inside Audio, say). */
+const InSection = createContext(false);
+
 /**
  * A Properties section: its title folds it (per `id`, the same in both languages), and with
- * `onReset` a ↺ button beside the title puts its settings back to their defaults.
+ * `onReset` a ↺ button beside the title puts its settings back to their defaults. Inside another
+ * Section it draws as a framed sub-section.
  */
 export function Section({ id, title, onReset, children }: { id: string; title: string; onReset?: () => void; children: ReactNode }) {
   const { t } = useTranslation();
   const collapsed = useCollapsedSections((s) => s.ids.includes(id));
+  const nested = useContext(InSection);
   return (
-    <section className="border-b border-line px-3 py-2" data-testid={`section-${id}`} data-collapsed={collapsed || undefined}>
+    <section
+      className={nested ? 'rounded border border-line/60 px-2 py-1' : 'border-b border-line px-3 py-2'}
+      data-testid={`section-${id}`}
+      data-collapsed={collapsed || undefined}
+    >
       <div className="flex items-center gap-1">
         {/* Not a <button>: a locked clip's fieldset disables buttons, and folding must still work there. */}
         <div
@@ -76,7 +85,11 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
           </button>
         )}
       </div>
-      {!collapsed && <div className="space-y-2 pt-1 pb-1">{children}</div>}
+      {!collapsed && (
+        <InSection.Provider value>
+          <div className="space-y-2 pt-1 pb-1">{children}</div>
+        </InSection.Provider>
+      )}
     </section>
   );
 }

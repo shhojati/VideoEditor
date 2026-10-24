@@ -146,6 +146,7 @@ test('stickers (animated GIF), sound effects and overlays from the server librar
   }, 300);
 
   // Stickers: files at the top level plus a category; other file types are not listed.
+  await page.getByTestId('tab-assets').click();
   await page.getByTestId('tab-stickers').click();
   const stickers = page.getByTestId('library-stickers');
   await expect(stickers.getByTestId('library-item')).toHaveCount(2);
@@ -174,6 +175,7 @@ test('stickers (animated GIF), sound effects and overlays from the server librar
   expect(Object.keys((await present(page)).assets)).toHaveLength(1);
 
   // Sound effects: drag onto the audio lane at about 2 s; dropped while still downloading.
+  await page.getByTestId('tab-assets').click();
   await page.getByTestId('tab-sounds').click();
   const lane = page.locator('[data-testid=track][data-track-kind=audio] [data-lane]');
   await page.getByTestId('library-sounds').getByTestId('library-item').dragTo(lane, { targetPosition: { x: 2 * 40, y: 20 } });

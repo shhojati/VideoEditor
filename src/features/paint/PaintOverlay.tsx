@@ -94,6 +94,8 @@ export function PaintOverlay({ project, time }: { project: Project; time: number
     update(null);
     if (!l) return;
     commitStroke(l.targetId, tool, l.points, l.pressure, brush, l.size, time, l.clone);
+    // The brush settings fold away once used (the tool stays; its icon opens them again).
+    useTool.setState({ optionsOpen: false });
   };
 
   const l = shown;

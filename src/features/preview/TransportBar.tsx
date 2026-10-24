@@ -7,6 +7,8 @@ import { useScopes } from './Scopes';
 import { jumpToEdit, stepFrames } from '../timeline/actions';
 import { useTimelineUi } from '../timeline/timelineUi';
 import { stepZoom, usePreviewView, ZOOM_PRESETS, zoomTo, zoomToFit } from './previewView';
+import { toggleFullscreen, useFullscreen } from './fullscreen';
+import { TimecodeField } from './TimecodeField';
 
 /** HH:MM:SS:FF at the project frame rate. */
 export function formatTimecode(t: number, fps: number) {
@@ -28,7 +30,7 @@ function ZoomControls() {
   const isPreset = ZOOM_PRESETS.some((p) => Math.abs(p - k) < 1e-6);
   return (
     <div className="flex items-center gap-0.5">
-      <button className={iconBtn} onClick={() => zoomTo(stepZoom(k, -1))} aria-label={t('preview.zoomOut')} title={`${t('preview.zoomOut')} (Ctrl+wheel)`}>
+      <button className={iconBtn} onClick={() => zoomTo(stepZoom(k, -1))} aria-label={t('preview.zoomOut')} title={`${t('preview.zoomOut')} (wheel)`}>
         −
       </button>
       <select
@@ -49,7 +51,7 @@ function ZoomControls() {
           </option>
         ))}
       </select>
-      <button className={iconBtn} onClick={() => zoomTo(stepZoom(k, 1))} aria-label={t('preview.zoomIn')} title={`${t('preview.zoomIn')} (Ctrl+wheel)`}>
+      <button className={iconBtn} onClick={() => zoomTo(stepZoom(k, 1))} aria-label={t('preview.zoomIn')} title={`${t('preview.zoomIn')} (wheel)`}>
         +
       </button>
     </div>
@@ -59,7 +61,6 @@ function ZoomControls() {
 export function TransportBar({ fps }: { fps: number }) {
   const { t } = useTranslation();
   const playing = useTransport((s) => s.playing);
-  const time = useTransport((s) => s.time);
   const duration = useTransport((s) => s.duration);
   const loop = useTransport((s) => s.loop);
   const volume = useTransport((s) => s.volume);
@@ -99,8 +100,8 @@ export function TransportBar({ fps }: { fps: number }) {
       <button className={iconBtn} onClick={() => jumpToEdit(1)} title={t('transport.nextEdit')} aria-label={t('transport.nextEdit')}>
         ⏭
       </button>
-      <span className="mx-2 font-mono text-neutral-200 max-md:mx-1" data-testid="preview-timecode">
-        {formatTimecode(time, fps)}
+      <span className="mx-2 flex items-center font-mono text-neutral-200 max-md:mx-1">
+        <TimecodeField format={(x) => formatTimecode(x, fps)} fps={fps} testId="preview-timecode" />
         <span className="text-neutral-400"> / {formatTimecode(duration, fps)}</span>
       </span>
       <button
@@ -131,6 +132,7 @@ export function TransportBar({ fps }: { fps: number }) {
       <div className="ms-auto flex gap-1">
         <ScopesButton />
         <ZoomControls />
+        <FullscreenButton />
         <span className="mx-1 w-px self-stretch bg-line" />
         <button className={iconBtn} disabled={!selection.length} onClick={() => setFit('contain')} title={t('transport.fitHint')}>
           {t('transport.fit')}
@@ -140,6 +142,17 @@ export function TransportBar({ fps }: { fps: number }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function FullscreenButton() {
+  const { t } = useTranslation();
+  const on = useFullscreen();
+  const label = `${t(on ? 'preview.exitFullscreen' : 'preview.fullscreen')} (~)`;
+  return (
+    <button className={iconBtn} aria-pressed={on} onClick={toggleFullscreen} title={label} aria-label={label} data-testid="preview-fullscreen">
+      {on ? '🗗' : '⛶'}
+    </button>
   );
 }
 

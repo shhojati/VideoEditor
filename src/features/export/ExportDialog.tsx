@@ -18,6 +18,7 @@ import {
 import { formatBytes, formatDuration } from '../../lib/time';
 import { overLimitBy } from '../../model/platforms';
 import { timelineDuration } from '../../model/timeline';
+import { soloActive } from '../../model/visibility';
 import { lengthWarningText } from '../projects/LengthWarning';
 import type { Project } from '../../model/types';
 import { friendlyError } from '../../app/toasts';
@@ -69,6 +70,9 @@ export function ExportDialog({ project }: { project: Project }) {
   const running = state.stage === 'audio' || state.stage === 'video' || state.stage === 'encode';
   const tooLong = overLimitBy(project) > 0;
   const hasSubtitles = project.subtitleTracks.some((s) => !s.hidden && s.cues.length);
+  // The eye and solo apply to the export too: say so before it runs.
+  const hiddenTracks = project.tracks.filter((x) => x.hidden && x.clips.length).length;
+  const solo = soloActive(project);
   const isVideo = format.kind === 'video';
   const singleFrame = format.kind === 'image' && settings.imageMode === 'frame';
   const frameTime = Math.min(playhead, duration);
@@ -98,6 +102,11 @@ export function ExportDialog({ project }: { project: Project }) {
         <h2 id="export-title" className="text-base font-semibold text-white">
           {t('export.title')}
         </h2>
+        {!running && state.stage !== 'done' && (hiddenTracks > 0 || solo) && (
+          <p className="rounded bg-amber-900/40 px-2 py-1.5 text-xs text-amber-200" data-testid="export-hidden-warning">
+            {solo ? t('export.soloWarning') : t('export.hiddenWarning', { count: hiddenTracks })}
+          </p>
+        )}
 
         {!running && state.stage !== 'done' && (
           <>

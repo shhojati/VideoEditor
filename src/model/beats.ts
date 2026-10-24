@@ -2,7 +2,7 @@
 // seconds); markers are the project's own timeline points. Like timeline.ts, the edits mutate the
 // project and are meant to run inside edit().
 import { newId } from './factories';
-import { findClip, MIN_CLIP_DURATION } from './timeline';
+import { findClip, MIN_CLIP_DURATION, splitClips } from './timeline';
 import type { Clip, ID, Project } from './types';
 import { handles, sourceLength, timelineTimeAt } from './remap';
 
@@ -22,7 +22,7 @@ export function timelineBeats(p: Project, skip: ReadonlySet<ID> = new Set()): nu
   const all: number[] = [];
   for (const track of p.tracks) {
     if (track.muted) continue;
-    for (const clip of track.clips) if (!skip.has(clip.id)) all.push(...clipBeats(p, clip));
+    for (const clip of track.clips) if (!skip.has(clip.id) && !clip.audioDetached) all.push(...clipBeats(p, clip));
   }
   all.sort((a, b) => a - b);
   return all.filter((t, i) => i === 0 || t - all[i - 1] > 1e-3);
@@ -41,10 +41,35 @@ export function toggleMarker(p: Project, t: number, tolerance: number): boolean 
   return true;
 }
 
+export type SplitAtBeatsResult = { ok: true; count: number } | { ok: false; reason: 'noClips' | 'noBeats' | 'noCuts' };
+
+/**
+ * Cut to beat: split each selected clip at every `every`th beat inside it (the first beat in the
+ * clip, then every `every` beats), using the beats of every clip on the timeline — the clip's own
+ * included, so a music video cuts on its own beat. Returns how many cuts were made.
+ */
+export function splitAtBeats(p: Project, ids: readonly ID[], every: number): SplitAtBeatsResult {
+  const refs = ids.map((id) => findClip(p, id)).filter((r) => r && !r.track.locked);
+  if (!refs.length) return { ok: false, reason: 'noClips' };
+  const beats = timelineBeats(p);
+  if (!beats.length) return { ok: false, reason: 'noBeats' };
+  let count = 0;
+  for (const ref of refs) {
+    const { clip } = ref!;
+    const lo = clip.start + MIN_CLIP_DURATION - EPS;
+    const hi = clip.start + clip.duration - MIN_CLIP_DURATION + EPS;
+    const cuts = beats.filter((b) => b >= lo && b <= hi).filter((_, i) => i % every === 0);
+    // Last to first: the left part keeps the clip's id (and still covers the earlier beats), the
+    // right part of each split gets a new one.
+    for (const b of cuts.reverse()) count += splitClips(p, b, new Set([clip.id])).length;
+  }
+  return count ? { ok: true, count } : { ok: false, reason: 'noCuts' };
+}
+
 export type CutToBeatResult = { ok: true; count: number } | { ok: false; reason: 'noClips' | 'noBeats' | 'blocked' };
 
 /**
- * Lay the selected clips (of the first selected clip's track) end to end from the beat nearest the
+ * Fit to beat: lay the selected clips (of the first selected clip's track) end to end from the beat nearest the
  * first one, each lasting `every` beats: photos are stretched, videos trimmed (a video too short
  * for `every` beats takes fewer, or ends off-beat if it is shorter than one). Uses the beats of
  * the other clips on the timeline.

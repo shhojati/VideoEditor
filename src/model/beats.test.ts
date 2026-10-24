@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clipBeats, cutToBeat, timelineBeats, toggleMarker } from './beats';
+import { clipBeats, cutToBeat, splitAtBeats, timelineBeats, toggleMarker } from './beats';
 import { createProject, createTrack } from './factories';
 import { createClip } from './timeline';
 import type { Asset } from './types';
@@ -72,5 +72,41 @@ describe('toggleMarker', () => {
     expect(p.markers!.map((m) => m.t)).toEqual([1, 3]);
     expect(toggleMarker(p, 3.02, 0.05)).toBe(false);
     expect(p.markers!.map((m) => m.t)).toEqual([1]);
+  });
+});
+
+describe('splitAtBeats (cut to beat)', () => {
+  it('cuts a clip at every beat inside it, in one go', () => {
+    const p = setup();
+    // Photo a: 2.2–5.2 s; beats at 2.25, 2.75 … 4.75 (2.25 is less than a minimum clip from the start).
+    expect(splitAtBeats(p, ['a'], 1)).toEqual({ ok: true, count: 5 });
+    const pieces = p.tracks[1].clips.filter((c) => c.start < 5.2);
+    expect(pieces.map((c) => c.start)).toEqual([2.2, 2.75, 3.25, 3.75, 4.25, 4.75]);
+    expect(pieces[0].id).toBe('a');
+    expect(pieces.at(-1)!.start + pieces.at(-1)!.duration).toBeCloseTo(5.2);
+  });
+
+  it('takes every Nth beat, starting from the first one in the clip', () => {
+    const p = setup();
+    expect(splitAtBeats(p, ['a'], 2)).toEqual({ ok: true, count: 3 });
+    expect(p.tracks[1].clips.filter((c) => c.start < 5.2).map((c) => c.start)).toEqual([2.2, 2.75, 3.75, 4.75]);
+  });
+
+  it('uses the selected clip’s own beats (a music video)', () => {
+    const p = setup();
+    p.tracks[0].clips = [];
+    p.assets.v = { ...video, duration: 10, beats: { bpm: 60, times: [1, 2, 3, 4] } };
+    p.tracks[1].clips = [{ ...createClip(p.assets.v, 0), id: 'mv', duration: 10 }];
+    expect(splitAtBeats(p, ['mv'], 1)).toEqual({ ok: true, count: 4 });
+    expect(p.tracks[1].clips.map((c) => [c.start, c.inPoint])).toEqual([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]]);
+  });
+
+  it('says why nothing was cut', () => {
+    const p = setup();
+    expect(splitAtBeats(p, [], 1)).toEqual({ ok: false, reason: 'noClips' });
+    p.tracks[1].clips.push({ ...createClip(photo, 30), id: 'late', duration: 0.15 });
+    expect(splitAtBeats(p, ['late'], 1)).toEqual({ ok: false, reason: 'noCuts' });
+    p.tracks[0].muted = true;
+    expect(splitAtBeats(p, ['a'], 1)).toEqual({ ok: false, reason: 'noBeats' });
   });
 });

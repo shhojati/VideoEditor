@@ -18,6 +18,7 @@ import { drawTextClip } from './text';
 import { drawTransition } from './transitions';
 import { keyTimeAt, mediaTimeAt } from '../../model/remap';
 import { MAX_NEST, sequenceDuration, sequenceView } from '../../model/sequences';
+import { trackShows } from '../../model/visibility';
 
 /** Anything with display dimensions that can draw itself (Mediabunny VideoSample fits this). */
 export interface Drawable {
@@ -43,7 +44,7 @@ export const isActiveAt = (clip: Clip, t: number) => t >= clip.start && t < clip
 export function visualClipsAt(project: Project, t: number): { clip: Clip; track: Track }[] {
   const out: { clip: Clip; track: Track }[] = [];
   for (const track of project.tracks) {
-    if (track.kind === 'audio') continue;
+    if (track.kind === 'audio' || !trackShows(project, track)) continue;
     for (const clip of track.clips) {
       const r = track.transitions?.length ? clipVisibleRange(track, clip) : { start: clip.start, end: clip.start + clip.duration };
       if (t >= r.start && t < r.end) out.push({ clip, track });
@@ -60,7 +61,7 @@ export type TrackDraw =
 export function drawPlanAt(project: Project, t: number): TrackDraw[] {
   const plan: TrackDraw[] = [];
   for (const track of project.tracks) {
-    if (track.kind === 'audio') continue;
+    if (track.kind === 'audio' || !trackShows(project, track)) continue;
     const tr = track.transitions?.find((x) => {
       const from = track.clips.find((c) => c.id === x.fromClipId);
       if (!from) return false;

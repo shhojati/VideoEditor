@@ -35,6 +35,18 @@ export interface Project {
   luts?: Record<ID, ProjectLut>;
   /** The insides of compound clips (model/sequences.ts), by id. */
   sequences?: Record<ID, Sequence>;
+  /** Fonts beyond the built-in ones that text and subtitles can use (lib/fonts.ts). */
+  fonts?: CustomFont[];
+}
+
+/** An uploaded font (its file kept in browser storage like media, at mediaPathFor(id)) or one from the server. */
+export interface CustomFont {
+  id: ID;
+  /** The CSS family name text clips and subtitle styles refer to. */
+  family: string;
+  fileName: string;
+  /** A server font: its path under library/fonts/. Absent for an upload. */
+  library?: string;
 }
 
 /** A nested timeline: what a compound clip shows. Same frame size and rate as the project. */
@@ -64,7 +76,7 @@ export interface Marker {
 export type AssetKind = 'video' | 'audio' | 'image';
 
 /** Server library folders (library/<kind>/…). */
-export type LibraryKind = 'stickers' | 'sounds' | 'overlays' | 'templates';
+export type LibraryKind = 'stickers' | 'sounds' | 'overlays' | 'backgrounds' | 'templates' | 'fonts';
 
 export interface Asset {
   id: ID;
@@ -99,6 +111,10 @@ export interface Track {
   kind: TrackKind;
   muted: boolean;
   locked: boolean;
+  /** Eye off: the track's pictures are not drawn, in the preview or the export (model/visibility.ts). */
+  hidden?: boolean;
+  /** Solo: while any track is soloed, only soloed tracks are drawn and heard. */
+  solo?: boolean;
   clips: Clip[];
   /** Transitions between touching clips of this track (see model/transitions.ts). */
   transitions?: Transition[];
@@ -380,6 +396,8 @@ export interface Clip {
   speedPreset?: SpeedPreset;
   /** Holds the frame at inPoint (a freeze frame clip; silent). */
   freeze?: true;
+  /** A video clip whose sound was detached onto its own clip on an audio track: it plays silent. */
+  audioDetached?: true;
   /** Spoken words (source time), for text-based editing; see model/transcript.ts. */
   transcript?: ClipTranscript;
   /** A compound clip: plays this sequence (Project.sequences) instead of a media file. */

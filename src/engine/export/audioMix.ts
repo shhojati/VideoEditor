@@ -9,6 +9,7 @@ import { CleanChain, hasCleanStage, type NoiseProfile } from '../audio/cleanDsp'
 import { SpaceChain, VoiceChain, voiceLatency } from '../audio/voiceDsp';
 import { audioEnvelope, type AudioEnvelope } from '../fade';
 import { mediaTimeAt } from '../../model/remap';
+import { trackSounds } from '../../model/visibility';
 
 export interface DecodedRange {
   /** Planar source samples (1 or 2+ channels). */
@@ -130,16 +131,16 @@ function mixClipFx(
   }
 }
 
-/** Clips that make sound: on unmuted audio/video tracks, with a decodable audio source. */
+/** Clips that make sound: on unmuted (and, while any track is soloed, soloed) audio/video tracks, with a decodable audio source. */
 export function audibleClips(project: Project, only?: ReadonlySet<string>): { clip: Clip; track: Track; opfsPath: string }[] {
   const out: { clip: Clip; track: Track; opfsPath: string }[] = [];
   for (const track of project.tracks) {
-    if (track.muted || track.kind === 'text') continue;
+    if (!trackSounds(project, track) || track.kind === 'text') continue;
     for (const clip of track.clips) {
       if (only && !only.has(clip.id)) continue;
       const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
       // A freeze frame is silent.
-      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || clip.freeze) continue;
+      if (!asset?.fileRef.opfsPath || peakVolume(clip) <= 0 || clip.freeze || clip.audioDetached) continue;
       if (asset.kind === 'audio' || (asset.kind === 'video' && asset.hasAudio)) out.push({ clip, track, opfsPath: asset.fileRef.opfsPath });
     }
   }

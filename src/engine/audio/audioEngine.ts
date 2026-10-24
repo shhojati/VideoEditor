@@ -15,6 +15,7 @@ import type { AudioAux } from './audioAux';
 import { cleanLatency, hasCleanStage, type NoiseProfile } from './cleanDsp';
 import { isLinear, sourceRangeFor, timelineTimeAt } from '../../model/remap';
 import { remapAudio } from '../export/audioMix';
+import { trackSounds } from '../../model/visibility';
 import type { AudioBufferSink } from 'mediabunny';
 
 /** How far ahead of the clock audio is decoded and scheduled (s). */
@@ -70,10 +71,10 @@ export class AudioEngine {
     this.t0 = t0;
     this.ctxStart = ctx.currentTime + START_LEAD;
     for (const track of project.tracks) {
-      if (track.muted || track.kind === 'text') continue;
+      if (!trackSounds(project, track) || track.kind === 'text') continue;
       for (const clip of track.clips) {
         const env = audioEnvelope(clip, track, (c) => (c.assetId ? project.assets[c.assetId]?.duration : undefined), aux.duck?.[clip.id]);
-        if (env.end <= t0 || peakVolume(clip) <= 0 || clip.freeze) continue;
+        if (env.end <= t0 || peakVolume(clip) <= 0 || clip.freeze || clip.audioDetached) continue;
         const asset = clip.assetId ? project.assets[clip.assetId] : undefined;
         if (!asset || (asset.kind === 'video' && !asset.hasAudio) || asset.kind === 'image') continue;
         void this.playClip(clip, env, asset, gen, fx, aux.noise?.[asset.id]);

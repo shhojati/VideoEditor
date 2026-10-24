@@ -98,6 +98,8 @@ function ItemTile({ item, busy }: { item: LibraryItem; busy: boolean }) {
     onDragEnd: endLibraryDrag,
     onClick: () => void addLibraryItem(item),
   };
+  // Stickers and still backgrounds are pictures; overlays and moving backgrounds are videos.
+  const picture = item.kind === 'stickers' || (item.kind === 'backgrounds' && !/\.(mp4|webm)$/i.test(item.fileName));
   const spinner = busy && (
     <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs text-white" aria-label={t('library.downloading')}>
       ⏳
@@ -137,6 +139,8 @@ function ItemTile({ item, busy }: { item: LibraryItem; busy: boolean }) {
       >
         {item.kind === 'stickers' ? (
           <img src={item.url} alt="" loading="lazy" draggable={false} className="max-h-full max-w-full object-contain p-1" />
+        ) : picture ? (
+          <img src={item.url} alt="" loading="lazy" draggable={false} className="h-full w-full object-cover" />
         ) : (
           <video src={`${item.url}#t=0.1`} muted loop playsInline preload="metadata" className="pointer-events-none max-h-full max-w-full" />
         )}

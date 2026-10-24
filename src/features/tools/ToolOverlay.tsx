@@ -105,15 +105,17 @@ export function ToolOverlay({ project, time, hitTest }: { project: Project; time
       const b = squareUp(applyAffine(inv, drag.a), applyAffine(inv, drag.b), drag.shift);
       const name = t('masks.nameN', { n: (target.masks?.length ?? 0) + 1 });
       addPresetMask(target.id, MASK_OF[kind], name, clicked ? undefined : b);
-      return;
+    } else {
+      const a = toProject(drag.a);
+      const b = toProject(drag.b);
+      if (clicked) addShape(kind, { cx: a.x, cy: a.y });
+      else if (kind === 'line') {
+        const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+        addShape(kind, { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, w: Math.hypot(b.x - a.x, b.y - a.y), rotation: Math.round(angle * 100) / 100 });
+      } else addShape(kind, squareUp(a, b, drag.shift || keepsAspect(kind)));
     }
-    const a = toProject(drag.a);
-    const b = toProject(drag.b);
-    if (clicked) addShape(kind, { cx: a.x, cy: a.y });
-    else if (kind === 'line') {
-      const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-      addShape(kind, { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, w: Math.hypot(b.x - a.x, b.y - a.y), rotation: Math.round(angle * 100) / 100 });
-    } else addShape(kind, squareUp(a, b, drag.shift || keepsAspect(kind)));
+    // One shape per pick (its options close): back to the selection tool to edit it.
+    setTool('select');
   };
 
   // The box being dragged, on screen.

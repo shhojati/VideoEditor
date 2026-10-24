@@ -64,9 +64,11 @@ interface ToolState {
   /** Onion skin: the drawings before and after show faintly on the preview (frame-by-frame paint). */
   onion: boolean;
   cloneSource: CloneSource | null;
+  /** The tool's options beside the strip (shapes, brush settings); they fold away after a stroke. */
+  optionsOpen: boolean;
 }
 
-export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush(), onion: true, cloneSource: null }));
+export const useTool = create<ToolState>()(() => ({ tool: 'select', shapeKind: 'rectangle', editingText: null, brush: loadBrush(), onion: true, cloneSource: null, optionsOpen: true }));
 
 /** Change the brush settings (remembered on this device). */
 export function setBrush(change: Partial<BrushSettings>) {
@@ -81,7 +83,8 @@ export function setBrush(change: Partial<BrushSettings>) {
 
 export function setTool(tool: Tool) {
   if (useTool.getState().tool === 'pen' && tool !== 'pen' && useMasks.getState().pen) cancelPen();
-  useTool.setState({ tool });
+  // Picking a tool (again) shows its options.
+  useTool.setState({ tool, optionsOpen: true });
   if (tool === 'pen') armPen();
 }
 

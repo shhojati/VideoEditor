@@ -14,7 +14,7 @@ const RAMPS = Object.keys(SPEED_PRESETS) as Exclude<SpeedPreset, 'custom'>[];
 const QUICK = [0.25, 0.5, 1, 2, 4];
 
 /** Speed, ramps (presets and a curve), reverse, freeze frame and keep pitch for a video or audio clip. */
-export function SpeedSection({ clip, asset, audible, set }: { clip: Clip; asset: Asset; audible: boolean; set: SetFn }) {
+export function SpeedSection({ clip, asset, audible, visual, set }: { clip: Clip; asset: Asset; audible: boolean; visual: boolean; set: SetFn }) {
   const { t } = useTranslation();
   const reversing = useSpeedUi((s) => s.reversing === clip.id);
   const error = useSpeedUi((s) => (s.error?.clipId === clip.id ? s.error.reason : undefined));
@@ -61,7 +61,7 @@ export function SpeedSection({ clip, asset, audible, set }: { clip: Clip; asset:
         <button className={`rounded px-2 py-1 disabled:opacity-40 ${asset.reverseOf ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} data-testid="reverse" aria-pressed={!!asset.reverseOf} disabled={reversing} onClick={() => void toggleReverse(clip.id)}>
           ⟲ {reversing ? t('speed.reversing') : t('speed.reverse')}
         </button>
-        {asset.kind === 'video' && (
+        {asset.kind === 'video' && visual && (
           <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49]" data-testid="freeze" title={t('speed.freezeHint')} onClick={() => freezeAtPlayhead(clip.id)}>
             ❄ {t('speed.freeze')}
           </button>

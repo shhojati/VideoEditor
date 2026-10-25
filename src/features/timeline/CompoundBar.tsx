@@ -1,3 +1,5 @@
+import { Flag, Group, X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -43,7 +45,8 @@ export function MakeCompoundButton() {
   const count = useTimelineUi((s) => s.selection.length);
   return (
     <Button className="text-xs" disabled={count < 2} onClick={makeCompoundFromSelection} title={t('compound.makeHint')} data-testid="make-compound">
-      ▣ {t('compound.make')}
+      <Icon icon={Group} size={16} />
+      {t('compound.make')}
     </Button>
   );
 }
@@ -57,7 +60,8 @@ export function MarkersMenu({ project }: { project: Project }) {
   return (
     <span className="relative">
       <Button className="text-xs" aria-expanded={open} onClick={() => setOpen((o) => !o)} data-testid="markers-menu" title={t('markers.hint')}>
-        🚩 {markers.length}
+        <Icon icon={Flag} size={16} />
+        {markers.length}
       </Button>
       {open && (
         <div className="absolute top-full z-40 mt-1 w-72 space-y-1 rounded border border-line bg-surface-1 p-2 shadow-xl" data-testid="markers-list">
@@ -83,7 +87,7 @@ export function MarkersMenu({ project }: { project: Project }) {
                 />
               ))}
               <button className="px-1 text-neutral-400 hover:text-white" aria-label={t('markers.remove')} onClick={() => removeMarker(m.id)}>
-                ✕
+                <Icon icon={X} size={14} />
               </button>
             </div>
           ))}

@@ -43,7 +43,7 @@ export function TimelineSplitter({ kind, target }: { kind: LayoutKind; target: R
       tabIndex={0}
       data-testid="timeline-splitter"
       className={`group flex shrink-0 cursor-row-resize touch-none items-center justify-center bg-surface-0 select-none ${
-        kind === 'mobile' ? 'h-3.5 border-t border-line' : 'h-1.5 hover:bg-accent/60'
+        kind === 'mobile' ? 'h-3.5 border-t border-line' : 'h-3 hover:bg-accent/30'
       }`}
       onPointerDown={(e) => {
         const el = target.current;
@@ -115,7 +115,7 @@ export function ColumnSplitter({ column, container }: { column: Column; containe
       aria-valuenow={Math.round(share * 100)}
       tabIndex={0}
       data-testid={`column-splitter-${column}`}
-      className="cursor-col-resize touch-none bg-line select-none hover:bg-accent/60"
+      className="cursor-col-resize touch-none rounded-full bg-transparent select-none hover:bg-accent/60"
       onPointerDown={(e) => {
         const el = container.current;
         if (!el) return;

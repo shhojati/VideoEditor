@@ -1,3 +1,5 @@
+import { ChevronDown } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -46,7 +48,8 @@ export function ProjectMenu() {
   return (
     <div className="relative" ref={ref}>
       <Button aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        {t('project.menu')} ▾
+        {t('project.menu')}
+        <Icon icon={ChevronDown} size={16} className="max-md:hidden" />
       </Button>
       {loadError && (
         <span className="ms-2 text-xs text-red-400">{t('project.loadError', { error: loadError })}</span>

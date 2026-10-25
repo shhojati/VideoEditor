@@ -4,6 +4,8 @@ const timelineHeight = (page: Page) =>
   page.locator('section[aria-label]', { has: page.getByTestId('timeline') }).evaluate((el) => el.getBoundingClientRect().height);
 
 test('timeline height: drag the splitter, remembered after reload, arrow keys', async ({ page }) => {
+  // The welcome card sits over the middle of the screen, where the splitter's midpoint can land.
+  await page.addInitScript(() => localStorage.setItem('onboarding-hidden', '1'));
   await page.goto('/');
   const splitter = page.getByTestId('timeline-splitter');
   await expect(splitter).toBeVisible();

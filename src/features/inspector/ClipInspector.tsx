@@ -1,3 +1,5 @@
+import { Lock, Snowflake } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { detectRtl } from '../../engine/render/textLayout';
@@ -83,8 +85,18 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
     <fieldset disabled={track.locked} className="min-w-0 disabled:opacity-60" data-testid="clip-inspector">
       <div className="truncate border-b border-line px-3 py-2 text-sm font-medium text-white" dir="auto">
         {clip.adjustment ? t('effects.adjustment') : isText ? t('inspector.textClip') : clip.shape ? t('inspector.shapeClip') : isPaintLayer(clip) ? `🖌 ${t('paint.layer')}` : clip.solid ? `■ ${t('shapes.solid')}` : clip.nullObject ? `⌖ ${t('shapes.null')}` : compound ? `▣ ${project.sequences?.[clip.sequenceId!]?.name ?? ''}` : asset?.name}
-        {track.locked && <span className="ms-2 text-xs text-amber-400">🔒 {t('inspector.locked')}</span>}
-        {clip.freeze && <p className="text-[11px] font-normal text-sky-300" data-testid="freeze-note">❄ {t('speed.freezeNote')}</p>}
+        {track.locked && (
+          <span className="ms-2 inline-flex items-center gap-1 text-xs text-amber-400">
+            <Icon icon={Lock} size={12} />
+            {t('inspector.locked')}
+          </span>
+        )}
+        {clip.freeze && (
+          <p className="flex items-center gap-1 text-[11px] font-normal text-sky-300" data-testid="freeze-note">
+            <Icon icon={Snowflake} size={12} />
+            {t('speed.freezeNote')}
+          </p>
+        )}
       </div>
 
       {/* What the clip is first, then the owner's order: transform, effects, masks, speed, keyframes,

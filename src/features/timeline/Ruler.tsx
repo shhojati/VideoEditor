@@ -39,7 +39,7 @@ export function Ruler() {
       const t = i * minor;
       const x = Math.round(t * pps - scrollX) + 0.5;
       const isMajor = i % 5 === 0;
-      ctx.fillStyle = isMajor ? '#8b93a3' : '#4a5160';
+      ctx.fillStyle = isMajor ? '#8fa3a3' : '#34494b';
       ctx.fillRect(x, isMajor ? 12 : 18, 1, RULER_HEIGHT);
       if (isMajor) ctx.fillText(major < 1 ? `${formatDuration(Math.floor(t))}.${String(Math.round((t % 1) * 100)).padStart(2, '0')}` : formatDuration(t), x + 3, 2);
     }

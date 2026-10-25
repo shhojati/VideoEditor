@@ -76,9 +76,9 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       data-start={clip.start.toFixed(3)}
       data-duration={clip.duration.toFixed(3)}
       data-selected={selected}
-      className={`absolute top-1 overflow-hidden rounded border text-[11px] text-white select-none ${COLORS[kind]} ${
+      className={`absolute top-1 overflow-hidden rounded-md border text-[11px] text-white select-none ${COLORS[kind]} ${
         // Touch: a selected clip drags; an unselected one lets a swipe scroll the timeline.
-        selected ? 'touch-none ring-2 ring-white' : ''
+        selected ? 'touch-none ring-2 ring-accent' : ''
       } ${ghost ? 'opacity-80 shadow-lg' : ''} ${invalid ? 'border-red-500! ring-red-500' : ''} ${fxHover ? 'ring-2 ring-amber-300' : ''} ${
         track.locked ? 'cursor-not-allowed opacity-60' : 'cursor-grab'
       }`}

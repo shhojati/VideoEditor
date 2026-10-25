@@ -1,3 +1,5 @@
+import { ChevronDown, ChevronRight, Mic } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -35,10 +37,10 @@ export function AutoSubtitles({ project }: { project: Project }) {
   return (
     <section className="rounded border border-line bg-surface-2/60" data-testid="auto-subtitles">
       <button className="flex w-full items-center gap-2 px-2 py-1.5 text-start font-medium" onClick={() => setOpen((o) => !o)} aria-expanded={open || busy}>
-        <span>🎙</span>
+        <Icon icon={Mic} size={16} />
         <span className="flex-1">{t('stt.title')}</span>
         {busy && <span className="text-accent">{Math.round(stt.progress * 100)}%</span>}
-        <span>{open || busy ? '▾' : '▸'}</span>
+        <Icon icon={open || busy ? ChevronDown : ChevronRight} size={16} className={open || busy ? '' : 'rtl:-scale-x-100'} />
       </button>
       {(open || busy || stt.stage === 'done' || stt.stage === 'error') && (
         <div className="space-y-2 border-t border-line p-2">

@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Icon } from './icons';
 import type { TFunction } from 'i18next';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +51,7 @@ export function Toasts() {
         <div key={toast.id} role="alert" className="pointer-events-auto flex items-start gap-2 rounded border border-red-800 bg-surface-2 p-3 text-sm shadow-xl">
           <span className="flex-1">{toast.message}</span>
           <button onClick={() => dismissToast(toast.id)} aria-label={t('media.dismiss')} className="text-neutral-400 hover:text-white">
-            ✕
+            <Icon icon={X} size={16} />
           </button>
         </div>
       ))}

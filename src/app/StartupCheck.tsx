@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Icon } from './icons';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { checkCapabilities, type Capability } from './capabilities';
@@ -53,7 +55,7 @@ export function StartupCheck({ children }: { children: ReactNode }) {
             ))}
           </ul>
           <button
-            className="rounded px-2 hover:bg-amber-800"
+            className="rounded-md px-2 hover:bg-amber-800"
             aria-label={t('media.dismiss')}
             onClick={() => {
               setDismissed(true);
@@ -64,7 +66,7 @@ export function StartupCheck({ children }: { children: ReactNode }) {
               }
             }}
           >
-            ✕
+            <Icon icon={X} size={16} />
           </button>
         </div>
       )}

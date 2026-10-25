@@ -1,3 +1,5 @@
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clock, Diamond, PenTool, Pentagon, Square, X, type LucideIcon } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { maskShapeAt } from '../../engine/render/masks';
 import { keyIndexAt, keyTolerance, type MaskPreset } from '../../model/masks';
@@ -28,13 +30,13 @@ import {
 import { keyRate, keyTimeAt } from '../../model/remap';
 import { resetClipSection } from '../inspector/resetActions';
 
-const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
-const iconBtn = 'rounded px-1.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
+const btn = 'inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4 disabled:opacity-40';
+const iconBtn = 'inline-flex items-center rounded-md px-1 py-0.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
 const MODES: MaskMode[] = ['add', 'subtract', 'intersect', 'difference'];
-const PRESETS: { kind: MaskPreset; icon: string }[] = [
-  { kind: 'rectangle', icon: '▭' },
-  { kind: 'ellipse', icon: '◯' },
-  { kind: 'polygon', icon: '⬠' },
+const PRESETS: { kind: MaskPreset; icon: LucideIcon }[] = [
+  { kind: 'rectangle', icon: Square },
+  { kind: 'ellipse', icon: Circle },
+  { kind: 'polygon', icon: Pentagon },
 ];
 
 /** A clip's roto masks: draw or add them, pick one to edit on the canvas, animate and track it. */
@@ -65,7 +67,8 @@ export function MasksSection({ project, clip }: { project: Project; clip: Clip }
         ) : (
           <div className="flex flex-wrap gap-1">
             <button className={btn} data-testid="mask-pen-start" title={t('masks.penTitle')} onClick={() => startPen(clip.id)}>
-              ✎ {t('masks.pen')}
+              <Icon icon={PenTool} size={14} />
+              {t('masks.pen')}
             </button>
             {PRESETS.map((p) => (
               <button
@@ -76,7 +79,7 @@ export function MasksSection({ project, clip }: { project: Project; clip: Clip }
                 aria-label={t(`masks.presets.${p.kind}`)}
                 onClick={() => addPresetMask(clip.id, p.kind, nextName())}
               >
-                {p.icon}
+                <Icon icon={p.icon} size={14} />
               </button>
             ))}
           </div>
@@ -112,13 +115,13 @@ function MaskRow({ clip, mask, index, count, selected }: { clip: Clip; mask: Rot
         onChange={(e) => setMaskProps(clip.id, mask.id, { name: e.target.value })}
       />
       <button className={iconBtn} disabled={index === 0} aria-label={t('masks.up')} title={t('masks.up')} onClick={() => moveMask(clip.id, mask.id, -1)}>
-        ↑
+        <Icon icon={ChevronUp} size={14} />
       </button>
       <button className={iconBtn} disabled={index === count - 1} aria-label={t('masks.down')} title={t('masks.down')} onClick={() => moveMask(clip.id, mask.id, 1)}>
-        ↓
+        <Icon icon={ChevronDown} size={14} />
       </button>
       <button className={iconBtn} aria-label={t('masks.delete')} title={t('masks.delete')} onClick={() => deleteMask(clip.id, mask.id)}>
-        ✕
+        <Icon icon={X} size={14} />
       </button>
     </div>
   );
@@ -141,12 +144,12 @@ function KeyControls({ clip, mask, anim, s, tol }: { clip: Clip; mask: RotoMask;
         aria-label={t(animated ? 'masks.stopAnimating' : 'masks.animate')}
         onClick={() => setMaskAnimated(clip.id, mask.id, anim, !animated)}
       >
-        ◷
+        <Icon icon={Clock} size={14} />
       </button>
       {animated && (
         <>
           <button className={iconBtn} title={t('masks.prevKey')} aria-label={t('masks.prevKey')} onClick={() => jumpToMaskKey(clip.id, -1, key)}>
-            ◀
+            <Icon icon={ChevronLeft} size={14} />
           </button>
           <button
             className={`${iconBtn} text-yellow-300`}
@@ -155,10 +158,10 @@ function KeyControls({ clip, mask, anim, s, tol }: { clip: Clip; mask: RotoMask;
             aria-label={t(here ? 'masks.removeKey' : 'masks.addKey')}
             onClick={() => toggleMaskKey(clip.id, mask.id, anim)}
           >
-            {here ? '◆' : '◇'}
+            <Icon icon={Diamond} size={14} className={here ? 'fill-current' : ''} />
           </button>
           <button className={iconBtn} title={t('masks.nextKey')} aria-label={t('masks.nextKey')} onClick={() => jumpToMaskKey(clip.id, 1, key)}>
-            ▶
+            <Icon icon={ChevronRight} size={14} />
           </button>
         </>
       )}

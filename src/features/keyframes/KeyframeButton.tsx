@@ -1,3 +1,5 @@
+import { Diamond, Minus, Plus } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { findClip } from '../../model/timeline';
@@ -24,7 +26,11 @@ export function KeyframeButton({ project }: { project: Project }) {
       aria-pressed={here}
       data-testid="btn-keyframe"
     >
-      {here ? '◆−' : '◆+'} {t('keyframes.short')}
+      <span className="inline-flex items-center" aria-hidden>
+        <Icon icon={Diamond} size={14} className={here ? 'fill-current' : ''} />
+        <Icon icon={here ? Minus : Plus} size={10} />
+      </span>
+      {t('keyframes.short')}
     </Button>
   );
 }

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ID } from '../../model/types';
 
 /** Track header column width; narrower in the mobile layout. */
-export const HEADER_WIDTH = 216;
+export const HEADER_WIDTH = 288;
 export const HEADER_WIDTH_COMPACT = 112;
 export const TRACK_HEIGHT = 52;
 export const RULER_HEIGHT = 26;

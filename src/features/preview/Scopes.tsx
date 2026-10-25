@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
@@ -109,7 +111,7 @@ export function Scopes() {
         <figcaption>{t('scopes.vectorscope')}</figcaption>
       </figure>
       <button className="self-start px-1 text-neutral-400 hover:text-white" aria-label={t('scopes.close')} onClick={() => useScopes.setState({ open: false })}>
-        ✕
+        <Icon icon={X} size={14} />
       </button>
     </div>
   );

@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -60,7 +62,7 @@ export function MediaBin() {
                   aria-label={t('media.dismiss')}
                   onClick={() => dismissImport(job.id)}
                 >
-                  ✕
+                  <Icon icon={X} size={14} />
                 </button>
               )}
             </div>

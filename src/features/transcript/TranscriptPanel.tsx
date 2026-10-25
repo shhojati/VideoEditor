@@ -1,3 +1,5 @@
+import { FileText, Scissors, Search } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -93,7 +95,8 @@ export function TranscriptPanel({ project }: { project: Project }) {
             </>
           ) : (
             <Button className="flex-1 text-xs" disabled={!audible.length} data-testid="transcribe" onClick={() => void transcribeClips(audible, { model, language: lang === 'auto' ? null : lang })}>
-              📝 {t('transcript.transcribe', { count: audible.length })}
+              <Icon icon={FileText} size={16} />
+              {t('transcript.transcribe', { count: audible.length })}
             </Button>
           )}
         </div>
@@ -125,10 +128,12 @@ export function TranscriptPanel({ project }: { project: Project }) {
           </div>
           <div className="flex gap-1">
             <Button className="text-xs" data-testid="find-removals" onClick={startReview}>
-              🔍 {t('transcript.find')}
+              <Icon icon={Search} size={16} />
+              {t('transcript.find')}
             </Button>
             <Button className="text-xs" data-testid="cut-words" onMouseDown={(e) => e.preventDefault()} onClick={cutSelection} title={t('transcript.cutHint')}>
-              ✂ {t('transcript.cut')} <ProBadge />
+              <Icon icon={Scissors} size={16} />
+              {t('transcript.cut')} <ProBadge />
             </Button>
           </div>
           {review && (

@@ -1,3 +1,5 @@
+import { TriangleAlert } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -35,12 +37,12 @@ export function LengthWarning({ project }: { project: Project }) {
   if (!over) return null;
   return (
     <span
-      className="shrink-0 rounded bg-amber-900/60 px-2 py-0.5 text-xs text-amber-200"
+      className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-900/60 px-2 py-0.5 text-xs text-amber-200"
       role="status"
       data-testid="length-warning"
       title={lengthWarningText(project, t)}
     >
-      ⚠
+      <Icon icon={TriangleAlert} size={14} />
       <span className="max-md:hidden" dir="ltr">
         {' '}
         {formatDuration(timelineDuration(project))} / {formatDuration(maxDurationOf(project) ?? 0)}

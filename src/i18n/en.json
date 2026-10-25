@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Video Editor",
+    "title": "Vidora",
     "untitled": "Untitled project",
     "loading": "Loading…"
   },
@@ -579,7 +579,7 @@
     "unexpected": "Unexpected error: {{message}}"
   },
   "onboarding": {
-    "title": "Welcome to the video editor 👋",
+    "title": "Welcome to Vidora 👋",
     "step1": "Drop video, audio or image files onto the Media panel.",
     "step2": "Drag them onto the timeline; split (S), trim and move them.",
     "step3": "Add titles with \"T+ Text\", and create or auto-generate subtitles in the Subtitles tab.",
@@ -1273,7 +1273,7 @@
     "step1": "Send us the message below on Telegram (it has your account code).",
     "step2": "Pay the amount for the pass you want, as we tell you there.",
     "step3": "We activate Pro on your account; it shows here within minutes.",
-    "telegramMessage": "Hello, I would like to buy Pro for the video editor. Account code: {{code}} ({{email}})",
+    "telegramMessage": "Hello, I would like to buy Vidora Pro. Account code: {{code}} ({{email}})",
     "openTelegram": "Message on Telegram",
     "copyMessage": "Copy message",
     "copied": "Copied",

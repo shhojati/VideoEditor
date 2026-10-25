@@ -1,3 +1,5 @@
+import { Brush, ChevronLeft, ChevronRight, Eraser, PenLine, Stamp, X, type LucideIcon } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { keyToTimeline } from '../../model/remap';
 import type { Clip, PaintStroke, Project } from '../../model/types';
@@ -6,8 +8,8 @@ import { Section, Segmented } from '../inspector/controls';
 import { useTool } from '../tools/toolService';
 import { clearPaint, deleteStroke, setFrameByFrame, setStroke, stepDrawing } from './paintService';
 
-const ICON: Record<PaintStroke['tool'], string> = { brush: '🖌', eraser: '⌫', clone: '⧉' };
-const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
+const ICON: Record<PaintStroke['tool'], LucideIcon> = { brush: Brush, eraser: Eraser, clone: Stamp };
+const btn = 'inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4 disabled:opacity-40';
 const input = 'w-12 rounded bg-surface-3 px-1 py-0.5 text-end';
 
 type DurationKind = 'constant' | 'frame' | 'custom';
@@ -36,10 +38,12 @@ export function PaintSection({ project, clip }: { project: Project; clip: Clip }
           />
           <div className="flex items-center gap-1">
             <button className={btn} onClick={() => stepDrawing(clip.id, -1)} title={`${t('paint.prevDrawing')} (,)`} data-testid="prev-drawing">
-              ◀ {t('paint.drawing')}
+              <Icon icon={ChevronLeft} size={14} className="rtl:-scale-x-100" />
+              {t('paint.drawing')}
             </button>
             <button className={btn} onClick={() => stepDrawing(clip.id, 1)} title={`${t('paint.nextDrawing')} (.)`} data-testid="next-drawing">
-              {t('paint.drawing')} ▶
+              {t('paint.drawing')}
+              <Icon icon={ChevronRight} size={14} className="rtl:-scale-x-100" />
             </button>
           </div>
           <label className="flex items-center gap-2 text-xs text-neutral-300">
@@ -55,7 +59,7 @@ export function PaintSection({ project, clip }: { project: Project; clip: Clip }
           const at = keyToTimeline(clip, s.start);
           return (
             <li key={s.id} className="flex flex-wrap items-center gap-1.5 rounded bg-surface-2 px-1.5 py-1 text-xs" data-testid="stroke-row">
-              <span aria-hidden>{ICON[s.tool]}</span>
+              <Icon icon={ICON[s.tool]} size={14} />
               {s.tool === 'brush' && <span className="h-3 w-3 rounded-full border border-white/30" style={{ background: s.color }} aria-hidden />}
               <button className="text-sky-300 hover:underline" title={t('paint.goTo')} onClick={() => useTransport.getState().seek(at)} dir="ltr">
                 #{strokes.length - i} · {at.toFixed(2)}s
@@ -89,7 +93,7 @@ export function PaintSection({ project, clip }: { project: Project; clip: Clip }
               )}
               {s.tool === 'brush' && (
                 <label className="flex items-center gap-1 text-neutral-400" title={t('paint.writeOnHint')}>
-                  ✍
+                  <Icon icon={PenLine} size={14} />
                   <input
                     className={input}
                     dir="ltr"
@@ -103,7 +107,7 @@ export function PaintSection({ project, clip }: { project: Project; clip: Clip }
                 </label>
               )}
               <button className="ms-auto text-neutral-400 hover:text-red-400" aria-label={t('paint.deleteStroke')} title={t('paint.deleteStroke')} onClick={() => deleteStroke(clip.id, s.id)}>
-                ✕
+                <Icon icon={X} size={14} />
               </button>
             </li>
           );

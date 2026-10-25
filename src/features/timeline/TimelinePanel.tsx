@@ -1,4 +1,6 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AudioLines, ChevronDown, ChevronUp, Eye, EyeOff, Film, Magnet, Minus, Music, Plus, Scissors, Trash2, Type, Unlink, X, type LucideIcon } from 'lucide-react';
+import { Icon } from '../../app/icons';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { createTrack } from '../../model/factories';
@@ -24,6 +26,12 @@ import { HEADER_WIDTH, RULER_HEIGHT, select, TRACK_HEIGHT, useTimelineUi } from 
 
 const KINDS: TrackKind[] = ['video', 'audio', 'text'];
 const KIND_COLOR: Record<TrackKind, string> = { video: 'bg-sky-500', audio: 'bg-emerald-500', text: 'bg-amber-500' };
+/** Track header tiles: the kind's icon on a tint of its clip colour. */
+const KIND_TILE: Record<TrackKind, { icon: LucideIcon; className: string }> = {
+  video: { icon: Film, className: 'bg-sky-500/15 text-sky-300' },
+  audio: { icon: AudioLines, className: 'bg-emerald-500/15 text-emerald-300' },
+  text: { icon: Type, className: 'bg-amber-500/15 text-amber-300' },
+};
 /** Extra room after the last clip so there is always space to drop or drag to. */
 const TAIL_SECONDS = 30;
 
@@ -41,12 +49,13 @@ export function TimelinePanel({ project }: { project: Project }) {
   useEffect(() => useTransport.setState({ duration }), [duration]);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col border-t border-line bg-surface-1" aria-label={t('panels.timeline')}>
+    <section className="flex min-h-0 flex-1 flex-col border-t border-line bg-surface-1 md:overflow-hidden md:rounded-lg md:border" aria-label={t('panels.timeline')}>
       <Breadcrumb />
-      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
+      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs md:gap-1.5 md:px-3 md:py-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
         {KINDS.map((kind) => (
           <Button
             key={kind}
+            variant="ghost"
             className="text-xs"
             onClick={() =>
               // Audio tracks stack at the bottom, visual tracks on top.
@@ -56,37 +65,42 @@ export function TimelinePanel({ project }: { project: Project }) {
             {t('track.add', { kind: t(`track.${kind}`) })}
           </Button>
         ))}
-        <Button className="text-xs" onClick={() => addText(t('text.default'))} data-testid="btn-add-text">
-          T+ {t('text.add')}
+        <Button variant="ghost" className="text-xs" onClick={() => addText(t('text.default'))} data-testid="btn-add-text">
+          <Icon icon={Type} size={16} />
+          {t('text.add')}
         </Button>
         <ShapeMenu />
-        <span className="mx-1 h-4 w-px bg-line" />
-        <Button className="text-xs" onClick={splitAtPlayhead} title={`${t('timeline.split')} (S)`} data-testid="btn-split">
-          ✂ {t('timeline.split')}
+        <span className="mx-1 h-4 w-px bg-line md:h-6" />
+        <Button variant="ghost" className="text-xs" onClick={splitAtPlayhead} title={`${t('timeline.split')} (S)`} data-testid="btn-split">
+          <Icon icon={Scissors} size={16} />
+          {t('timeline.split')}
         </Button>
         <KeyframeButton project={project} />
-        <Button className="text-xs" disabled={!hasSelection} onClick={() => deleteSelection()} title={`${t('timeline.delete')} (Del)`}>
-          🗑 {t('timeline.delete')}
+        <Button variant="ghost" className="text-xs" disabled={!hasSelection} onClick={() => deleteSelection()} title={`${t('timeline.delete')} (Del)`}>
+          <Icon icon={Trash2} size={16} />
+          {t('timeline.delete')}
         </Button>
         <MakeCompoundButton />
         <DetachAudioButton project={project} />
         <CutToBeat project={project} enabled={hasSelection} />
         <MarkersMenu project={project} />
         <Button
-          className={`text-xs ${snapping ? 'bg-accent/40!' : ''}`}
+          variant={snapping ? 'pill' : 'ghost'}
+          className="text-xs"
           aria-pressed={snapping}
           onClick={() => useTimelineUi.setState({ snapping: !snapping })}
           title={t('timeline.snapHint')}
         >
-          🧲 {t('timeline.snap')}
+          <Icon icon={Magnet} size={16} />
+          {t('timeline.snap')}
         </Button>
         <Timecode duration={duration} fps={project.settings.fps} />
         <div className="ms-auto flex items-center gap-1" dir="ltr">
-          <Button className="text-xs" onClick={() => zoomBy(1 / 1.5)} aria-label={t('timeline.zoomOut')}>
-            −
+          <Button className="text-xs md:w-9 md:px-0" onClick={() => zoomBy(1 / 1.5)} aria-label={t('timeline.zoomOut')}>
+            <Icon icon={Minus} size={16} />
           </Button>
-          <Button className="text-xs" onClick={() => zoomBy(1.5)} aria-label={t('timeline.zoomIn')}>
-            +
+          <Button className="text-xs md:w-9 md:px-0" onClick={() => zoomBy(1.5)} aria-label={t('timeline.zoomIn')}>
+            <Icon icon={Plus} size={16} />
           </Button>
           <Button className="text-xs" onClick={zoomToFit}>
             {t('timeline.fit')}
@@ -335,15 +349,21 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
   const compact = headerWidth < HEADER_WIDTH;
   return (
     <div
-      className={`sticky left-0 z-10 flex shrink-0 items-center border-e border-line bg-surface-2 text-xs ${compact ? 'gap-1 px-1' : 'gap-2 px-2'}`}
+      className={`sticky left-0 z-10 flex shrink-0 items-center border-e border-b border-line bg-surface-1 text-xs ${compact ? 'gap-1 px-1' : 'gap-1.5 px-2.5 md:text-sm'}`}
       style={{ width: headerWidth }}
       title={t(`track.${track.kind}`)}
     >
-      <span className={`h-3 w-1 rounded ${KIND_COLOR[track.kind]}`} />
-      <span className="min-w-0 flex-1 truncate">{!compact && t(`track.${track.kind}`)}</span>
+      {compact ? (
+        <span className={`h-3 w-1 rounded ${KIND_COLOR[track.kind]}`} />
+      ) : (
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${KIND_TILE[track.kind].className}`}>
+          <Icon icon={KIND_TILE[track.kind].icon} size={16} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1 truncate text-neutral-200">{!compact && t(`track.${track.kind}`)}</span>
       {track.kind !== 'audio' && (
-        <Toggle label={t('track.visible')} on={!track.hidden} onClick={() => flip('hidden')} testId="track-eye" small={compact}>
-          👁
+        <Toggle label={t('track.visible')} on={!track.hidden} onClick={() => flip('hidden')} testId="track-eye" small={compact} plain>
+          <Icon icon={track.hidden ? EyeOff : Eye} size={compact ? 14 : 16} />
         </Toggle>
       )}
       {/* Solo is a desktop tool; the phone header has no room for it. */}
@@ -366,10 +386,10 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
               aria-label={t(dir === 1 ? 'track.up' : 'track.down')}
               title={t(dir === 1 ? 'track.up' : 'track.down')}
               data-testid={`track-${dir === 1 ? 'up' : 'down'}`}
-              className="px-0.5 text-[9px] text-neutral-400 hover:text-white"
+              className="rounded px-0.5 text-muted hover:bg-surface-3 hover:text-white"
               onClick={() => edit('ops.moveTrack', (p) => void moveTrack(p, track.id, dir))}
             >
-              {dir === 1 ? '▲' : '▼'}
+              <Icon icon={dir === 1 ? ChevronUp : ChevronDown} size={12} />
             </button>
           ))}
         </span>
@@ -377,20 +397,21 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
       <button
         aria-label={t('track.remove')}
         title={t('track.remove')}
-        className="rounded px-1 text-neutral-400 hover:bg-red-900/50 hover:text-red-200"
+        className="flex h-6 w-6 items-center justify-center rounded-md text-muted hover:bg-red-900/50 hover:text-red-200"
         onClick={() =>
           edit('ops.removeTrack', (p) => {
             p.tracks = p.tracks.filter((x) => x.id !== track.id);
           })
         }
       >
-        ✕
+        <Icon icon={X} size={16} />
       </button>
     </div>
   );
 }
 
-function Toggle(props: { label: string; on: boolean; onClick: () => void; children: string; testId?: string; small?: boolean }) {
+/** A track switch; `plain` draws only its icon (the eye), the others light up green when on. */
+function Toggle(props: { label: string; on: boolean; onClick: () => void; children: ReactNode; testId?: string; small?: boolean; plain?: boolean }) {
   return (
     <button
       aria-label={props.label}
@@ -398,7 +419,13 @@ function Toggle(props: { label: string; on: boolean; onClick: () => void; childr
       title={props.label}
       data-testid={props.testId}
       onClick={props.onClick}
-      className={`${props.small ? 'w-5 text-[10px]' : 'w-6'} rounded py-0.5 font-mono ${props.on ? 'bg-accent text-white' : 'bg-surface-3 text-neutral-400'}`}
+      className={`flex items-center justify-center ${props.small ? 'h-5 w-5 text-[10px]' : 'h-6 w-6'} rounded-md text-xs font-medium ${
+        props.plain
+          ? `${props.on ? 'text-neutral-300' : 'text-muted'} hover:bg-surface-3`
+          : props.on
+            ? 'border border-accent/50 bg-accent-soft text-accent'
+            : 'border border-line text-neutral-300 hover:bg-surface-3'
+      }`}
     >
       {props.children}
     </button>
@@ -412,10 +439,10 @@ function Playhead({ pps }: { pps: number }) {
   return (
     <div
       data-testid="playhead"
-      className="pointer-events-none absolute top-0 bottom-0 z-20 w-px bg-red-500"
+      className="pointer-events-none absolute top-0 bottom-0 z-20 w-0.5 -translate-x-1/4 bg-playhead"
       style={{ left: headerWidth + time * pps }}
     >
-      <div className="absolute -left-1.5 top-0 h-3 w-3 rotate-45 bg-red-500" />
+      <div className="absolute -left-[5px] top-0 h-0 w-0 border-x-[6px] border-t-[8px] border-x-transparent border-t-playhead" />
     </div>
   );
 }
@@ -427,7 +454,8 @@ function DetachAudioButton({ project }: { project: Project }) {
   const can = detachableClips(project, selection).length > 0;
   return (
     <Button className="text-xs" disabled={!can} onClick={detachSelectedAudio} title={t('timeline.detachAudioHint')} data-testid="btn-detach-audio">
-      🔊✂ {t('timeline.detachAudio')}
+      <Icon icon={Unlink} size={16} />
+      {t('timeline.detachAudio')}
     </Button>
   );
 }
@@ -441,7 +469,8 @@ function CutToBeat({ project, enabled }: { project: Project; enabled: boolean })
   return (
     <span className="flex items-center gap-0.5">
       <Button className="text-xs" disabled={!enabled} onClick={() => cutSelectionToBeat(every)} title={t('beats.cutHint')} data-testid="cut-to-beat">
-        ♪ {t('beats.cut')}
+        <Icon icon={Music} size={16} />
+        {t('beats.cut')}
       </Button>
       <Button className="text-xs" disabled={!enabled} onClick={() => fitSelectionToBeat(every)} title={t('beats.fitHint')} data-testid="fit-to-beat">
         {t('beats.fit')}

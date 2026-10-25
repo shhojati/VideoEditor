@@ -151,7 +151,7 @@ function AuthDialog() {
             <button
               type="submit"
               disabled={busy}
-              className="rounded bg-accent px-2.5 py-1 text-sm text-white disabled:opacity-40"
+              className="rounded bg-accent px-2.5 py-1 text-sm text-on-accent disabled:opacity-40"
               data-testid="auth-submit"
             >
               {mode === 'login' ? t('account.login') : t('account.register')}
@@ -237,7 +237,7 @@ function AccountDialog() {
         <div className="flex flex-wrap gap-2">
           {pricing?.telegram && (
             <a
-              className="rounded bg-accent px-2.5 py-1 text-sm text-white"
+              className="rounded bg-accent px-2.5 py-1 text-sm text-on-accent"
               href={`https://t.me/${encodeURIComponent(pricing.telegram.replace(/^@/, ''))}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -335,7 +335,7 @@ export function AccountButton() {
   return (
     <Button onClick={openAccount} data-testid="account-button" title={me.email}>
       <span
-        className={`rounded px-1 text-[10px] font-bold ${pro ? (days <= 3 ? 'bg-amber-500 text-black' : 'bg-emerald-800 text-white') : 'bg-neutral-600 text-white'}`}
+        className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${pro ? (days <= 3 ? 'bg-amber-500 text-black' : 'border border-accent/50 bg-accent-soft text-accent') : 'bg-surface-4 text-neutral-200'}`}
       >
         {pro ? t('account.proBadge') : t('account.freeBadge')}
       </span>

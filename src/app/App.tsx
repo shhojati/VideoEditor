@@ -91,7 +91,7 @@ function Editor() {
           {/* Panels sit as in English in both languages (Media left, Properties right); only their contents follow the language. */}
           <main
             ref={mainRef}
-            className={`grid min-h-0 flex-1 [direction:ltr] ${i18n.dir() === 'rtl' ? '[&>*]:[direction:rtl]' : ''}`}
+            className={`grid min-h-0 flex-1 gap-1 px-3 pt-3 [direction:ltr] ${i18n.dir() === 'rtl' ? '[&>*]:[direction:rtl]' : ''}`}
             style={{ gridTemplateColumns: `max(160px, ${columns.start * 100}%) 4px minmax(0, 1fr) 4px max(160px, ${columns.end * 100}%)` }}
           >
             <ErrorBoundary area={t('panels.media')}>
@@ -113,7 +113,7 @@ function Editor() {
             <RecordDialog />
           </ErrorBoundary>
           <TimelineSplitter kind="desktop" target={timelineRef} />
-          <div ref={timelineRef} className="flex min-h-[120px] shrink-0 flex-col" style={{ height: `${timelineShare * 100}%` }}>
+          <div ref={timelineRef} className="mx-3 mb-3 flex min-h-[120px] shrink-0 flex-col" style={{ height: `${timelineShare * 100}%` }}>
             <ErrorBoundary area={t('panels.timeline')}>
               <TimelinePanel project={project} />
             </ErrorBoundary>

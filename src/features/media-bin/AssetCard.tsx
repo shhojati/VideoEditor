@@ -1,3 +1,5 @@
+import { Film, Image, Music, TriangleAlert, X, type LucideIcon } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ACCEPT_ATTR } from '../../engine/decode/classify';
@@ -8,7 +10,7 @@ import { addAssetAtPlayhead } from '../timeline/interactions';
 import { assetDrag, useTimelineUi } from '../timeline/timelineUi';
 import { relinkAsset, removeAsset, useMedia, type AssetMediaState } from './mediaService';
 
-const KIND_ICON = { video: '🎬', audio: '🎵', image: '🖼' } as const;
+const KIND_ICON: Record<Asset['kind'], LucideIcon> = { video: Film, audio: Music, image: Image };
 
 export function AssetCard({ asset }: { asset: Asset }) {
   const { t } = useTranslation();
@@ -88,15 +90,17 @@ export function AssetCard({ asset }: { asset: Asset }) {
             {formatDuration(asset.duration)}
           </span>
         )}
-        <span className="absolute start-1 bottom-1 text-[11px]">{KIND_ICON[asset.kind]}</span>
+        <span className="absolute start-1 bottom-1 flex items-center rounded-md bg-black/60 p-0.5 text-neutral-200">
+          <Icon icon={KIND_ICON[asset.kind]} size={12} />
+        </span>
       </div>
       <div className="flex items-center gap-1 px-1.5 py-1">
         <span className="min-w-0 flex-1 truncate" dir="auto">
           {asset.name}
         </span>
         {audioUnsupported && (
-          <span className="text-amber-400" title={t('media.warnings.audioCodec', { codec: asset.codecs?.audio })}>
-            ⚠
+          <span className="flex text-amber-400" title={t('media.warnings.audioCodec', { codec: asset.codecs?.audio })}>
+            <Icon icon={TriangleAlert} size={14} />
           </span>
         )}
         {status !== 'missing' && (
@@ -115,12 +119,12 @@ export function AssetCard({ asset }: { asset: Asset }) {
           </button>
         )}
         <button
-          className="rounded px-1 text-neutral-400 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-200 focus:opacity-100 pointer-coarse:px-2 pointer-coarse:py-1 pointer-coarse:opacity-100"
+          className="rounded-md px-1 text-neutral-400 opacity-0 group-hover:opacity-100 hover:bg-red-900/50 hover:text-red-200 focus:opacity-100 pointer-coarse:px-2 pointer-coarse:py-1 pointer-coarse:opacity-100"
           aria-label={`${t('media.remove')} ${asset.name}`}
           title={t('media.remove')}
           onClick={() => removeAsset(asset.id)}
         >
-          ✕
+          <Icon icon={X} size={14} />
         </button>
       </div>
     </li>
@@ -134,7 +138,7 @@ function Preview({ asset, state }: { asset: Asset; state?: AssetMediaState }) {
     return <img src={url} alt="" className="h-full w-full object-contain" draggable={false} />;
   }
   if (state?.waveform) return <Waveform peaks={state.waveform.peaks} />;
-  return <span className="text-2xl opacity-40">{KIND_ICON[asset.kind]}</span>;
+  return <Icon icon={KIND_ICON[asset.kind]} size={28} className="opacity-40" />;
 }
 
 /** Whole-file overview: buckets are folded down to the canvas width. */

@@ -1,10 +1,12 @@
+import { ChevronLeft, ChevronRight, Diamond, Minus, Plus } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_EASE, KEY_EASES } from '../../model/keyframes';
 import type { Clip, Project } from '../../model/types';
 import { Section, SelectField } from '../inspector/controls';
 import { clearKeyframes, isInside, jumpToKeyframe, keyAtPlayhead, setEaseAtPlayhead, toggleKeyframe } from './keyframeService';
 
-const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
+const btn = 'inline-flex items-center justify-center gap-1 rounded-md bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4 disabled:opacity-40';
 
 /** The clip's keyframes, InShot style: ◆ adds/removes one at the playhead; ◀ ▶ jump; ease of the one under the playhead. */
 export function KeyframesSection({ project, clip, time }: { project: Project; clip: Clip; time: number }) {
@@ -18,7 +20,7 @@ export function KeyframesSection({ project, clip, time }: { project: Project; cl
       <div className="space-y-2" data-testid="keyframes-section">
         <div className="flex items-center gap-1" dir="ltr">
           <button className={btn} disabled={!keys.length} title={t('keyframes.prev')} aria-label={t('keyframes.prev')} onClick={() => jumpToKeyframe(clip.id, -1)}>
-            ◀
+            <Icon icon={ChevronLeft} size={14} />
           </button>
           <button
             className={`${btn} flex-1 ${here ? 'text-sky-300' : ''}`}
@@ -27,10 +29,14 @@ export function KeyframesSection({ project, clip, time }: { project: Project; cl
             title={`${t(here ? 'keyframes.remove' : 'keyframes.add')} (K)`}
             onClick={() => toggleKeyframe(clip.id)}
           >
-            {here ? '◆−' : '◆+'} {t(here ? 'keyframes.remove' : 'keyframes.add')}
+            <span className="inline-flex items-center" aria-hidden>
+              <Icon icon={Diamond} size={14} className={here ? 'fill-current' : ''} />
+              <Icon icon={here ? Minus : Plus} size={10} />
+            </span>
+            {t(here ? 'keyframes.remove' : 'keyframes.add')}
           </button>
           <button className={btn} disabled={!keys.length} title={t('keyframes.next')} aria-label={t('keyframes.next')} onClick={() => jumpToKeyframe(clip.id, 1)}>
-            ▶
+            <Icon icon={ChevronRight} size={14} />
           </button>
         </div>
         <p className="text-[11px] text-neutral-400">

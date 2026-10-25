@@ -41,7 +41,7 @@ export function SubtitleStyleInspector({ project, trackId }: { project: Project;
           {(Object.keys(SUBTITLE_PRESETS) as SubtitlePresetId[]).map((id) => (
             <button
               key={id}
-              className={`rounded px-2 py-1 ${preset === id ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`}
+              className={`rounded px-2 py-1 ${preset === id ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`}
               onClick={() => set('preset', (s) => Object.assign(s, { ...SUBTITLE_PRESETS[id], digits: style.digits }))}
             >
               {t(`subtitles.presetNames.${id}`)}

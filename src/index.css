@@ -28,12 +28,21 @@
 
 @theme {
   --font-sans: 'Inter', 'Vazirmatn', system-ui, sans-serif;
-  --color-surface-0: #0f1115;
-  --color-surface-1: #171a21;
-  --color-surface-2: #20242d;
-  --color-surface-3: #2b303b;
-  --color-line: #313744;
-  --color-accent: #2563eb;
+  --color-surface-0: #0b1517;
+  --color-surface-1: #101d1f;
+  --color-surface-2: #152628;
+  --color-surface-3: #1c3033;
+  --color-surface-4: #24393c;
+  --color-line: #1f3336;
+  --color-accent: #3fbf8a;
+  --color-accent-strong: #4cc996;
+  --color-accent-soft: rgb(63 191 138 / 0.15);
+  --color-muted: #8fa3a3;
+  --color-playhead: #a78bfa;
+  --color-on-accent: #04201a;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 
 html[lang='fa'] {

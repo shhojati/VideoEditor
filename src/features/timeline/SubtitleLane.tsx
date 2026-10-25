@@ -1,3 +1,5 @@
+import { Eye, EyeOff } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMobileUi } from '../../app/layout';
@@ -47,7 +49,7 @@ export const SubtitleLane = memo(function SubtitleLane({
           aria-pressed={!track.hidden}
           aria-label={t('subtitles.toggleVisible')}
           title={t('subtitles.toggleVisible')}
-          className={`w-6 rounded py-0.5 ${track.hidden ? 'bg-surface-3 text-neutral-400' : 'bg-accent text-white'}`}
+          className={`flex w-6 items-center justify-center rounded-md py-0.5 ${track.hidden ? 'bg-surface-3 text-neutral-400' : 'bg-accent text-on-accent'}`}
           onClick={() =>
             edit('ops.subtitleVisibility', (p) => {
               const st = p.subtitleTracks.find((x) => x.id === track.id);
@@ -55,7 +57,7 @@ export const SubtitleLane = memo(function SubtitleLane({
             })
           }
         >
-          👁
+          <Icon icon={track.hidden ? EyeOff : Eye} size={14} />
         </button>
       </div>
       <div className={`relative flex-1 ${track.hidden ? 'opacity-40' : ''}`}>

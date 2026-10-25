@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { clipsWithTracker } from '../../engine/render/motion';
 import { isOverlay, isPaintLayer } from '../../model/overlays';
@@ -22,7 +24,7 @@ import {
 import { timelineTimeAt } from '../../model/remap';
 import { resetClipSection } from '../inspector/resetActions';
 
-const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
+const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4 disabled:opacity-40';
 const seconds = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 
 /** Display name of a clip in pickers. */
@@ -112,8 +114,8 @@ function TrackerRow({ clip, tracker, selected }: { clip: Clip; tracker: Tracker;
           onFocus={() => setActiveTracker(clip.id, tracker.id)}
           onChange={(e) => renameTracker(clip.id, tracker.id, e.target.value)}
         />
-        <button className="rounded px-1.5 text-neutral-300 hover:bg-surface-3" aria-label={t('tracking.delete')} title={t('tracking.delete')} onClick={() => deleteTracker(clip.id, tracker.id)}>
-          ✕
+        <button className="rounded-md px-1.5 text-neutral-300 hover:bg-surface-3" aria-label={t('tracking.delete')} title={t('tracking.delete')} onClick={() => deleteTracker(clip.id, tracker.id)}>
+          <Icon icon={X} size={14} />
         </button>
       </div>
       <p className="mt-0.5 text-[11px] text-neutral-400" data-testid="tracker-range">

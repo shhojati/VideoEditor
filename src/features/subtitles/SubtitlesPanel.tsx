@@ -1,3 +1,5 @@
+import { ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, Scissors, Trash2, X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -101,7 +103,7 @@ export function SubtitlesPanel({ project }: { project: Project }) {
         <div className="flex items-start gap-2 rounded bg-surface-2 p-2" role="status">
           <span className="flex-1">{message}</span>
           <button onClick={() => setMessage(null)} aria-label={t('media.dismiss')}>
-            ✕
+            <Icon icon={X} size={14} />
           </button>
         </div>
       )}
@@ -205,7 +207,7 @@ const CueRow = memo(function CueRow(props: {
     useTransport.getState().seek(cue.start + 1e-3);
     select([cue.id]);
   };
-  const iconBtn = 'rounded px-1 text-neutral-400 hover:bg-surface-3 hover:text-white';
+  const iconBtn = 'inline-flex items-center rounded-md px-1 text-neutral-400 hover:bg-surface-3 hover:text-white';
 
   return (
     <li
@@ -222,17 +224,17 @@ const CueRow = memo(function CueRow(props: {
         </button>
         <span className="ms-auto flex gap-0.5">
           <button className={iconBtn} title={t('subtitles.startHere')} aria-label={t('subtitles.startHere')} onClick={() => edit('ops.cueTiming', (p) => void setCueEdge(p, cue.id, 'start', now()))}>
-            ⇤
+            <Icon icon={ArrowLeftToLine} size={14} />
           </button>
           <button className={iconBtn} title={t('subtitles.endHere')} aria-label={t('subtitles.endHere')} onClick={() => edit('ops.cueTiming', (p) => void setCueEdge(p, cue.id, 'end', now()))}>
-            ⇥
+            <Icon icon={ArrowRightToLine} size={14} />
           </button>
           <button className={iconBtn} title={t('subtitles.split')} aria-label={t('subtitles.split')} onClick={() => edit('ops.splitCue', (p) => void splitCue(p, cue.id, now()))}>
-            ✂
+            <Icon icon={Scissors} size={14} />
           </button>
           {!props.isLast && (
             <button className={iconBtn} title={t('subtitles.merge')} aria-label={t('subtitles.merge')} onClick={() => edit('ops.mergeCues', (p) => void mergeWithNext(p, cue.id))}>
-              ⤓
+              <Icon icon={ArrowDownToLine} size={14} />
             </button>
           )}
           <button
@@ -245,7 +247,7 @@ const CueRow = memo(function CueRow(props: {
               })
             }
           >
-            🗑
+            <Icon icon={Trash2} size={14} />
           </button>
         </span>
       </div>

@@ -1,3 +1,5 @@
+import { Clapperboard, MessageSquareText, Shapes, SlidersHorizontal, WandSparkles, X, type LucideIcon } from 'lucide-react';
+import { Icon } from './icons';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Inspector } from '../features/inspector/Inspector';
@@ -13,12 +15,12 @@ import { LeftPanel } from './LeftPanel';
 
 type NavId = 'media' | 'subtitles' | 'library' | 'fx' | 'inspector';
 /** Each button opens a group of left-panel tabs (or the inspector). */
-const NAV: { id: NavId; icon: string; label: string; tabs?: PanelTab[] }[] = [
-  { id: 'media', icon: '🎞', label: 'panels.media', tabs: ['media'] },
-  { id: 'subtitles', icon: '💬', label: 'panels.subtitles', tabs: ['subtitles'] },
-  { id: 'library', icon: '🌟', label: 'panels.library', tabs: ['assets', 'overlays', 'templates'] },
-  { id: 'fx', icon: '✨', label: 'panels.fx', tabs: ['effects', 'transitions', 'filters', 'layouts'] },
-  { id: 'inspector', icon: '⚙', label: 'panels.inspector' },
+const NAV: { id: NavId; icon: LucideIcon; label: string; tabs?: PanelTab[] }[] = [
+  { id: 'media', icon: Clapperboard, label: 'panels.media', tabs: ['media'] },
+  { id: 'subtitles', icon: MessageSquareText, label: 'panels.subtitles', tabs: ['subtitles'] },
+  { id: 'library', icon: Shapes, label: 'panels.library', tabs: ['assets', 'overlays', 'templates'] },
+  { id: 'fx', icon: WandSparkles, label: 'panels.fx', tabs: ['effects', 'transitions', 'filters', 'layouts'] },
+  { id: 'inspector', icon: SlidersHorizontal, label: 'panels.inspector' },
 ];
 const navOf = (tab: PanelTab) => NAV.find((n) => n.tabs?.includes(tab))!.id;
 
@@ -69,7 +71,7 @@ export function MobileLayout({ project }: { project: Project }) {
                 aria-label={t('panels.close')}
                 onClick={() => useMobileUi.setState({ sheet: null })}
               >
-                ✕
+                <Icon icon={X} size={18} />
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
@@ -99,7 +101,7 @@ export function MobileLayout({ project }: { project: Project }) {
           >
             {active === n.id && <span className="absolute inset-x-4 top-0 h-0.5 rounded bg-accent" />}
             <span className="text-lg leading-none" aria-hidden>
-              {n.icon}
+              <Icon icon={n.icon} size={20} />
             </span>
             <span className="max-w-full truncate px-1">{t(n.label)}</span>
             {/* Something is selected: its properties are one tap away. */}

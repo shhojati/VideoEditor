@@ -213,7 +213,7 @@ function UserRow({
           <span className="text-neutral-400">{t('admin.note')}</span>
           <input className="min-w-32 rounded bg-surface-3 px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
-        <Button className="bg-accent! text-white" onClick={() => onGrant(months, Number(amount || 0), note)} data-testid="admin-grant">
+        <Button className="bg-accent! text-on-accent" onClick={() => onGrant(months, Number(amount || 0), note)} data-testid="admin-grant">
           {t('admin.grant')}
         </Button>
         {u.plan === 'pro' && <Button onClick={onRevoke}>{t('admin.revoke')}</Button>}

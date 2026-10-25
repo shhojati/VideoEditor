@@ -1,3 +1,5 @@
+import { ChevronDown, ChevronRight, ChevronUp, Pipette, RotateCcw, X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { defaultParams, EFFECT_DEFS, moveEffect, type ParamSpec } from '../../model/effects';
@@ -46,7 +48,7 @@ function EffectCard({ effect, first, last, set, clip, asset }: { effect: Effect;
       const e = c.effects?.find((x) => x.id === effect.id);
       if (e) fn(e, p);
     });
-  const iconBtn = 'rounded px-1.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
+  const iconBtn = 'inline-flex items-center rounded-md px-1 py-0.5 text-neutral-300 hover:bg-surface-3 disabled:opacity-30';
   return (
     <div className={`rounded border border-line bg-surface-2 ${effect.enabled ? '' : 'opacity-60'}`} data-testid="effect-card" data-kind={effect.kind}>
       <div className="flex items-center gap-1 px-1.5 py-1 text-xs">
@@ -57,14 +59,15 @@ function EffectCard({ effect, first, last, set, clip, asset }: { effect: Effect;
           title={t('effects.enabled')}
           onChange={(ev) => edit('enabled', (x) => void (x.enabled = ev.target.checked))}
         />
-        <button className="min-w-0 flex-1 truncate text-start font-medium text-white" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          {open ? '▾' : '▸'} {name}
+        <button className="flex min-w-0 flex-1 items-center gap-1 text-start font-medium text-white" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          <Icon icon={open ? ChevronDown : ChevronRight} size={14} className={`shrink-0 ${open ? '' : 'rtl:-scale-x-100'}`} />
+          <span className="truncate">{name}</span>
         </button>
         <button className={iconBtn} disabled={first} onClick={() => set('fx.order', (c) => moveEffect(c, effect.id, -1))} aria-label={t('effects.up')} title={t('effects.up')}>
-          ↑
+          <Icon icon={ChevronUp} size={14} />
         </button>
         <button className={iconBtn} disabled={last} onClick={() => set('fx.order', (c) => moveEffect(c, effect.id, 1))} aria-label={t('effects.down')} title={t('effects.down')}>
-          ↓
+          <Icon icon={ChevronDown} size={14} />
         </button>
         <button
           className={iconBtn}
@@ -72,7 +75,7 @@ function EffectCard({ effect, first, last, set, clip, asset }: { effect: Effect;
           aria-label={t('effects.reset')}
           title={t('effects.reset')}
         >
-          ↺
+          <Icon icon={RotateCcw} size={14} />
         </button>
         <button
           className={`${iconBtn} text-red-300`}
@@ -81,7 +84,7 @@ function EffectCard({ effect, first, last, set, clip, asset }: { effect: Effect;
           title={t('effects.remove')}
           data-testid="effect-remove"
         >
-          ✕
+          <Icon icon={X} size={14} />
         </button>
       </div>
       {open && def.params.length > 0 && (
@@ -123,8 +126,9 @@ function ParamField({
         <>
           <ColorField label={label} value={String(value(spec.key, spec.default))} onChange={(v) => setParam(spec.key, v ?? spec.default)} />
           {picker && (
-            <button className={`rounded px-2 py-0.5 text-xs ${picking ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} data-testid="pick-color" aria-pressed={picking} onClick={() => setPicking((p) => !p)}>
-              ⌖ {t('effects.pickFromFrame')}
+            <button className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs ${picking ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`} data-testid="pick-color" aria-pressed={picking} onClick={() => setPicking((p) => !p)}>
+              <Icon icon={Pipette} size={14} />
+              {t('effects.pickFromFrame')}
             </button>
           )}
           {picker && picking && (

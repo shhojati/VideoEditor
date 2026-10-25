@@ -1,3 +1,5 @@
+import { Languages } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -22,7 +24,7 @@ export function TranslateBox({ track }: { track: SubtitleTrack }) {
   return (
     <section className="space-y-2 rounded border border-line bg-surface-2/60 p-2" data-testid="translate-box">
       <div className="flex items-center gap-2 font-medium">
-        <span>🌐</span>
+        <Icon icon={Languages} size={16} />
         <span className="flex-1">{t('translate.title')}</span>
         <ProBadge />
       </div>

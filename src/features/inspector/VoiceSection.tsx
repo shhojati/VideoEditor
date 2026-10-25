@@ -93,7 +93,7 @@ function Chips<K extends VoiceKind | SpaceKind>(props: {
       aria-checked={props.value === k}
       data-testid={props.testId}
       data-kind={k ?? 'none'}
-      className={`rounded border border-line px-2 py-0.5 ${props.value === k ? 'bg-accent text-white' : 'bg-surface-3 text-neutral-300 hover:bg-[#363c49]'}`}
+      className={`rounded border border-line px-2 py-0.5 ${props.value === k ? 'bg-accent text-on-accent' : 'bg-surface-3 text-neutral-300 hover:bg-surface-4'}`}
       onClick={() => props.onPick(k)}
     >
       {text}

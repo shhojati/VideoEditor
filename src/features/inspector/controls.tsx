@@ -1,6 +1,8 @@
 import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
+import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
+import { Icon } from '../../app/icons';
 
 /** Fade in/out presets shared by text and shape clips (s). */
 export const FADE_PRESETS = [
@@ -48,7 +50,7 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
   const nested = useContext(InSection);
   return (
     <section
-      className={nested ? 'rounded border border-line/60 px-2 py-1' : 'border-b border-line px-3 py-2'}
+      className={nested ? 'rounded-md border border-line/60 px-2 py-1' : 'border-b border-line px-3 py-2 md:px-4 md:py-3'}
       data-testid={`section-${id}`}
       data-collapsed={collapsed || undefined}
     >
@@ -59,7 +61,7 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
           tabIndex={0}
           aria-expanded={!collapsed}
           data-testid="section-toggle"
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-xs font-medium tracking-wide text-neutral-400 uppercase select-none hover:text-neutral-200"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-xs font-medium tracking-[0.15em] text-muted uppercase select-none hover:text-neutral-200 md:text-[13px]"
           onClick={() => toggleSection(id)}
           onKeyDown={(e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -67,21 +69,19 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
             toggleSection(id);
           }}
         >
-          <span aria-hidden className="w-2.5 text-[10px]">
-            {collapsed ? (document.documentElement.dir === 'rtl' ? '◂' : '▸') : '▾'}
-          </span>
+          <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} className="shrink-0 rtl:-scale-x-100" />
           <h3 className="truncate">{title}</h3>
         </div>
         {onReset && (
           <button
             type="button"
-            className="rounded px-1.5 py-0.5 text-sm leading-none text-neutral-400 hover:bg-surface-3 hover:text-white disabled:opacity-30"
+            className="rounded-md px-1.5 py-1 text-sm leading-none text-muted hover:bg-surface-3 hover:text-white disabled:opacity-30"
             title={t('inspector.resetSection')}
             aria-label={`${t('inspector.resetSection')}: ${title}`}
             data-testid="section-reset"
             onClick={onReset}
           >
-            ↺
+            <Icon icon={RotateCcw} size={14} />
           </button>
         )}
       </div>
@@ -97,9 +97,9 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
 /** Label above its controls: the inspector column is narrow. */
 function Row({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 text-xs">
+    <div className="flex flex-col gap-1 text-xs md:gap-1.5 md:text-sm">
       {label && (
-        <label htmlFor={htmlFor} className="text-neutral-400">
+        <label htmlFor={htmlFor} className="text-muted">
           {label}
         </label>
       )}
@@ -146,7 +146,7 @@ export function NumberField({ label, value, min, max, step = 0.01, factor = 1, u
         id={id}
         dir="ltr"
         inputMode="decimal"
-        className="w-14 rounded bg-surface-3 px-1 py-0.5 text-end"
+        className="w-14 rounded-md border border-line bg-surface-2 px-1 py-0.5 text-end md:w-16 md:py-1"
         value={draft ?? String(shown)}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={(e) => commit(e.target.value)}
@@ -155,7 +155,7 @@ export function NumberField({ label, value, min, max, step = 0.01, factor = 1, u
           if (e.key === 'Escape') setDraft(null);
         }}
       />
-      {unit && <span className="w-4 text-neutral-400">{unit}</span>}
+      {unit && <span className="w-4 text-muted">{unit}</span>}
     </Row>
   );
 }
@@ -184,7 +184,7 @@ export function ColorField(props: {
         id={id}
         type="color"
         disabled={!on}
-        className="h-6 w-10 cursor-pointer rounded border border-line bg-transparent disabled:opacity-30"
+        className="h-6 w-10 cursor-pointer rounded-md border border-line bg-transparent disabled:opacity-30"
         value={props.value ?? props.fallback ?? '#000000'}
         onChange={(e) => props.onChange(e.target.value)}
       />
@@ -204,14 +204,14 @@ export function Segmented<T extends string | number>(props: {
 }) {
   return (
     <Row label={props.label}>
-      <div className="flex overflow-hidden rounded border border-line" role="radiogroup" aria-label={props.label}>
+      <div className="flex overflow-hidden rounded-md border border-line" role="radiogroup" aria-label={props.label}>
         {props.options.map((o) => (
           <button
             key={String(o.value)}
             role="radio"
             aria-checked={o.value === props.value}
             title={o.title}
-            className={`px-2 py-0.5 ${o.value === props.value ? 'bg-accent text-white' : 'bg-surface-3 text-neutral-300 hover:bg-[#363c49]'}`}
+            className={`px-2 py-0.5 md:py-1 ${o.value === props.value ? 'bg-accent-soft text-accent' : 'bg-surface-2 text-neutral-300 hover:bg-surface-3'}`}
             onClick={() => props.onChange(o.value)}
           >
             {o.label}
@@ -233,7 +233,7 @@ export function SelectField<T extends string | number>(props: {
     <Row label={props.label} htmlFor={id}>
       <select
         id={id}
-        className="min-w-0 flex-1 rounded bg-surface-3 px-2 py-1"
+        className="min-w-0 flex-1 rounded-md border border-line bg-surface-2 px-2.5 py-1 md:h-9"
         value={props.value}
         onChange={(e) => {
           const raw = e.target.value;

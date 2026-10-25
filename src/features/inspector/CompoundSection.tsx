@@ -1,3 +1,5 @@
+import { Group } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import type { Clip, Project } from '../../model/types';
 import { breakApartClip, enterCompound, renameCompound } from '../timeline/compoundActions';
@@ -18,10 +20,11 @@ export function CompoundSection({ project, clip }: { project: Project; clip: Cli
         </label>
         <p className="text-neutral-400">{t('compound.contains', { count })}</p>
         <div className="flex gap-1">
-          <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49]" data-testid="compound-open" onClick={() => enterCompound(clip.id)}>
-            ▣ {t('compound.open')}
+          <button className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 hover:bg-surface-4" data-testid="compound-open" onClick={() => enterCompound(clip.id)}>
+            <Icon icon={Group} size={14} />
+            {t('compound.open')}
           </button>
-          <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49]" data-testid="compound-break" onClick={() => breakApartClip(clip.id)}>
+          <button className="rounded bg-surface-3 px-2 py-1 hover:bg-surface-4" data-testid="compound-break" onClick={() => breakApartClip(clip.id)}>
             {t('compound.break')}
           </button>
         </div>

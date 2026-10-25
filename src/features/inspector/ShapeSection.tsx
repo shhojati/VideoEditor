@@ -1,3 +1,5 @@
+import { Diamond, Timer } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { keepsAspect, setShapeKind, SHAPE_KINDS } from '../../model/overlays';
 import type { ID, ShapeProps } from '../../model/types';
@@ -228,16 +230,18 @@ function PathControls({ clipId, shape, set, keyAt, fps }: { clipId: ID; shape: S
       <div className="flex items-center gap-2 text-xs text-neutral-300">
         <label className="flex items-center gap-2" title={t('shapes.animatePathHint')}>
           <input type="checkbox" checked={animated} onChange={(e) => setShapePathAnimated(clipId, e.target.checked)} />
-          ⏱ {t('shapes.animatePath')}
+          <Icon icon={Timer} size={14} />
+          {t('shapes.animatePath')}
         </label>
         {animated && (
           <button
-            className={`rounded px-1.5 py-0.5 ${here ? 'bg-amber-500 text-black' : 'bg-surface-3 hover:bg-[#363c49]'}`}
+            className={`inline-flex items-center rounded-md px-1.5 py-0.5 ${here ? 'bg-amber-500 text-black' : 'bg-surface-3 hover:bg-surface-4'}`}
             title={t(here ? 'shapes.removePathKey' : 'shapes.addPathKey')}
+            aria-label={t(here ? 'shapes.removePathKey' : 'shapes.addPathKey')}
             aria-pressed={here}
             onClick={() => toggleShapePathKey(clipId)}
           >
-            ◆
+            <Icon icon={Diamond} size={14} className={here ? 'fill-current' : ''} />
           </button>
         )}
       </div>

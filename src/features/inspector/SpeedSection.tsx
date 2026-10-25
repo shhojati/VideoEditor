@@ -1,3 +1,5 @@
+import { Snowflake } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { meanSpeed, SPEED_RANGE } from '../../model/remap';
@@ -27,7 +29,7 @@ export function SpeedSection({ clip, asset, audible, visual, set }: { clip: Clip
       <NumberField label={t('inspector.speed')} value={clip.speedCurve ? Math.round(avg * 100) / 100 : clip.speed} min={SPEED_RANGE.min} max={SPEED_RANGE.max} step={0.05} unit="×" onChange={setSpeed} />
       <div className="flex flex-wrap gap-1 text-xs">
         {QUICK.map((s) => (
-          <button key={s} className={`rounded px-2 py-0.5 ${!clip.speedCurve && clip.speed === s ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} onClick={() => setSpeed(s)}>
+          <button key={s} className={`rounded px-2 py-0.5 ${!clip.speedCurve && clip.speed === s ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`} onClick={() => setSpeed(s)}>
             {s}×
           </button>
         ))}
@@ -35,7 +37,7 @@ export function SpeedSection({ clip, asset, audible, visual, set }: { clip: Clip
 
       <div className="text-[11px] text-neutral-400">{t('speed.ramps')}</div>
       <div className="grid grid-cols-4 gap-1 text-xs" role="radiogroup" aria-label={t('speed.ramps')}>
-        <button role="radio" aria-checked={!clip.speedCurve} data-testid="speed-preset" data-kind="none" className={`rounded px-1 py-1 ${!clip.speedCurve ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} onClick={() => clip.speedCurve && setCurve(null)}>
+        <button role="radio" aria-checked={!clip.speedCurve} data-testid="speed-preset" data-kind="none" className={`rounded px-1 py-1 ${!clip.speedCurve ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`} onClick={() => clip.speedCurve && setCurve(null)}>
           {t('speed.presets.none')}
         </button>
         {RAMPS.map((k) => (
@@ -45,25 +47,26 @@ export function SpeedSection({ clip, asset, audible, visual, set }: { clip: Clip
             aria-checked={clip.speedPreset === k}
             data-testid="speed-preset"
             data-kind={k}
-            className={`rounded px-1 py-1 ${clip.speedPreset === k ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`}
+            className={`rounded px-1 py-1 ${clip.speedPreset === k ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`}
             onClick={() => setCurve(SPEED_PRESETS[k], k)}
           >
             {t(`speed.presets.${k}`)}
           </button>
         ))}
-        <button role="radio" aria-checked={clip.speedPreset === 'custom'} data-testid="speed-preset" data-kind="custom" className={`rounded px-1 py-1 ${clip.speedPreset === 'custom' ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} onClick={() => setCurve(clip.speedCurve ?? [[0, clip.speed], [1, clip.speed]])}>
+        <button role="radio" aria-checked={clip.speedPreset === 'custom'} data-testid="speed-preset" data-kind="custom" className={`rounded px-1 py-1 ${clip.speedPreset === 'custom' ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`} onClick={() => setCurve(clip.speedCurve ?? [[0, clip.speed], [1, clip.speed]])}>
           {t('speed.presets.custom')}
         </button>
       </div>
       {clip.speedCurve && <CurveEditor curve={clip.speedCurve} onChange={(c) => setCurve(c)} />}
 
       <div className="flex flex-wrap gap-1 text-xs">
-        <button className={`rounded px-2 py-1 disabled:opacity-40 ${asset.reverseOf ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'}`} data-testid="reverse" aria-pressed={!!asset.reverseOf} disabled={reversing} onClick={() => void toggleReverse(clip.id)}>
+        <button className={`rounded px-2 py-1 disabled:opacity-40 ${asset.reverseOf ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'}`} data-testid="reverse" aria-pressed={!!asset.reverseOf} disabled={reversing} onClick={() => void toggleReverse(clip.id)}>
           ⟲ {reversing ? t('speed.reversing') : t('speed.reverse')}
         </button>
         {asset.kind === 'video' && visual && (
-          <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49]" data-testid="freeze" title={t('speed.freezeHint')} onClick={() => freezeAtPlayhead(clip.id)}>
-            ❄ {t('speed.freeze')}
+          <button className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 hover:bg-surface-4" data-testid="freeze" title={t('speed.freezeHint')} onClick={() => freezeAtPlayhead(clip.id)}>
+            <Icon icon={Snowflake} size={14} />
+            {t('speed.freeze')}
           </button>
         )}
       </div>

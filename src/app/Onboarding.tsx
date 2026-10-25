@@ -83,7 +83,7 @@ export function Onboarding({ project }: { project: Project }) {
         <p className="text-xs text-neutral-400">{t('media.privacy')}</p>
         <div className="flex flex-wrap gap-2">
           <Button
-            className="bg-accent! text-white"
+            className="bg-accent! text-on-accent"
             disabled={loading}
             data-testid="load-sample"
             onClick={async () => {

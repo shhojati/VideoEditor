@@ -1,3 +1,5 @@
+import { Smartphone, WandSparkles } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
 import { aspectOf } from '../../model/factories';
 import type { Clip, Project } from '../../model/types';
@@ -6,7 +8,7 @@ import { autoReframe, cancelReframe, reframeProject, useReframe } from './refram
 import { ProBadge } from '../account/ProBadge';
 import { resetClipSection } from '../inspector/resetActions';
 
-const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-[#363c49] disabled:opacity-40';
+const btn = 'rounded bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4 disabled:opacity-40';
 
 /** Auto reframe (Pro): keep the person in the middle when the clip's shape differs from the frame. */
 export function ReframeSection({ project, clip }: { project: Project; clip: Clip }) {
@@ -33,11 +35,13 @@ export function ReframeSection({ project, clip }: { project: Project; clip: Clip
         ) : (
           <div className="flex flex-wrap gap-1">
             <button className={btn} data-testid="reframe-clip" onClick={() => void autoReframe(clip.id)}>
-              ✨ {clip.motion?.mode === 'reframe' ? t('reframe.again') : t('reframe.clip')} <ProBadge />
+              <Icon icon={WandSparkles} size={14} />
+              {clip.motion?.mode === 'reframe' ? t('reframe.again') : t('reframe.clip')} <ProBadge />
             </button>
             {!vertical && (
               <button className={btn} data-testid="reframe-project" onClick={() => void reframeProject('9:16')}>
-                📱 {t('reframe.project')} <ProBadge />
+                <Icon icon={Smartphone} size={14} />
+                {t('reframe.project')} <ProBadge />
               </button>
             )}
           </div>

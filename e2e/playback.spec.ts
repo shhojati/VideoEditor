@@ -73,6 +73,6 @@ test('2-minute multi-track playback stays in sync', async ({ page }) => {
   expect(audio.buffers).toBeGreaterThan(100);
   expect(audio.maxLate).toBeLessThan(0.08);
   // The playhead reached the end and stopped.
-  await expect(page.getByTestId('play')).toHaveText('▶', { timeout: 10_000 });
+  await expect(page.getByTestId('play')).toHaveAttribute('data-state', 'paused', { timeout: 10_000 });
   expect(samples.at(-1)!.clock).toBeGreaterThan(115);
 });

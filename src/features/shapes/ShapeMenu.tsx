@@ -1,10 +1,12 @@
+import { Crosshair, Plus, Shapes, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
 import { SHAPE_KINDS } from '../../model/overlays';
 import { addNull, addShape, addSolid } from '../timeline/actions';
-import { SHAPE_ICONS } from './shapesUi';
+import { SHAPE_LINE_ICONS } from './shapesUi';
+import { Icon } from '../../app/icons';
 
 const MENU_HEIGHT = 200;
 
@@ -48,7 +50,11 @@ export function ShapeMenu() {
           setOpen((o) => (o ? null : { left: Math.max(4, Math.min(r.left, window.innerWidth - 232)), top }));
         }}
       >
-        ★+ {t('shapes.add')}
+        <span className="inline-flex items-center" aria-hidden>
+          <Icon icon={Shapes} size={16} />
+          <Icon icon={Plus} size={10} />
+        </span>
+        {t('shapes.add')}
       </Button>
       {open &&
         createPortal(
@@ -69,17 +75,15 @@ export function ShapeMenu() {
                   addShape(kind);
                 }}
               >
-                <span className="w-4 text-center text-base leading-none" aria-hidden>
-                  {SHAPE_ICONS[kind]}
-                </span>
+                <Icon icon={SHAPE_LINE_ICONS[kind]} size={16} />
                 {t(`shapes.${kind}`)}
               </button>
             ))}
             {/* After Effects' Layer → New: a solid colour layer, and a null object to parent clips to. */}
             {(
               [
-                ['solid', '■', addSolid],
-                ['null', '⌖', addNull],
+                ['solid', Square, addSolid],
+                ['null', Crosshair, addNull],
               ] as const
             ).map(([key, icon, add]) => (
               <button
@@ -92,9 +96,7 @@ export function ShapeMenu() {
                   add();
                 }}
               >
-                <span className="w-4 text-center text-base leading-none" aria-hidden>
-                  {icon}
-                </span>
+                <Icon icon={icon} size={16} />
                 {t(`shapes.${key}`)}
               </button>
             ))}

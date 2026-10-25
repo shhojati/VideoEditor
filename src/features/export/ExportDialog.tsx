@@ -276,7 +276,7 @@ export function ExportDialog({ project }: { project: Project }) {
             )}
             {result.url && (
               <a
-                className="inline-block rounded bg-accent px-3 py-1.5 text-white"
+                className="inline-block rounded bg-accent px-3 py-1.5 text-on-accent"
                 href={result.url}
                 download={result.name}
                 data-testid="export-download"
@@ -301,12 +301,12 @@ export function ExportDialog({ project }: { project: Project }) {
               <Button onClick={closeExportDialog}>{t('export.close')}</Button>
               {state.stage !== 'done' &&
                 (policy.kind === 'login' && !offline ? (
-                  <Button className="bg-accent! text-white" onClick={openAuth} data-testid="export-login">
+                  <Button className="bg-accent! text-on-accent" onClick={openAuth} data-testid="export-login">
                     {t('exportGate.loginButton')}
                   </Button>
                 ) : (
                   <Button
-                    className="bg-accent! text-white"
+                    className="bg-accent! text-on-accent"
                     disabled={duration <= 0 || policy.kind !== 'ok'}
                     onClick={() => void startExport(project, { ...settings, frameTime }, policy)}
                     data-testid="export-start"
@@ -344,7 +344,7 @@ function ExportGate({ policy, offline, duration }: { policy: ExportPolicy; offli
         <p>
           {t('exportGate.tooLong', { max: formatDuration(policy.maxSeconds), duration: formatDuration(duration) })}
         </p>
-        <Button className="bg-accent! text-white" onClick={openAccount} data-testid="export-upgrade">
+        <Button className="bg-accent! text-on-accent" onClick={openAccount} data-testid="export-upgrade">
           {t('exportGate.upgrade')}
         </Button>
       </div>

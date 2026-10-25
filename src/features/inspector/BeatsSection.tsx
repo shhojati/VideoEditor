@@ -1,3 +1,5 @@
+import { Music, X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Asset, Clip } from '../../model/types';
@@ -26,15 +28,23 @@ export function BeatsSection({ clip, asset }: { clip: Clip; asset: Asset }) {
         {asset.beats ? (
           <>
             <span className="text-neutral-200" data-testid="beats-info">
-              ♪ {t('beats.info', { bpm: asset.beats.bpm, count: asset.beats.times.length })}
+              <Icon icon={Music} size={14} className="me-1 inline-block align-[-2px]" />
+              {t('beats.info', { bpm: asset.beats.bpm, count: asset.beats.times.length })}
             </span>
             <button className="text-neutral-400 hover:text-white" aria-label={t('beats.clear')} title={t('beats.clear')} onClick={() => clearBeats(asset.id)}>
-              ✕
+              <Icon icon={X} size={14} />
             </button>
           </>
         ) : (
-          <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49] disabled:opacity-40" data-testid="detect-beats" disabled={busy} onClick={() => void detect()}>
-            {busy ? t('beats.detecting') : `♪ ${t('beats.detect')}`}
+          <button className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 hover:bg-surface-4 disabled:opacity-40" data-testid="detect-beats" disabled={busy} onClick={() => void detect()}>
+            {busy ? (
+              t('beats.detecting')
+            ) : (
+              <>
+                <Icon icon={Music} size={14} />
+                {t('beats.detect')}
+              </>
+            )}
           </button>
         )}
       </div>

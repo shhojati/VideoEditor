@@ -1,3 +1,5 @@
+import { ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EFFECT_DEFS, EFFECT_MENU } from '../../model/effects';
@@ -29,8 +31,9 @@ export function EffectsPanel() {
           aria-label={t('library.search')}
           className="min-w-0 flex-1 rounded bg-surface-3 px-2 py-1 text-xs"
         />
-        <button className="rounded bg-surface-3 px-2 text-xs hover:bg-accent" onClick={addAdjustmentLayer} title={t('effects.adjustmentHint')} data-testid="add-adjustment">
-          ◫ {t('effects.adjustment')}
+        <button className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 text-xs hover:bg-accent" onClick={addAdjustmentLayer} title={t('effects.adjustmentHint')} data-testid="add-adjustment">
+          <Icon icon={Layers} size={14} />
+          {t('effects.adjustment')}
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-1">
@@ -43,7 +46,8 @@ export function EffectsPanel() {
                 onClick={() => setClosed((c) => ({ ...c, [g.category]: !c[g.category] }))}
                 aria-expanded={!isClosed}
               >
-                {isClosed ? '▸' : '▾'} {t(`effects.categories.${g.category}`)}
+                <Icon icon={isClosed ? ChevronRight : ChevronDown} size={14} className={isClosed ? 'rtl:-scale-x-100' : ''} />
+                {t(`effects.categories.${g.category}`)}
               </button>
               {!isClosed && (
                 <ul>

@@ -1,3 +1,5 @@
+import { LoaderCircle, Play, Square } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
@@ -102,7 +104,7 @@ function ItemTile({ item, busy }: { item: LibraryItem; busy: boolean }) {
   const picture = item.kind === 'stickers' || (item.kind === 'backgrounds' && !/\.(mp4|webm)$/i.test(item.fileName));
   const spinner = busy && (
     <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs text-white" aria-label={t('library.downloading')}>
-      ⏳
+      <Icon icon={LoaderCircle} size={18} className="animate-spin" />
     </span>
   );
 
@@ -162,7 +164,7 @@ function SoundPreview({ url }: { url: string }) {
   const playing = usePreview((s) => s.url === url);
   return (
     <button
-      className="w-6 shrink-0 rounded bg-surface-3 text-center hover:bg-accent"
+      className="flex w-6 shrink-0 items-center justify-center rounded-md bg-surface-3 hover:bg-accent"
       aria-label={playing ? t('library.stop') : t('library.listen')}
       draggable={false}
       onClick={(e) => {
@@ -175,7 +177,7 @@ function SoundPreview({ url }: { url: string }) {
         usePreview.setState({ url });
       }}
     >
-      {playing ? '■' : '▶'}
+      <Icon icon={playing ? Square : Play} size={14} />
     </button>
   );
 }

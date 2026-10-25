@@ -21,7 +21,7 @@ export function BrushOptions() {
         <div className="space-y-1">
           <p className="text-[11px] text-sky-300">{t(source ? 'paint.cloneReady' : 'paint.cloneHint')}</p>
           {source && (
-            <button className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49]" onClick={() => useTool.setState({ cloneSource: null })}>
+            <button className="rounded bg-surface-3 px-2 py-1 hover:bg-surface-4" onClick={() => useTool.setState({ cloneSource: null })}>
               {t('paint.cloneReset')}
             </button>
           )}

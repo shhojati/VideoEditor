@@ -1,3 +1,5 @@
+import { Circle, Square } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../app/ui';
@@ -91,7 +93,8 @@ export function RecordDialog() {
         <div className="flex justify-end gap-2">
           {r.stage === 'recording' ? (
             <Button className="bg-red-600! text-white" onClick={stopRecording} data-testid="record-stop">
-              ■ {t('record.stop')}
+              <Icon icon={Square} size={16} className="fill-current" />
+              {t('record.stop')}
             </Button>
           ) : (
             <>
@@ -99,7 +102,8 @@ export function RecordDialog() {
                 {t('record.close')}
               </Button>
               <Button className="bg-red-600/80! text-white" onClick={startRecording} disabled={busy || !r.stream} data-testid="record-start">
-                ● {t('record.start')}
+                <Icon icon={Circle} size={16} className="fill-current text-red-400" />
+                {t('record.start')}
               </Button>
             </>
           )}

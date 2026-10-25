@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+import { Icon } from '../../app/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NORMALIZE_TARGET, normalizeGain } from '../../engine/audio/cleanDsp';
@@ -65,7 +67,7 @@ export function CleanupSection({ project, clip, set }: { project: Project; clip:
       </label>
       <div className="flex items-center gap-2 text-xs">
         <button
-          className="rounded bg-surface-3 px-2 py-1 hover:bg-[#363c49] disabled:opacity-40"
+          className="rounded bg-surface-3 px-2 py-1 hover:bg-surface-4 disabled:opacity-40"
           data-testid="normalize"
           disabled={measuring}
           title={t('cleanup.normalizeHint', { target: NORMALIZE_TARGET })}
@@ -80,7 +82,7 @@ export function CleanupSection({ project, clip, set }: { project: Project; clip:
               {clip.audio.gainDb} dB
             </span>
             <button className="text-neutral-400 hover:text-white" aria-label={t('cleanup.resetGain')} title={t('cleanup.resetGain')} onClick={() => set('gainDb', (c) => void delete c.audio.gainDb)}>
-              ✕
+              <Icon icon={X} size={14} />
             </button>
           </>
         )}

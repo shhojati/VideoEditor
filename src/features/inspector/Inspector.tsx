@@ -49,7 +49,7 @@ export function Inspector({ project }: { project: Project }) {
       ) : (
         <>
           {existing.length > 1 && (
-            <p className="border-b border-line px-3 py-2 text-xs text-neutral-400">
+            <p className="border-b border-line px-3 py-2 text-xs text-muted md:px-4">
               {t('inspector.multi', { count: existing.length })}
             </p>
           )}
@@ -92,9 +92,9 @@ function ProjectSettings({ project }: { project: Project }) {
         options={FPS_OPTIONS.map((f) => ({ value: f, label: String(f) }))}
         onChange={(v) => edit('ops.fps', (p) => void (p.settings.fps = v))}
       />
-      <div className="flex items-center gap-2 text-xs text-neutral-400">
-        <span className="w-24">{t('settings.size')}</span>
-        <span dir="ltr" data-testid="canvas-size">
+      <div className="flex flex-col gap-1 text-xs md:gap-1.5 md:text-sm">
+        <span className="text-muted">{t('settings.size')}</span>
+        <span dir="ltr" data-testid="canvas-size" className="rounded-md border border-line bg-surface-2 px-2.5 py-1 text-center text-neutral-200 md:py-1.5">
           {width}×{height}
         </span>
       </div>

@@ -32,7 +32,7 @@ export function TransitionInspector({ project, fromId, toId }: { project: Projec
               key={kind}
               data-testid={`pick-${kind}`}
               className={`flex items-center gap-1.5 rounded px-2 py-1 text-start ${
-                transition?.kind === kind ? 'bg-accent text-white' : 'bg-surface-3 hover:bg-[#363c49]'
+                transition?.kind === kind ? 'bg-accent text-on-accent' : 'bg-surface-3 hover:bg-surface-4'
               }`}
               onClick={() =>
                 transition

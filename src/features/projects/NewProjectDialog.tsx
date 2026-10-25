@@ -155,7 +155,7 @@ function Form() {
           <Button onClick={close}>{t('newProject.cancel')}</Button>
           <Button
             type="submit"
-            className="bg-accent! text-white"
+            className="bg-accent! text-on-accent"
             disabled={busy}
             data-testid="create-project"
           >

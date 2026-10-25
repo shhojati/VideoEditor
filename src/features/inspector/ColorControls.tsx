@@ -95,7 +95,7 @@ export function LutField({
           ))}
         </select>
       </label>
-      <button className="rounded bg-surface-3 px-2 py-0.5 text-xs hover:bg-[#363c49]" onClick={() => input.current?.click()}>
+      <button className="rounded bg-surface-3 px-2 py-0.5 text-xs hover:bg-surface-4" onClick={() => input.current?.click()}>
         {t('luts.import')}
       </button>
       <input

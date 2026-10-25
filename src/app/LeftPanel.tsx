@@ -46,7 +46,7 @@ function TabRow<T extends string>({ tabs, current, onPick, small }: { tabs: { id
           aria-selected={current === id}
           data-testid={`tab-${id}`}
           title={t(label)}
-          className={`flex min-w-0 items-center justify-center px-1 md:rounded-md ${small ? 'py-1 text-[10px] md:px-2.5 md:text-xs' : 'py-1.5 text-[11px] md:px-3 md:text-sm'} font-medium ${
+          className={`flex min-w-0 items-center justify-center px-1 md:rounded-md ${small ? 'py-1 text-[10px] md:px-2.5 md:text-xs' : 'py-1.5 text-[11px] md:px-3 md:text-[13px]'} font-medium ${
             current === id
               ? 'bg-surface-2 text-white shadow-[inset_0_-2px_0_var(--color-accent)] md:bg-surface-3 md:shadow-none'
               : 'text-muted hover:text-white md:text-neutral-300 md:hover:bg-surface-2'

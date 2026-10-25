@@ -92,7 +92,7 @@ function ProjectSettings({ project }: { project: Project }) {
         options={FPS_OPTIONS.map((f) => ({ value: f, label: String(f) }))}
         onChange={(v) => edit('ops.fps', (p) => void (p.settings.fps = v))}
       />
-      <div className="flex flex-col gap-1 text-xs md:gap-1.5 md:text-sm">
+      <div className="flex flex-col gap-1 text-xs md:gap-1.5 md:text-[13px]">
         <span className="text-muted">{t('settings.size')}</span>
         <span dir="ltr" data-testid="canvas-size" className="rounded-md border border-line bg-surface-2 px-2.5 py-1 text-center text-neutral-200 md:py-1.5">
           {width}×{height}

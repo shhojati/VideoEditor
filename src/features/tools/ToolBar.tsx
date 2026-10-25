@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SHAPE_KINDS } from '../../model/overlays';
 import { Brush, Eraser, Hand, MousePointer2, PenTool, Stamp, Type } from 'lucide-react';
@@ -17,7 +18,10 @@ const TOOLS: { tool: Tool; key: string; icon?: LucideIcon }[] = [
   { tool: 'eraser', key: 'E', icon: Eraser },
 ];
 
-const btn = 'flex h-7 w-7 items-center justify-center rounded-md text-sm leading-none md:h-9 md:w-9';
+/** A tool button's height plus the gap below it (px). */
+const ROW = 30;
+
+const btn = 'flex h-7 w-7 items-center justify-center rounded-md text-sm leading-none';
 
 /**
  * The preview's tool strip (top-left); beside it, the shape tool's shapes or the brush settings,
@@ -28,9 +32,23 @@ export function ToolBar() {
   const tool = useTool((s) => s.tool);
   const kind = useTool((s) => s.shapeKind);
   const optionsOpen = useTool((s) => s.optionsOpen);
+  // As many rows as the preview's height holds; the rest wrap into a second column.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [rows, setRows] = useState(TOOLS.length);
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setRows(Math.max(1, Math.min(TOOLS.length, Math.floor((el.clientHeight - 4) / ROW)))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   return (
-    <div data-preview-ui className="absolute start-2 top-2 z-10 flex items-start gap-1" dir="ltr">
-      <div role="toolbar" aria-label={t('tools.title')} aria-orientation="vertical" className="flex flex-col gap-0.5 rounded-lg border border-line bg-surface-2/95 p-0.5 shadow md:gap-1 md:p-1">
+    // Spans the viewport's height so a short preview wraps the tools into a second column; only the
+    // bars themselves take clicks.
+    <div ref={boxRef} data-preview-ui className="pointer-events-none absolute start-2 top-2 bottom-2 z-10 flex items-start gap-1 *:pointer-events-auto" dir="ltr">
+      <div role="toolbar" aria-label={t('tools.title')} aria-orientation="vertical" className="grid grid-flow-col gap-0.5 rounded-lg border border-line bg-surface-2/95 p-0.5 shadow"
+        style={{ gridTemplateRows: `repeat(${rows}, 28px)` }}
+      >
         {TOOLS.map((x) => (
           <button
             key={x.tool}
@@ -42,12 +60,12 @@ export function ToolBar() {
             className={`${btn} ${tool === x.tool ? 'bg-accent/90 text-on-accent' : 'text-neutral-300 hover:bg-surface-3 hover:text-white'}`}
             onClick={() => setTool(x.tool)}
           >
-            <Icon icon={x.icon ?? SHAPE_LINE_ICONS[kind]} />
+            <Icon icon={x.icon ?? SHAPE_LINE_ICONS[kind]} size={16} />
           </button>
         ))}
       </div>
       {tool === 'shape' && optionsOpen && (
-        <div role="radiogroup" aria-label={t('tools.shapeKind')} className="mt-[92px] flex gap-0.5 rounded-lg border border-line bg-surface-2/95 p-0.5 shadow md:mt-[124px] md:p-1">
+        <div role="radiogroup" aria-label={t('tools.shapeKind')} className="mt-[92px] flex gap-0.5 rounded-lg border border-line bg-surface-2/95 p-0.5 shadow">
           {SHAPE_KINDS.map((k) => (
             <button
               key={k}
@@ -60,7 +78,7 @@ export function ToolBar() {
               className={`${btn} ${kind === k ? 'bg-accent/90 text-on-accent' : 'text-neutral-200 hover:bg-surface-3'}`}
               onClick={() => useTool.setState({ shapeKind: k })}
             >
-              <Icon icon={SHAPE_LINE_ICONS[k]} />
+              <Icon icon={SHAPE_LINE_ICONS[k]} size={16} />
             </button>
           ))}
         </div>

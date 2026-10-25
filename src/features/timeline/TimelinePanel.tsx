@@ -1,4 +1,4 @@
-import { AudioLines, ChevronDown, ChevronUp, Eye, EyeOff, Film, Magnet, Minus, Music, Plus, Scissors, Trash2, Type, Unlink, X, type LucideIcon } from 'lucide-react';
+import { Image as ImageIcon, Video, AudioLines, ChevronDown, ChevronUp, Eye, EyeOff, Film, Magnet, Minus, Music, Plus, Scissors, Trash2, Type, Unlink, X, type LucideIcon } from 'lucide-react';
 import { Icon } from '../../app/icons';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +41,6 @@ const TAIL_SECONDS = 30;
  */
 export function TimelinePanel({ project }: { project: Project }) {
   const { t } = useTranslation();
-  const edit = useProjectStore((s) => s.edit);
   const snapping = useTimelineUi((s) => s.snapping);
   const hasSelection = useTimelineUi((s) => s.selection.length > 0);
   const duration = timelineDuration(project);
@@ -51,20 +50,9 @@ export function TimelinePanel({ project }: { project: Project }) {
   return (
     <section className="flex min-h-0 flex-1 flex-col border-t border-line bg-surface-1 md:overflow-hidden md:rounded-lg md:border" aria-label={t('panels.timeline')}>
       <Breadcrumb />
-      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs md:gap-1.5 md:px-3 md:py-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
-        {KINDS.map((kind) => (
-          <Button
-            key={kind}
-            variant="ghost"
-            className="text-xs"
-            onClick={() =>
-              // Audio tracks stack at the bottom, visual tracks on top.
-              edit('ops.addTrack', (p) => void (kind === 'audio' ? p.tracks.unshift(createTrack(kind)) : p.tracks.push(createTrack(kind))))
-            }
-          >
-            {t('track.add', { kind: t(`track.${kind}`) })}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5 text-xs md:gap-1.5 md:px-3 md:py-1.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:*:shrink-0">
+        {/* Desktop: these sit above the track headers (AddTrackButtons). */}
+        <AddTrackButtons className="md:hidden" />
         <Button variant="ghost" className="text-xs" onClick={() => addText(t('text.default'))} data-testid="btn-add-text">
           <Icon icon={Type} size={16} />
           {t('text.add')}
@@ -96,10 +84,10 @@ export function TimelinePanel({ project }: { project: Project }) {
         </Button>
         <Timecode duration={duration} fps={project.settings.fps} />
         <div className="ms-auto flex items-center gap-1" dir="ltr">
-          <Button className="text-xs md:w-9 md:px-0" onClick={() => zoomBy(1 / 1.5)} aria-label={t('timeline.zoomOut')}>
+          <Button className="text-xs md:w-8 md:px-0" onClick={() => zoomBy(1 / 1.5)} aria-label={t('timeline.zoomOut')}>
             <Icon icon={Minus} size={16} />
           </Button>
-          <Button className="text-xs md:w-9 md:px-0" onClick={() => zoomBy(1.5)} aria-label={t('timeline.zoomIn')}>
+          <Button className="text-xs md:w-8 md:px-0" onClick={() => zoomBy(1.5)} aria-label={t('timeline.zoomIn')}>
             <Icon icon={Plus} size={16} />
           </Button>
           <Button className="text-xs" onClick={zoomToFit}>
@@ -193,7 +181,9 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
     >
       <div className="relative" style={{ width: headerWidth + laneWidth }}>
         <div className="sticky top-0 z-30 flex border-b border-line bg-surface-1" style={{ height: RULER_HEIGHT }}>
-          <div className="sticky left-0 z-10 shrink-0 border-e border-line bg-surface-1" style={{ width: headerWidth }} />
+          <div className="sticky left-0 z-10 flex shrink-0 items-center border-e border-line bg-surface-1 px-1.5" style={{ width: headerWidth }}>
+            <AddTrackButtons compact className="max-md:hidden" />
+          </div>
           <div className="sticky" style={{ left: headerWidth }}>
             <Ruler />
           </div>
@@ -349,7 +339,7 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
   const compact = headerWidth < HEADER_WIDTH;
   return (
     <div
-      className={`sticky left-0 z-10 flex shrink-0 items-center border-e border-b border-line bg-surface-1 text-xs ${compact ? 'gap-1 px-1' : 'gap-1.5 px-2.5 md:text-sm'}`}
+      className={`sticky left-0 z-10 flex shrink-0 items-center border-e border-b border-line bg-surface-1 text-xs ${compact ? 'gap-1 px-1' : 'gap-1.5 px-2.5 md:text-[13px]'}`}
       style={{ width: headerWidth }}
       title={t(`track.${track.kind}`)}
     >
@@ -406,6 +396,47 @@ function TrackHeader({ track, edit }: { track: Track; edit: ReturnType<typeof us
       >
         <Icon icon={X} size={16} />
       </button>
+    </div>
+  );
+}
+
+const KIND_ADD_ICON: Record<TrackKind, LucideIcon> = { video: Video, audio: AudioLines, text: ImageIcon };
+
+/**
+ * New video / audio / graphics track. On desktop they are small icons in the corner above the
+ * track headers; on phones, labelled buttons on the timeline toolbar.
+ */
+function AddTrackButtons({ compact, className = '' }: { compact?: boolean; className?: string }) {
+  const { t } = useTranslation();
+  const edit = useProjectStore((s) => s.edit);
+  return (
+    <div className={`flex items-center gap-0.5 ${className}`}>
+      {KINDS.map((kind) => {
+        const label = t('track.add', { kind: t(`track.${kind}`) });
+        return (
+          <Button
+            key={kind}
+            variant="ghost"
+            className={compact ? 'relative h-[22px]! w-7 px-0! text-muted hover:text-white' : 'text-xs'}
+            aria-label={compact ? label : undefined}
+            title={compact ? label : undefined}
+            data-testid={`add-track-${kind}`}
+            onClick={() =>
+              // Audio tracks stack at the bottom, visual tracks on top.
+              edit('ops.addTrack', (p) => void (kind === 'audio' ? p.tracks.unshift(createTrack(kind)) : p.tracks.push(createTrack(kind))))
+            }
+          >
+            {compact ? (
+              <>
+                <Icon icon={KIND_ADD_ICON[kind]} size={15} />
+                <Icon icon={Plus} size={9} strokeWidth={3} className="absolute end-0.5 bottom-0" />
+              </>
+            ) : (
+              label
+            )}
+          </Button>
+        );
+      })}
     </div>
   );
 }

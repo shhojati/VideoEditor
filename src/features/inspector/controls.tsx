@@ -61,7 +61,7 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
           tabIndex={0}
           aria-expanded={!collapsed}
           data-testid="section-toggle"
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-xs font-medium tracking-[0.15em] text-muted uppercase select-none hover:text-neutral-200 md:text-[13px]"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-xs font-medium tracking-[0.15em] text-muted uppercase select-none hover:text-neutral-200 md:text-xs"
           onClick={() => toggleSection(id)}
           onKeyDown={(e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -97,7 +97,7 @@ export function Section({ id, title, onReset, children }: { id: string; title: s
 /** Label above its controls: the inspector column is narrow. */
 function Row({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 text-xs md:gap-1.5 md:text-sm">
+    <div className="flex flex-col gap-1 text-xs md:gap-1.5 md:text-[13px]">
       {label && (
         <label htmlFor={htmlFor} className="text-muted">
           {label}

@@ -50,7 +50,7 @@ export function PreviewPanel({ project }: { project: Project }) {
   useViewportGestures(boxRef);
 
   return (
-    <Panel title={t('panels.preview')}>
+    <Panel title={t('panels.preview')} hideTitle>
       <div ref={setFullscreenTarget} className="flex h-full flex-col bg-surface-0" dir="ltr" data-testid="preview-panel">
         <div ref={boxRef} className="relative min-h-0 flex-1 touch-none overflow-hidden" data-testid="preview-viewport">
           <canvas ref={canvasRef} data-testid="preview-canvas" className="absolute inset-0" style={{ width: viewport.w, height: viewport.h }} />

@@ -31,10 +31,10 @@ export function TopBar() {
   const status = useSaveStatus((s) => s.status);
 
   return (
-    <header className="flex items-center gap-3 border-b border-line bg-surface-1 px-3 py-2 max-md:gap-1.5 max-md:px-2 max-md:py-1.5 md:h-[60px] md:gap-4 md:px-4">
+    <header className="flex items-center gap-3 border-b border-line bg-surface-1 px-3 py-2 max-md:gap-1.5 max-md:px-2 max-md:py-1.5 md:h-[52px] md:gap-4 md:px-4">
       <span className="flex items-center gap-2.5 max-md:hidden md:me-2">
         <Logo className="h-8 w-8" />
-        <span className="text-lg font-light tracking-[0.3em] text-neutral-100 uppercase">{t('app.title')}</span>
+        <span className="text-base font-light tracking-[0.3em] text-neutral-100 uppercase">{t('app.title')}</span>
       </span>
       <ProjectMenu />
       {project && <ProjectName key={project.id + project.name} name={project.name} />}
@@ -60,7 +60,7 @@ export function TopBar() {
         </Button>
       </div>
       <span
-        className={`flex items-center gap-2 text-xs md:text-sm ${status === 'error' ? 'text-red-400' : 'text-muted'}`}
+        className={`flex items-center gap-2 text-xs md:text-[13px] ${status === 'error' ? 'text-red-400' : 'text-muted'}`}
         data-testid="save-status"
         data-status={status}
         title={t(`save.${status}`)}

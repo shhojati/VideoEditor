@@ -15,7 +15,7 @@ export function BrushOptions() {
       data-testid="brush-options"
       aria-label={t('paint.options')}
       role="group"
-      className="w-60 space-y-1.5 rounded border border-line bg-surface-2/95 p-2 text-xs shadow-lg"
+      className="max-h-full w-60 space-y-1.5 overflow-y-auto rounded-md border border-line bg-surface-2/95 p-2 text-xs shadow-lg"
     >
       {cloning && (
         <div className="space-y-1">

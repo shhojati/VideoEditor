@@ -4,6 +4,7 @@ import './i18n';
 import './index.css';
 import { App } from './app/App';
 import { initAccount } from './store/account';
+import { initAgent } from './features/agent/bridge';
 
 if (import.meta.env.DEV) {
   // Handles for debugging and E2E checks; not present in production builds.
@@ -13,6 +14,7 @@ if (import.meta.env.DEV) {
 }
 
 initAccount();
+initAgent();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

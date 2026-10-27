@@ -1,0 +1,1552 @@
+[
+  {
+    "name": "get_project",
+    "description": "The open project: settings, length, playhead, every track (bottom to top) with its clips, and subtitle tracks. Call this first and after edits to get ids. Times are seconds.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "list_assets",
+    "description": "Media in the project (videos, sounds, pictures) with ids for add_clip. The user imports files; an agent can only add library items (add_library_item).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "get_clip",
+    "description": "Every setting of one clip (transform, text, shape, audio, effects with params, keyframes).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "clipId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "add_clip",
+    "description": "Put an asset on the timeline at `start`. Without trackId it goes on the top free track that takes it (or a new one). Optional inPoint (seconds into the source) and duration trim it.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "start": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "trackId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "inPoint": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "assetId",
+        "start"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "add_text",
+    "description": "Add a text clip (title, caption, label) on a graphics track. Defaults: 3 s, white bold 72 px Vazirmatn with a black outline, slightly below centre. Persian/Arabic text is detected and laid out right-to-left.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "fontFamily": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 4,
+          "maximum": 1000,
+          "description": "Pixels in project resolution"
+        },
+        "fontWeight": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 900
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "strokeColor": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "bgColor": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "animIn": {
+          "type": "string",
+          "enum": [
+            "fade",
+            "slideUp",
+            "slideDown",
+            "slideLeft",
+            "slideRight",
+            "pop",
+            "zoom",
+            "typewriter",
+            "wordByWord",
+            "blurIn",
+            "wipe"
+          ]
+        },
+        "animOut": {
+          "type": "string",
+          "enum": [
+            "fade",
+            "slideUp",
+            "slideDown",
+            "slideLeft",
+            "slideRight",
+            "pop",
+            "zoom",
+            "typewriter",
+            "wordByWord",
+            "blurIn",
+            "wipe"
+          ]
+        },
+        "start": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "transform": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Centre offset as a fraction of the frame width: 0 centred, -0.5 left edge, 0.5 right edge"
+            },
+            "y": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Centre offset as a fraction of the frame height: 0 centred, -0.5 top, 0.5 bottom"
+            },
+            "scale": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 20
+            },
+            "rotation": {
+              "type": "number",
+              "minimum": -3600,
+              "maximum": 3600,
+              "description": "Degrees, clockwise"
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "content"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "add_shape",
+    "description": "Add a vector shape (rectangle, circle, star, line…) on a graphics track. Sizes are project pixels.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "fill": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "stroke": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "cornerRadius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "rectangle",
+            "square",
+            "circle",
+            "oval",
+            "triangle",
+            "star",
+            "polygon",
+            "line"
+          ]
+        },
+        "start": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "transform": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Centre offset as a fraction of the frame width: 0 centred, -0.5 left edge, 0.5 right edge"
+            },
+            "y": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Centre offset as a fraction of the frame height: 0 centred, -0.5 top, 0.5 bottom"
+            },
+            "scale": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 20
+            },
+            "rotation": {
+              "type": "number",
+              "minimum": -3600,
+              "maximum": 3600,
+              "description": "Degrees, clockwise"
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "add_solid",
+    "description": "Add a full-frame solid colour layer (a background or a colour wash) on a graphics track.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "start": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "color"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "update_clip",
+    "description": "Change a clip: length, transform (position/scale/rotation/opacity), blend mode, sound (volume 0..2, fades), text style or shape style. On a clip with keyframes, transform and volume changes land in a keyframe at `time` (default the clip start).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "transform": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Centre offset as a fraction of the frame width: 0 centred, -0.5 left edge, 0.5 right edge"
+            },
+            "y": {
+              "type": "number",
+              "minimum": -2,
+              "maximum": 2,
+              "description": "Centre offset as a fraction of the frame height: 0 centred, -0.5 top, 0.5 bottom"
+            },
+            "scale": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 20
+            },
+            "rotation": {
+              "type": "number",
+              "minimum": -3600,
+              "maximum": 3600,
+              "description": "Degrees, clockwise"
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "blend": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "multiply",
+            "screen",
+            "overlay",
+            "softLight",
+            "hardLight",
+            "darken",
+            "lighten",
+            "add",
+            "difference",
+            "color",
+            "luminosity"
+          ]
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "fadeIn": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "fadeOut": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "text": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "fontFamily": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "fontSize": {
+              "type": "number",
+              "minimum": 4,
+              "maximum": 1000,
+              "description": "Pixels in project resolution"
+            },
+            "fontWeight": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 900
+            },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "strokeColor": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "strokeWidth": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "bgColor": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "align": {
+              "type": "string",
+              "enum": [
+                "left",
+                "center",
+                "right"
+              ]
+            },
+            "animIn": {
+              "type": "string",
+              "enum": [
+                "fade",
+                "slideUp",
+                "slideDown",
+                "slideLeft",
+                "slideRight",
+                "pop",
+                "zoom",
+                "typewriter",
+                "wordByWord",
+                "blurIn",
+                "wipe"
+              ]
+            },
+            "animOut": {
+              "type": "string",
+              "enum": [
+                "fade",
+                "slideUp",
+                "slideDown",
+                "slideLeft",
+                "slideRight",
+                "pop",
+                "zoom",
+                "typewriter",
+                "wordByWord",
+                "blurIn",
+                "wipe"
+              ]
+            }
+          }
+        },
+        "shape": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "height": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "fill": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "stroke": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "strokeWidth": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "cornerRadius": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        },
+        "time": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        }
+      },
+      "required": [
+        "clipId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "move_clip",
+    "description": "Move a clip to a new start time, optionally onto another track of the same kind. Fails if it would overlap another clip.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "start": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "trackId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "clipId",
+        "start"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "trim_clip",
+    "description": "Move a clip's start or end edge to timeline time `time` (clamped to the source media and neighbouring clips).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "start",
+            "end"
+          ]
+        },
+        "time": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        }
+      },
+      "required": [
+        "clipId",
+        "edge",
+        "time"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "split",
+    "description": "Cut clips in two at timeline time `time`: the given clips, or every clip under that time on unlocked tracks. Returns the ids of the new right-hand parts.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "clipIds": {
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "required": [
+        "time"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "delete_clips",
+    "description": "Delete clips. With ripple, later clips on the same track move left to close the gap.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipIds": {
+          "minItems": 1,
+          "maxItems": 500,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "ripple": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "clipIds"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "set_speed",
+    "description": "Play a video or sound clip faster or slower (0.1 to 10; 2 = twice as fast). The clip gets shorter or longer on the timeline.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "clipId",
+        "speed"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "detach_audio",
+    "description": "Move the sound of video clips onto their own clips on an audio track (the video goes silent).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipIds": {
+          "minItems": 1,
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "required": [
+        "clipIds"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "list_effects",
+    "description": "Effects (with their parameters and ranges), filter presets and transition kinds that can be added.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "add_effect",
+    "description": "Add an effect (blur, glow, colour correction…; see list_effects) to visual clips, with optional parameter values.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipIds": {
+          "minItems": 1,
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "gaussianBlur",
+            "fastBoxBlur",
+            "cameraLensBlur",
+            "directionalBlur",
+            "sharpen",
+            "unsharpMask",
+            "lumetri",
+            "curves",
+            "levels",
+            "hueSaturation",
+            "tint",
+            "tritone",
+            "brightnessContrast",
+            "transform",
+            "turbulentDisplace",
+            "displacementMap",
+            "opticsCompensation",
+            "powerPin",
+            "fill",
+            "gradientRamp",
+            "fourColorGradient",
+            "grid",
+            "lensFlare",
+            "stroke",
+            "glow",
+            "dropShadow",
+            "motionTile",
+            "roughenEdges",
+            "findEdges",
+            "posterize",
+            "mosaic",
+            "bevelAlpha",
+            "sphere",
+            "echo",
+            "posterizeTime",
+            "particleWorld",
+            "particleSystems",
+            "keylight",
+            "linearColorKey",
+            "colorRange",
+            "linearWipe",
+            "radialWipe",
+            "venetianBlinds",
+            "blockDissolve",
+            "gradientWipe",
+            "colorWheels"
+          ]
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "required": [
+        "clipIds",
+        "kind"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "update_effect",
+    "description": "Change an effect's parameters, turn it on or off, or remove it.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "effectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string",
+              "boolean"
+            ]
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "remove": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "clipId",
+        "effectId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "set_filter",
+    "description": "Give visual clips a colour filter preset (see list_effects filterPresets), at `intensity` percent.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipIds": {
+          "minItems": 1,
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "preset": {
+          "type": "string",
+          "enum": [
+            "cinematic",
+            "retro",
+            "vintage",
+            "vhs",
+            "glitch",
+            "fade",
+            "film",
+            "blur",
+            "warm",
+            "cool",
+            "fresh",
+            "autumn",
+            "summer",
+            "winter",
+            "sunset",
+            "natural",
+            "glowPortrait",
+            "soft",
+            "smooth",
+            "bright",
+            "cinema",
+            "tealOrange",
+            "filmGrain",
+            "dramatic",
+            "moody",
+            "noir",
+            "dreamy",
+            "goldenHour",
+            "pastel",
+            "matte",
+            "faded",
+            "softFocus",
+            "mono",
+            "bw",
+            "classic",
+            "silver",
+            "nineties",
+            "oldFilm",
+            "polaroid",
+            "retroFade"
+          ]
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "clipIds",
+        "preset"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "add_transition",
+    "description": "Add a transition on the cut between two touching clips of the same track (fromClipId ends where toClipId starts).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "fromClipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "toClipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "crossfade",
+            "dipBlack",
+            "dipWhite",
+            "wipeLeft",
+            "wipeRight",
+            "wipeUp",
+            "wipeDown",
+            "slideLeft",
+            "slideRight",
+            "pushLeft",
+            "pushRight",
+            "zoomIn",
+            "zoomOut",
+            "blur"
+          ]
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3
+        }
+      },
+      "required": [
+        "fromClipId",
+        "toClipId",
+        "kind"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "animate",
+    "description": "Animate a clip with keyframes at timeline times. Values: x, y, scale, rotation, opacity, volume, and for text text.size; shapes shape.width/shape.height. Ease: linear, easeIn, easeOut, easeInOut (default), hold.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "keyframes": {
+          "minItems": 1,
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "time": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "values": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "ease": {
+                "type": "string",
+                "enum": [
+                  "linear",
+                  "easeIn",
+                  "easeOut",
+                  "easeInOut",
+                  "hold"
+                ]
+              }
+            },
+            "required": [
+              "time",
+              "values"
+            ]
+          }
+        }
+      },
+      "required": [
+        "clipId",
+        "keyframes"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "clear_keyframes",
+    "description": "Remove a clip's animation, keeping the values it has at its start.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "clipId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "list_templates",
+    "description": "Ready-made titles, intros, lower thirds and outros that insert_template can add.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "insert_template",
+    "description": "Insert a template at `start` on new graphics tracks on top. Its placeholder text can then be changed with update_clip.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "templateId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "start": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "persian": {
+          "default": false,
+          "description": "Use the Persian placeholder text, laid out right-to-left",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "templateId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "list_library",
+    "description": "Files in the server's library: stickers, sounds (sound effects and music), overlays (light leaks, dust) or backgrounds.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stickers",
+            "sounds",
+            "overlays",
+            "backgrounds"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "add_library_item",
+    "description": "Add a library file (see list_library) to the project and the timeline at `start`. Backgrounds go on the bottom video track.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "stickers",
+            "sounds",
+            "overlays",
+            "backgrounds"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "start": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "list_cues",
+    "description": "The cues (start, end, text) of a subtitle track, or of the first one.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "trackId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "add_subtitles",
+    "description": "Create a subtitle track from cues you write or from SRT/WebVTT text. Use it for scripted captions; auto_captions transcribes the audio instead.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "language": {
+          "default": "en",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 10
+        },
+        "cues": {
+          "maxItems": 5000,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "end": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "start",
+              "end",
+              "text"
+            ]
+          }
+        },
+        "srt": {
+          "description": "SRT or WebVTT file text, instead of cues",
+          "type": "string",
+          "maxLength": 500000
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "edit_cues",
+    "description": "Change, add or delete subtitle cues. Changes: {cueId, text?, start?, end?}; additions: {trackId, start, end, text}; deletions: cue ids.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "change": {
+          "maxItems": 2000,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cueId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "start": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "end": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              }
+            },
+            "required": [
+              "cueId"
+            ]
+          }
+        },
+        "add": {
+          "maxItems": 2000,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "trackId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "start": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "end": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "trackId",
+              "start",
+              "end",
+              "text"
+            ]
+          }
+        },
+        "delete": {
+          "maxItems": 5000,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "auto_captions",
+    "description": "Transcribe the speech in the project into a new subtitle track, in the browser with Whisper. Takes from seconds to minutes: poll job_status. Model: base is fast, large-v3-turbo is best (needs a strong computer).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "model": {
+          "default": "base",
+          "type": "string",
+          "enum": [
+            "tiny",
+            "base",
+            "small",
+            "large-v3-turbo"
+          ]
+        },
+        "language": {
+          "description": "e.g. fa, en; omitted: detected",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 10
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "translate_captions",
+    "description": "Translate an English subtitle track into a new Persian one, in the browser (Pro plan). Poll job_status.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "trackId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "quality": {
+          "default": "standard",
+          "type": "string",
+          "enum": [
+            "standard",
+            "precise"
+          ]
+        }
+      },
+      "required": [
+        "trackId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "snapshot",
+    "description": "A picture of the video at timeline time `time` (also moves the playhead there). Use it to check how an edit looks.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "maxSize": {
+          "default": 640,
+          "type": "integer",
+          "minimum": 160,
+          "maximum": 1280
+        }
+      },
+      "required": [
+        "time"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "job_status",
+    "description": "Progress of auto_captions, translate_captions and export.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true
+    }
+  },
+  {
+    "name": "request_export",
+    "description": "Open the export window with these settings. The user must press Export themselves (the browser asks where to save). Free accounts: up to 60 s and a watermark. Poll job_status.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "format": {
+          "default": "mp4",
+          "type": "string",
+          "enum": [
+            "mp4",
+            "mov",
+            "webm",
+            "avi",
+            "mp3",
+            "gif",
+            "png",
+            "jpg"
+          ]
+        },
+        "resolution": {
+          "anyOf": [
+            {
+              "type": "number",
+              "const": 240
+            },
+            {
+              "type": "number",
+              "const": 360
+            },
+            {
+              "type": "number",
+              "const": 480
+            },
+            {
+              "type": "number",
+              "const": 720
+            },
+            {
+              "type": "number",
+              "const": 1080
+            }
+          ]
+        },
+        "quality": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "burnSubtitles": {
+          "type": "boolean"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "undo",
+    "description": "Undo the last change (the agent’s or the user’s).",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "redo",
+    "description": "Redo the last undone change.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  }
+]

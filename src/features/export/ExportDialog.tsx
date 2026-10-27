@@ -58,6 +58,16 @@ export function ExportDialog({ project }: { project: Project }) {
   const me = useAccount((s) => s.me);
   const accountStatus = useAccount((s) => s.status);
   const pricing = usePricing();
+  // Settings an AI agent asked for (request_export) replace the current choice.
+  useEffect(
+    () =>
+      useExport.subscribe(({ preset }) => {
+        if (!preset) return;
+        setSettings((s) => fitToFormat({ ...s, ...preset }));
+        useExport.setState({ preset: undefined });
+      }),
+    [],
+  );
   // Pick up a Pro activation made while the page was open.
   useEffect(() => {
     if (state.open) refreshAccount(true);

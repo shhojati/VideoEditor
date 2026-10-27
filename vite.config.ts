@@ -65,7 +65,11 @@ function dropDevOnlyPublicFiles(): Plugin {
 
 // The account API (server/); nginx proxies /api the same way in production.
 const API_PORT = Number(process.env.API_PORT ?? 3000);
-const proxy = { '/api': `http://127.0.0.1:${API_PORT}` };
+// Keep the browser's Host header: OAuth and MCP discovery documents name this address, and MCP
+// clients refuse them when they name the API's own port instead.
+const apiTarget = { target: `http://127.0.0.1:${API_PORT}`, changeOrigin: false };
+// The account API, plus MCP and OAuth for AI apps (docs/MCP.md), like deploy/nginx.conf.
+const proxy = { '/api': apiTarget, '/mcp': apiTarget, '/oauth/': apiTarget, '^/\\.well-known/(oauth-|openid-)': apiTarget };
 
 /**
  * Dev and preview: start the account API (server/data/dev.db) alongside Vite, unless one already

@@ -32,6 +32,33 @@ CREATE TABLE IF NOT EXISTS grants (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS grants_user ON grants(user_id);
+-- AI apps that connect to /mcp (oauth.ts). Clients register themselves (dynamic registration).
+CREATE TABLE IF NOT EXISTS oauth_clients (
+  client_id TEXT PRIMARY KEY,
+  secret_hash TEXT,
+  name TEXT NOT NULL,
+  redirect_uris TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS oauth_codes (
+  code_hash TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES oauth_clients(client_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  redirect_uri TEXT NOT NULL,
+  challenge TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+-- Access and refresh tokens (only their SHA-256, like sessions).
+CREATE TABLE IF NOT EXISTS oauth_tokens (
+  token_hash TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('access', 'refresh')),
+  client_id TEXT NOT NULL REFERENCES oauth_clients(client_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  last_used_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS oauth_tokens_user ON oauth_tokens(user_id);
 `;
 
 export function openDb(path: string): Db {

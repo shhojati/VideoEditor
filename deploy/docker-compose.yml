@@ -26,6 +26,9 @@ services:
   api:
     image: ${API_IMAGE:-ghcr.io/shhojati/videoeditor-api}:${TAG:-latest}
     restart: unless-stopped
+    environment:
+      # The editor's public https address: AI apps (MCP, docs/MCP.md) are sent here to log in.
+      PUBLIC_URL: ${PUBLIC_URL:-https://editor.shahabdev.ir}
     volumes:
       # SQLite database (app.db). Back this folder up.
       - ./data:/data

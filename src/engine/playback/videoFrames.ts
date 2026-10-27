@@ -85,6 +85,12 @@ export class VideoFrames {
 
   private project: Project | null = null;
 
+  /** True while a paused seek is still decoding frames. */
+  get seeking() {
+    for (const e of this.seeks.values()) if (e.busy || e.target !== undefined) return true;
+    return false;
+  }
+
   /** Paused: make sure every visible clip gets the exact frame for time t. */
   seek(project: Project, t: number) {
     this.project = project;

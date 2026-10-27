@@ -12,13 +12,19 @@ import {
   tokenHash,
   verifyPassword,
 } from './auth.ts';
+import { Bridge } from './bridge.ts';
 import { addMonths, idFromCode, userCode, type Db, type UserRow } from './db.ts';
+import { handleRpc } from './mcp.ts';
+import { createOAuth, OAuthError } from './oauth.ts';
 import { RateLimiter } from './rateLimit.ts';
 
 export const COOKIE = 've_session';
 const DAY = 86_400_000;
 export const SESSION_MS = 30 * DAY;
 const MAX_BODY = 16 * 1024;
+/** Bigger bodies: tool results (snapshots are pictures) and MCP calls (SRT text). */
+const BODY_LIMITS: Record<string, number> = { '/api/bridge/result': 4 * 1024 * 1024, '/mcp': 1024 * 1024 };
+const VERSION = '1.0.0';
 
 export interface AppOptions {
   db: Db;
@@ -27,6 +33,9 @@ export interface AppOptions {
   secureCookies?: boolean;
   /** Read the client IP from X-Forwarded-For (behind Caddy → nginx). */
   trustProxy?: boolean;
+  /** The editor's public address, e.g. https://editor.example.com (OAuth issuer, MCP resource). Default: from the Host header. */
+  publicUrl?: string;
+  bridge?: Bridge;
 }
 
 /** Error codes the editor translates (src/i18n: account.errors.*). */
@@ -123,6 +132,17 @@ export function createApp(opts: AppOptions) {
     return userById(s.user_id) ?? null;
   }
 
+  /** Check the password and start a session (the login route and the OAuth page). */
+  async function logIn(ip: string, res: ServerResponse, rawEmail: unknown, rawPassword: unknown): Promise<UserRow> {
+    if (!loginLimit.hit(ip)) throw new ApiError(429, 'rate_limited');
+    const email = normalizeEmail(str(rawEmail, 300) ?? '');
+    const password = str(rawPassword, MAX_PASSWORD) ?? '';
+    const u = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserRow | undefined;
+    if (!u || !(await verifyPassword(password, u.password_hash))) throw new ApiError(401, 'bad_credentials');
+    startSession(res, u.id);
+    return u;
+  }
+
   const requireUser = (ctx: Ctx) => {
     const u = currentUser(ctx);
     if (!u) throw new ApiError(401, 'unauthorized');
@@ -153,6 +173,27 @@ export function createApp(opts: AppOptions) {
   /** Admin view of a user. */
   const adminUser = (u: UserRow) => ({ ...toMe(u), createdAt: u.created_at, lastLoginAt: u.last_login_at });
 
+  const bridge = opts.bridge ?? new Bridge();
+  const baseUrl = (req: IncomingMessage) => opts.publicUrl?.replace(/\/+$/, '') ?? `http://${req.headers.host ?? 'localhost'}`;
+  const oauth = createOAuth({
+    db,
+    now,
+    baseUrl,
+    secureCookies: opts.secureCookies,
+    sessionUser: (req, res) => currentUser({ req, res } as Ctx),
+    login: async (req, res, email, password) => {
+      try {
+        await logIn(clientIp(req), res, email, password);
+        return true;
+      } catch (e) {
+        if (e instanceof ApiError) return false;
+        throw e;
+      }
+    },
+  });
+  const clientLimit = new RateLimiter(20, 60 * 60_000, now);
+  const mcpLimit = new RateLimiter(300, 60_000, now);
+
   type Handler = (ctx: Ctx, params: string[]) => Promise<unknown> | unknown;
   const routes: [string, RegExp, Handler][] = [
     ['GET', /^\/api\/health$/, () => ({ ok: true })],
@@ -180,14 +221,8 @@ export function createApp(opts: AppOptions) {
       'POST',
       /^\/api\/auth\/login$/,
       async (ctx) => {
-        if (!loginLimit.hit(ctx.ip)) throw new ApiError(429, 'rate_limited');
         const b = await ctx.body();
-        const email = normalizeEmail(str(b.email, 300) ?? '');
-        const password = str(b.password, MAX_PASSWORD) ?? '';
-        const u = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserRow | undefined;
-        if (!u || !(await verifyPassword(password, u.password_hash))) throw new ApiError(401, 'bad_credentials');
-        startSession(ctx.res, u.id);
-        return toMe(u);
+        return toMe(await logIn(ctx.ip, ctx.res, b.email, b.password));
       },
     ],
 
@@ -215,6 +250,7 @@ export function createApp(opts: AppOptions) {
         // Log out everywhere else.
         const keep = tokenHash(sessionToken(ctx.req)!);
         db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(u.id, keep);
+        oauth.disconnectAll(u.id);
         return { ok: true };
       },
     ],
@@ -225,6 +261,34 @@ export function createApp(opts: AppOptions) {
       (ctx) => {
         const u = currentUser(ctx);
         return { user: u ? toMe(u) : null };
+      },
+    ],
+
+    // ---- AI agents (MCP) ----
+
+    [
+      'POST',
+      /^\/api\/bridge\/result$/,
+      async (ctx) => {
+        const u = requireUser(ctx);
+        const b = await ctx.body();
+        const r = b.result as { content?: unknown } | null;
+        // Passed on to the agent as an MCP tool result: it must at least look like one.
+        if (!r || typeof r !== 'object' || !Array.isArray(r.content)) throw new ApiError(400, 'bad_request');
+        if (!bridge.result(u.id, str(b.tabId, 100) ?? '', str(b.callId, 100) ?? '', r)) throw new ApiError(404, 'not_found');
+        return { ok: true };
+      },
+    ],
+
+    ['GET', /^\/api\/agent\/apps$/, (ctx) => ({ apps: oauth.apps(requireUser(ctx).id) })],
+
+    [
+      'POST',
+      /^\/api\/agent\/apps\/revoke$/,
+      async (ctx) => {
+        const u = requireUser(ctx);
+        oauth.disconnect(u.id, str((await ctx.body()).clientId, 200) ?? '');
+        return { ok: true };
       },
     ],
 
@@ -295,6 +359,7 @@ export function createApp(opts: AppOptions) {
         const password = tempPassword();
         db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hashPassword(password), u.id);
         db.prepare('DELETE FROM sessions WHERE user_id = ?').run(u.id);
+        oauth.disconnectAll(u.id);
         return { password };
       },
     ],
@@ -345,31 +410,127 @@ export function createApp(opts: AppOptions) {
     return req.socket.remoteAddress ?? '';
   }
 
-  function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-    // JSON only: a cross-site form cannot send it without a CORS preflight we never answer.
-    if (!String(req.headers['content-type'] ?? '').startsWith('application/json'))
-      return Promise.reject(new ApiError(415, 'bad_request'));
+  function readRaw(req: IncomingMessage, limit: number): Promise<string> {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       let size = 0;
       req.on('data', (c: Buffer) => {
         size += c.length;
-        if (size > MAX_BODY) {
+        if (size > limit) {
           reject(new ApiError(413, 'bad_request'));
           req.destroy();
         } else chunks.push(c);
       });
-      req.on('end', () => {
-        try {
-          const v = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-          if (v && typeof v === 'object' && !Array.isArray(v)) resolve(v);
-          else reject(new ApiError(400, 'bad_request'));
-        } catch {
-          reject(new ApiError(400, 'bad_request'));
-        }
-      });
+      req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
       req.on('error', reject);
     });
+  }
+
+  const isJson = (req: IncomingMessage) => String(req.headers['content-type'] ?? '').startsWith('application/json');
+
+  /** A JSON value (object, or array when `arrays`). */
+  async function readJson(req: IncomingMessage, limit: number, arrays = false): Promise<unknown> {
+    // JSON only: a cross-site form cannot send it without a CORS preflight we never answer.
+    if (!isJson(req)) throw new ApiError(415, 'bad_request');
+    let v: unknown;
+    try {
+      v = JSON.parse((await readRaw(req, limit)) || '{}');
+    } catch {
+      throw new ApiError(400, 'bad_request');
+    }
+    if (v && typeof v === 'object' && (arrays || !Array.isArray(v))) return v;
+    throw new ApiError(400, 'bad_request');
+  }
+
+  const readBody = (req: IncomingMessage, limit: number) => readJson(req, limit) as Promise<Record<string, unknown>>;
+
+  /** OAuth endpoints take forms (RFC 6749); JSON is accepted too. */
+  async function readForm(req: IncomingMessage): Promise<URLSearchParams> {
+    if (isJson(req)) {
+      const o = await readBody(req, MAX_BODY);
+      return new URLSearchParams(Object.entries(o).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v]] : [])));
+    }
+    if (!String(req.headers['content-type'] ?? '').startsWith('application/x-www-form-urlencoded')) throw new ApiError(415, 'bad_request');
+    return new URLSearchParams(await readRaw(req, MAX_BODY));
+  }
+
+  /** Endpoints AI apps reach from other origins (they authenticate with tokens, never cookies). */
+  const isPublic = (path: string) =>
+    path === '/mcp' || path.startsWith('/.well-known/oauth-') || path === '/oauth/register' || path === '/oauth/token' || path === '/oauth/revoke';
+
+  /** MCP, OAuth and the bridge's event stream: not the JSON API's shape. True when handled. */
+  async function special(ctx: Ctx): Promise<boolean> {
+    const { req, res, method, path } = ctx;
+    if (isPublic(path)) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Mcp-Protocol-Version, Mcp-Session-Id');
+      res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate, Mcp-Session-Id');
+      if (method === 'OPTIONS') {
+        res.statusCode = 204;
+        res.end();
+        return true;
+      }
+    }
+    const oauthError = (e: unknown) => {
+      if (!(e instanceof OAuthError)) throw e;
+      send(res, e.status, { error: e.error, ...(e.message !== e.error && { error_description: e.message }) });
+    };
+
+    if (method === 'GET' && /^\/\.well-known\/oauth-protected-resource(\/mcp)?$/.test(path)) send(res, 200, oauth.resourceMetadata(req));
+    else if (method === 'GET' && /^\/\.well-known\/(oauth-authorization-server|openid-configuration)$/.test(path)) send(res, 200, oauth.metadata(req));
+    else if (path === '/oauth/register' && method === 'POST') {
+      if (!clientLimit.hit(ctx.ip)) throw new ApiError(429, 'rate_limited');
+      try {
+        send(res, 201, oauth.register(await readBody(req, MAX_BODY)));
+      } catch (e) {
+        oauthError(e);
+      }
+    } else if (path === '/oauth/authorize' && (method === 'GET' || method === 'POST'))
+      await oauth.authorize(req, res, ctx.query, method === 'POST' ? await readForm(req) : null);
+    else if (path === '/oauth/token' && method === 'POST') {
+      try {
+        send(res, 200, oauth.token(req, await readForm(req)));
+      } catch (e) {
+        oauthError(e);
+      }
+    } else if (path === '/oauth/revoke' && method === 'POST') {
+      oauth.revoke(await readForm(req));
+      send(res, 200, {});
+    } else if (path === '/mcp') await mcp(ctx);
+    else if (path === '/api/bridge/stream' && method === 'GET') bridge.open(requireUser(ctx).id, res);
+    else return false;
+    return true;
+  }
+
+  async function mcp({ req, res, method }: Ctx) {
+    const who = oauth.bearer(req);
+    const u = who && userById(who.userId);
+    if (!u) {
+      res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${baseUrl(req)}/.well-known/oauth-protected-resource"`);
+      return send(res, 401, { error: 'invalid_token' });
+    }
+    if (method !== 'POST') {
+      // No server-to-client stream: every answer is a plain JSON response.
+      res.setHeader('Allow', 'POST');
+      return send(res, 405, { error: 'method_not_allowed' });
+    }
+    if (!mcpLimit.hit(String(u.id))) return send(res, 429, { error: 'rate_limited' });
+    let body: unknown;
+    try {
+      body = await readJson(req, BODY_LIMITS['/mcp'], true);
+    } catch (e) {
+      if (!(e instanceof ApiError) || e.status === 413) throw e;
+      return send(res, 400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
+    }
+    const user = { userId: u.id, plan: toMe(u).plan };
+    const msgs = Array.isArray(body) ? body : [body];
+    const out = (await Promise.all(msgs.map((m) => handleRpc(m, user, bridge, VERSION)))).filter((x) => x !== null);
+    if (!out.length) {
+      res.statusCode = 202;
+      return res.end();
+    }
+    send(res, 200, Array.isArray(body) ? out : out[0]);
   }
 
   function send(res: ServerResponse, status: number, data: unknown) {
@@ -390,9 +551,10 @@ export function createApp(opts: AppOptions) {
       path: url.pathname,
       query: url.searchParams,
       ip: clientIp(req),
-      body: () => (body ??= readBody(req)),
+      body: () => (body ??= readBody(req, BODY_LIMITS[url.pathname] ?? MAX_BODY)),
     };
     try {
+      if (await special(ctx)) return;
       let pathMatched = false;
       for (const [m, re, handler] of routes) {
         const match = re.exec(ctx.path);

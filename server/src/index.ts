@@ -1,10 +1,12 @@
-// Account API. Env: PORT (3000), DB_PATH (/data/app.db), COOKIE_SECURE (1), TRUST_PROXY (1).
+// Account API and MCP server. Env: PORT (3000), DB_PATH (/data/app.db), COOKIE_SECURE (1), TRUST_PROXY (1),
+// PUBLIC_URL (the editor's https address, for OAuth; default: from the Host header).
 // `--dev` (npm run dev:api): server/data/dev.db, plain-http cookies, no proxy in front.
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
+import { Bridge } from './bridge.ts';
 import { openDb } from './db.ts';
 
 const dev = process.argv.includes('--dev');
@@ -14,8 +16,11 @@ const dbPath =
   process.env.DB_PATH ?? (dev ? join(fileURLToPath(new URL('../data', import.meta.url)), 'dev.db') : '/data/app.db');
 mkdirSync(dirname(dbPath), { recursive: true });
 const db = openDb(dbPath);
+const bridge = new Bridge();
 const handle = createApp({
   db,
+  bridge,
+  publicUrl: process.env.PUBLIC_URL || undefined,
   secureCookies: flag('COOKIE_SECURE', !dev),
   trustProxy: flag('TRUST_PROXY', !dev),
 });
@@ -27,6 +32,6 @@ server.on('error', (e: NodeJS.ErrnoException) => {
 });
 server.listen(port, () => console.log(`api listening on :${port} (${dbPath})`));
 
-const stop = () => server.close(() => (db.close(), process.exit(0)));
+const stop = () => (bridge.close(), server.close(() => (db.close(), process.exit(0))));
 process.on('SIGTERM', stop);
 process.on('SIGINT', stop);

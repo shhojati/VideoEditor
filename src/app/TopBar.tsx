@@ -16,6 +16,7 @@ import { Button } from './ui';
 import { useExport } from '../features/export/exportService';
 import { useShortcutSheet } from './ShortcutSheet';
 import { AccountButton } from '../features/account/AccountDialogs';
+import { AgentButton } from '../features/agent/AgentButton';
 import { ChevronDown, Globe, Keyboard, Redo2, Undo2, Upload } from 'lucide-react';
 import { Icon } from './icons';
 import { Logo } from './Logo';
@@ -74,6 +75,7 @@ export function TopBar() {
       </span>
       {project && <LengthWarning project={project} />}
       <div className="ms-auto flex shrink-0 items-center gap-2 max-md:gap-1 md:gap-2.5">
+        <AgentButton />
         <AccountButton />
         <Button variant="primary" disabled={!project} onClick={() => useExport.setState({ open: true })} data-testid="open-export" aria-label={t('export.open')}>
           <Icon icon={Upload} />

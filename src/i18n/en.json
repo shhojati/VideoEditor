@@ -1246,6 +1246,28 @@
     "clear": "Remove all keyframes",
     "diamond": "Keyframe: click to go to it, drag to move it"
   },
+  "agent": {
+    "button": "AI agent",
+    "open": "Connect an AI agent",
+    "title": "Connect an AI agent",
+    "intro": "Let an AI app such as Claude, ChatGPT or Cursor edit this project for you: add clips and text, cut, add effects, make captions and more.",
+    "address": "Address to add in the AI app (as a custom connector or MCP server)",
+    "addressHint": "The app asks you to log in to Vidora and allow it once.",
+    "copy": "Copy address",
+    "loginFirst": "Log in to use an AI agent",
+    "start": "Allow agent access",
+    "stop": "Stop",
+    "safety": "Access works only while this tab is open and allowed. Every change the agent makes can be undone. Exporting still needs your click.",
+    "recent": "Latest agent actions",
+    "apps": "Connected apps",
+    "disconnect": "Disconnect",
+    "status": {
+      "off": "Agent access is off",
+      "connecting": "Connecting…",
+      "on": "Agent access is on in this tab",
+      "error": "Could not connect. Log in again and retry."
+    }
+  },
   "account": {
     "login": "Log in",
     "register": "Create account",

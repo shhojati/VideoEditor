@@ -159,6 +159,32 @@ class PlaybackEngine {
     });
   }
 
+  /**
+   * The paused frame at the playhead as a JPEG at most `maxSide` pixels wide or high (the agent's
+   * snapshot tool). Waits for the exact video frames and fonts, up to a few seconds.
+   */
+  async snapshot(maxSide: number): Promise<Blob | null> {
+    const project = this.project;
+    if (!project) return null;
+    const t = useTransport.getState().time;
+    this.refreshPaused();
+    setCustomFonts(project.fonts);
+    const deadline = performance.now() + 4000;
+    await Promise.race([
+      Promise.allSettled(fontsAt(project, t).map(([family, weight]) => ensureFont(family, weight))),
+      new Promise((r) => setTimeout(r, 3000)),
+    ]);
+    while (this.video.seeking && performance.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+    const { width, height } = project.settings;
+    const k = Math.min(1, maxSide / Math.max(width, height));
+    const canvas = new OffscreenCanvas(Math.round(width * k), Math.round(height * k));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    renderFrame(project, t, ctx, this.video.lookup);
+    return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  }
+
   private render(t: number) {
     const project = this.project;
     const canvas = this.canvas;
@@ -167,11 +193,7 @@ class PlaybackEngine {
     if (!ctx) return;
     // Fonts load on first use; draw now with the fallback and again once the real font is in.
     setCustomFonts(project.fonts);
-    const fonts = [
-      ...visualClipsAt(flattenForMedia(project), t).flatMap(({ clip }) => (clip.text ? [[clip.text.fontFamily, clip.text.fontWeight] as const] : [])),
-      ...project.subtitleTracks.map((st) => [st.style.fontFamily, st.style.fontWeight ?? 600] as const),
-    ];
-    for (const [family, weight] of fonts) {
+    for (const [family, weight] of fontsAt(project, t)) {
       if (isFontReady(family, weight)) continue;
       ensureFont(family, weight).then(
         () => this.requestRender(),
@@ -197,6 +219,12 @@ class PlaybackEngine {
     ctx.restore();
   }
 }
+
+/** Fonts (family, weight) the frame at t draws text with. */
+const fontsAt = (project: Project, t: number) => [
+  ...visualClipsAt(flattenForMedia(project), t).flatMap(({ clip }) => (clip.text ? [[clip.text.fontFamily, clip.text.fontWeight] as const] : [])),
+  ...project.subtitleTracks.map((st) => [st.style.fontFamily, st.style.fontWeight ?? 600] as const),
+];
 
 export const playbackEngine = new PlaybackEngine();
 

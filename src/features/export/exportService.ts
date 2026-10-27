@@ -29,6 +29,8 @@ interface ExportState {
     settings: ExportSettings;
   };
   error?: string;
+  /** Settings an AI agent asked for (request_export); the dialog takes them on and clears this. */
+  preset?: Partial<ExportSettings>;
 }
 
 export const useExport = create<ExportState>()(() => ({ open: false, stage: 'idle', progress: 0 }));

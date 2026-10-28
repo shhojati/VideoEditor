@@ -105,7 +105,7 @@ export function ClipInspector({ project, clipId }: { project: Project; clipId: I
       {isText && <TextSection clipId={clipId} text={shown.text!} set={set} />}
       {clip.solid && (
         <Section id="solid" title={t('shapes.solid')}>
-          <ColorField label={t('inspector.fill')} value={clip.solid.color} onChange={(v) => v && set('solid.color', (c) => void (c.solid!.color = v))} />
+          <ColorField alpha label={t('inspector.fill')} value={clip.solid.color} onChange={(v) => v && set('solid.color', (c) => void (c.solid!.color = v))} />
         </Section>
       )}
       {clip.shape && (
@@ -319,7 +319,7 @@ function TextSection({ clipId, text, set }: { clipId: ID; text: TextProps; set: 
         />
       )}
       <NumberField label={t('inspector.size')} value={text.fontSize} min={12} max={300} step={1} unit="px" onChange={(v) => setText('fontSize', v)} />
-      <ColorField label={t('inspector.color')} value={text.color} onChange={(v) => setText('color', v ?? '#ffffff')} />
+      <ColorField alpha label={t('inspector.color')} value={text.color} onChange={(v) => setText('color', v ?? '#ffffff')} />
       <Segmented
         label={t('inspector.align')}
         value={text.align}
@@ -340,15 +340,15 @@ function TextSection({ clipId, text, set }: { clipId: ID; text: TextProps; set: 
         onChange={(v) => setText('rtl', v === 'rtl')}
       />
       <NumberField label={t('inspector.maxWidth')} value={text.maxWidth ?? DEFAULT_TEXT_MAX_WIDTH} min={0.2} max={1} factor={100} unit="%" onChange={(v) => setText('maxWidth', v)} />
-      <ColorField label={t('inspector.background')} optional fallback="#000000" value={text.bgColor} onChange={(v) => setText('bgColor', v)} />
-      <ColorField label={t('inspector.stroke')} optional fallback="#000000" value={text.strokeColor} onChange={(v) => set('text.strokeColor', (c) => {
+      <ColorField alpha label={t('inspector.background')} optional fallback="#000000" value={text.bgColor} onChange={(v) => setText('bgColor', v)} />
+      <ColorField alpha label={t('inspector.stroke')} optional fallback="#000000" value={text.strokeColor} onChange={(v) => set('text.strokeColor', (c) => {
         c.text!.strokeColor = v;
         if (v && !c.text!.strokeWidth) c.text!.strokeWidth = 4;
       })} />
       {text.strokeColor && (
         <NumberField label={t('inspector.strokeWidth')} value={text.strokeWidth ?? 0} min={0} max={24} step={0.5} unit="px" onChange={(v) => setText('strokeWidth', v)} />
       )}
-      <ColorField label={t('inspector.shadow')} optional fallback="#000000" value={text.shadowColor} onChange={(v) => set('text.shadowColor', (c) => {
+      <ColorField alpha label={t('inspector.shadow')} optional fallback="#000000" value={text.shadowColor} onChange={(v) => set('text.shadowColor', (c) => {
         c.text!.shadowColor = v;
         if (v && c.text!.shadowBlur === undefined) c.text!.shadowBlur = 12;
       })} />

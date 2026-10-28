@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
 import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 import { Icon } from '../../app/icons';
+import { splitAlpha, withAlpha } from '../../lib/color';
 
 /** Fade in/out presets shared by text and shape clips (s). */
 export const FADE_PRESETS = [
@@ -167,9 +168,14 @@ export function ColorField(props: {
   optional?: boolean;
   fallback?: string;
   onChange: (value: string | undefined) => void;
+  /** Also edit the colour's alpha (#rrggbbaa; fully opaque colours stay #rrggbb). */
+  alpha?: boolean;
 }) {
   const id = useId();
   const on = props.value !== undefined;
+  const current = props.value ?? props.fallback ?? '#000000';
+  const { rgb, a } = splitAlpha(current);
+  const { t } = useTranslation();
   return (
     <Row label={props.label} htmlFor={id}>
       {props.optional && (
@@ -185,9 +191,26 @@ export function ColorField(props: {
         type="color"
         disabled={!on}
         className="h-6 w-10 cursor-pointer rounded-md border border-line bg-transparent disabled:opacity-30"
-        value={props.value ?? props.fallback ?? '#000000'}
-        onChange={(e) => props.onChange(e.target.value)}
+        value={rgb}
+        onChange={(e) => props.onChange(withAlpha(e.target.value, a))}
       />
+      {props.alpha && (
+        <input
+          type="number"
+          disabled={!on}
+          min={0}
+          max={100}
+          step={1}
+          aria-label={t('inspector.colorAlpha')}
+          title={t('inspector.colorAlpha')}
+          className="w-12 rounded bg-surface-3 px-1 py-0.5 text-xs disabled:opacity-30"
+          value={Math.round(a * 100)}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (Number.isFinite(v)) props.onChange(withAlpha(rgb, Math.min(100, Math.max(0, v)) / 100));
+          }}
+        />
+      )}
       {/* Colours with alpha (e.g. a translucent box) keep their alpha when picked again. */}
       <span className="font-mono text-[10px] text-neutral-400" dir="ltr">
         {props.value ?? ''}

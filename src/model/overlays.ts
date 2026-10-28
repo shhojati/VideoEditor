@@ -1,5 +1,6 @@
 // Overlay clips (text and shapes, on 'text' tracks) and per-clip blend modes.
-import type { BlendMode, Clip, ShapeKind, ShapeProps, TextProps } from './types';
+import { pathBounds } from './masks';
+import type { BlendMode, Clip, MaskVertex, ShapeKind, ShapeProps, TextProps } from './types';
 
 export const SHAPE_KINDS = ['rectangle', 'square', 'circle', 'oval', 'triangle', 'star', 'polygon', 'line'] as const satisfies readonly ShapeKind[];
 
@@ -59,6 +60,33 @@ export function defaultShape(kind: ShapeKind): ShapeProps {
       return { ...base, fill: '#2563eb', strokeWidth: 0 };
   }
 }
+
+/**
+ * A path shape from Bézier points (project pixels in any frame): the points centred on their own
+ * middle, filled when closed, a white line when open. `centre` is where that middle was.
+ */
+export function pathShape(path: readonly MaskVertex[], closed: boolean): { shape: ShapeProps; centre: { x: number; y: number } } {
+  const b = pathBounds([...path]);
+  const mx = b.x + b.width / 2;
+  const my = b.y + b.height / 2;
+  return {
+    shape: {
+      ...defaultShape('path'),
+      width: Math.max(4, Math.round(b.width)),
+      height: Math.max(4, Math.round(b.height)),
+      path: { value: path.map(([x, y, ix, iy, ox, oy]): MaskVertex => [x - mx, y - my, ix, iy, ox, oy]) },
+      closed,
+      ...(closed ? { fill: '#2563eb', strokeWidth: 0 } : { fill: undefined, stroke: '#ffffff', strokeWidth: 8 }),
+    },
+    centre: { x: mx, y: my },
+  };
+}
+
+/** A shape's shadow offset (project px at scale 1): its own, or the old default of 2 % of its size down. */
+export const shadowOffset = (s: ShapeProps) =>
+  s.shadowX !== undefined || s.shadowY !== undefined
+    ? { shadowX: s.shadowX ?? 0, shadowY: s.shadowY ?? 0 }
+    : { shadowX: 0, shadowY: Math.round(Math.max(s.width, s.height) * 0.02 * 10) / 10 };
 
 /** Switch a shape's kind, keeping its size and colours where they still make sense. */
 export function setShapeKind(s: ShapeProps, kind: ShapeKind) {

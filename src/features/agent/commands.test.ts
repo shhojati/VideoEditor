@@ -90,6 +90,71 @@ describe('agent commands', () => {
   });
 });
 
+describe('agent drawing', () => {
+  const W = () => rootProject()!.settings.width;
+
+  it('draws a path from SVG data around the transform point, and reads it back', async () => {
+    const r = await call('add_shape', { kind: 'path', d: 'M -10 -10 L 30 -10 L 30 10 L -10 10 Z', fill: '#ff000080', transform: { x: 0.1 } });
+    expect(r.isError).toBe(false);
+    const clip = findClip(rootProject()!, r.data.id)!.clip;
+    // The outline's middle (10, 0) is 10 px right of the transform point.
+    expect(clip.transform.x).toBeCloseTo(0.1 + 10 / W());
+    expect(clip.shape).toMatchObject({ kind: 'path', closed: true, fill: '#ff000080', width: 40, height: 20 });
+    expect(clip.shape!.stroke).toBeUndefined();
+    const got = await call('get_clip', { clipId: r.data.id });
+    expect(got.data.d).toBe('M -20 -10 L 20 -10 L 20 10 L -20 10 Z');
+  });
+
+  it('refuses several subpaths and bad data in words the agent can act on', async () => {
+    const two = await call('add_shape', { kind: 'path', d: 'M0 0 L10 0 L10 10 Z M20 20 L30 30' });
+    expect(two.isError).toBe(true);
+    expect(two.text).toContain('group_clips');
+    const bad = await call('add_shape', { kind: 'path', d: 'M 0 0 Q 5' });
+    expect(bad.text).toContain('Invalid d');
+    expect(steps()).toBe(0);
+  });
+
+  it('changes an outline, and stroke, shadow and gradient settings', async () => {
+    const { data } = await call('add_shape', { kind: 'circle' });
+    await call('update_clip', {
+      clipId: data.id,
+      shape: { points: [{ x: 0, y: 0 }, { x: 50, y: 40 }, { x: 100, y: 0 }], smooth: true, closed: false, stroke: '#000000', lineCap: 'round', shadow: { color: '#00000080', blur: 8, x: 3, y: 4 } },
+    });
+    const s = findClip(rootProject()!, data.id)!.clip.shape!;
+    expect(s).toMatchObject({ kind: 'path', closed: false, stroke: '#000000', cap: 'round', shadowColor: '#00000080', shadowX: 3, shadowY: 4 });
+    expect(s.path!.value).toHaveLength(3);
+    await call('update_clip', { clipId: data.id, shape: { gradient: { kind: 'linear', to: '#ffffff' }, shadow: null } });
+    expect(findClip(rootProject()!, data.id)!.clip.shape).toMatchObject({ gradient: { kind: 'linear', to: '#ffffff', angle: 90 } });
+    expect(findClip(rootProject()!, data.id)!.clip.shape!.shadowColor).toBeUndefined();
+  });
+
+  it('groups parts, animates a part inside the group, reorders and ungroups', async () => {
+    const head = (await call('add_shape', { kind: 'circle', start: 1, duration: 4 })).data;
+    const eye = (await call('add_shape', { kind: 'path', d: 'M -30 -10 Q -20 -20 -10 -10', stroke: '#000000', start: 1, duration: 4 })).data;
+    // Each overlapping shape got its own graphics track; the eye is on top.
+    expect((await call('reorder_clip', { clipId: eye.id, action: 'sendToBack' })).isError).toBe(false);
+    expect((await call('reorder_clip', { clipId: eye.id, action: 'sendToBack' })).text).toContain('Nothing to move past');
+    await call('reorder_clip', { clipId: eye.id, action: 'bringToFront' });
+
+    const g = await call('group_clips', { clipIds: [head.id, eye.id], name: 'Head' });
+    expect(g.data).toMatchObject({ type: 'compound', name: 'Head', start: 1, end: 5 });
+    expect(g.data.children).toEqual(expect.arrayContaining([head.id, eye.id]));
+    // A part inside the group: timeline times, as before grouping.
+    const a = await call('animate', { clipId: eye.id, keyframes: [{ time: 2, values: { opacity: 0 } }, { time: 3, values: { opacity: 1 } }] });
+    expect(a.isError).toBe(false);
+    const inside = await call('get_clip', { clipId: eye.id });
+    expect(inside.data.insideGroup).toBe(true);
+    expect(inside.data.keyframes.map((k: { t: number }) => k.t)).toEqual([1, 2]);
+    expect((await call('move_clip', { clipId: eye.id, start: 0 })).text).toContain('inside a group');
+
+    const u = await call('ungroup', { groupId: g.data.id });
+    expect(u.data.clipIds).toEqual(expect.arrayContaining([head.id, eye.id]));
+    expect(findClip(rootProject()!, eye.id)!.clip.start).toBe(1);
+    await call('undo');
+    expect(findClip(rootProject()!, g.data.id)).toBeTruthy();
+  });
+});
+
 // The server lists the tools before any tab connects, from this checked-in copy.
 // UPDATE_AGENT_TOOLS=1 npx vitest run src/features/agent rewrites it after a change here.
 it('server/src/agentTools.json matches the commands', () => {

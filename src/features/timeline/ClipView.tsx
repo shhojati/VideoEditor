@@ -10,6 +10,7 @@ import { applyFx, canDropFx, fxDrag } from '../effects/effectActions';
 import { currentProject } from '../../store/projectStore';
 import { beginClipDrag } from './interactions';
 import { enterCompound } from './compoundActions';
+import { openClipMenu } from './ClipMenu';
 import { TRACK_HEIGHT, useTimelineUi } from './timelineUi';
 import { keyToTimeline, meanSpeed, mediaTimeAt, sourceRangeFor, timelineTimeAt } from '../../model/remap';
 
@@ -84,6 +85,7 @@ export function ClipBox(props: Props & { original: Clip; ghost?: boolean; invali
       }`}
       style={{ left, width, height: TRACK_HEIGHT - 8 }}
       onPointerDown={(e) => !track.locked && beginClipDrag(e, original.id, 'move')}
+      onContextMenu={(e) => !props.ghost && openClipMenu(e, original.id)}
       // Double-click opens a compound clip.
       onDoubleClick={() => original.sequenceId && enterCompound(original.id)}
       // Effects and filters dragged from their panes drop onto a clip.

@@ -3,7 +3,10 @@ import i18n from '../../i18n';
 import { mediaTimeAt } from '../../model/remap';
 import { breakApart, makeCompound, sequenceDuration } from '../../model/sequences';
 import { findClip } from '../../model/timeline';
-import type { ID } from '../../model/types';
+import type { ID, Project } from '../../model/types';
+import { showToast } from '../../app/toasts';
+import { drawnClip } from '../../engine/render/parenting';
+import { clipBox, corners } from '../preview/canvasGeometry';
 import { currentProject, rootProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { select, useTimelineUi } from './timelineUi';
@@ -40,7 +43,59 @@ export function exitTo(level: number) {
 }
 
 export function breakApartClip(clipId: ID) {
-  useProjectStore.getState().edit('ops.breakApart', (d) => void breakApart(d, clipId));
+  let done = false as ReturnType<typeof breakApart>;
+  useProjectStore.getState().edit('ops.breakApart', (d) => void (done = breakApart(d, clipId)));
+  if (done === 'approx') showToast(i18n.t('compound.breakApprox'));
+  select([]);
+}
+
+let measureCtx: CanvasRenderingContext2D | null = null;
+const measure = () => (measureCtx ??= document.createElement('canvas').getContext('2d')!);
+
+/**
+ * Where a group of clips pivots: the middle of their boxes on the canvas (project px, at timeline
+ * time t), or undefined when they have no box or are larger than the frame.
+ */
+export function groupPivot(p: Project, ids: readonly ID[], t: number): { x: number; y: number } | undefined {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const id of ids) {
+    const clip = findClip(p, id)?.clip;
+    if (!clip) continue;
+    const at = Math.min(Math.max(t, clip.start), clip.start + clip.duration);
+    const box = clipBox(p, drawnClip(p, clip, at), measure(), at);
+    if (!box) continue;
+    for (const c of corners(box)) {
+      x0 = Math.min(x0, c.x);
+      y0 = Math.min(y0, c.y);
+      x1 = Math.max(x1, c.x);
+      y1 = Math.max(y1, c.y);
+    }
+  }
+  if (!(x1 > x0) || x1 - x0 > p.settings.width || y1 - y0 > p.settings.height) return undefined;
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+}
+
+/** Group the selected clips (Ctrl+G): a compound clip that scales and turns about its content. */
+export function groupSelection() {
+  const ids = useTimelineUi.getState().selection;
+  const n = Object.keys(rootProject()?.sequences ?? {}).length + 1;
+  const t = useTransport.getState().time;
+  let id: ID | null = null;
+  useProjectStore.getState().edit('ops.group', (d) => void (id = makeCompound(d, ids, i18n.t('compound.groupName', { n }), { pivot: groupPivot(d, ids, t) })));
+  if (id) select([id]);
+}
+
+/** Ungroup (Ctrl+Shift+G): break apart the selected compound clips. */
+export function ungroupSelection() {
+  const ids = useTimelineUi.getState().selection;
+  let approx = false;
+  useProjectStore.getState().edit('ops.breakApart', (d) => {
+    for (const id of ids) if (breakApart(d, id) === 'approx') approx = true;
+  });
+  if (approx) showToast(i18n.t('compound.breakApprox'));
   select([]);
 }
 

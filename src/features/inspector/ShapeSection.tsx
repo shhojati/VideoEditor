@@ -1,7 +1,7 @@
-import { Diamond, Timer } from 'lucide-react';
+import { ClipboardCopy, ClipboardPaste, Diamond, Timer } from 'lucide-react';
 import { Icon } from '../../app/icons';
 import { useTranslation } from 'react-i18next';
-import { keepsAspect, setShapeKind, SHAPE_KINDS } from '../../model/overlays';
+import { keepsAspect, setShapeKind, shadowOffset, SHAPE_KINDS } from '../../model/overlays';
 import type { ID, ShapeProps } from '../../model/types';
 import { SHAPE_ICONS } from '../shapes/shapesUi';
 import type { SetFn } from './ClipInspector';
@@ -9,6 +9,10 @@ import { ColorField, FADE_PRESETS, NumberField, Section, Segmented, SelectField 
 import { resetClipSection } from './resetActions';
 import { setShapePathAnimated, toggleShapePathKey } from '../masks/maskService';
 import { keyIndexAt, keyTolerance } from '../../model/masks';
+import i18n from '../../i18n';
+import { showToast } from '../../app/toasts';
+import { toPathData } from '../../lib/svgPath';
+import { setShapePathData } from '../timeline/actions';
 
 /**
  * Shape type, size, fill, stroke (colour, width, opacity, dashes), corners, star, arrows, shadow,
@@ -73,7 +77,7 @@ export function ShapeSection({ clipId, shape, set, maxSize, keyAt, fps }: { clip
               />
               {shape.gradient && (
                 <>
-                  <ColorField label={t('shapes.gradientTo')} value={shape.gradient.to} onChange={(v) => v && set('shape.gradient.to', (c) => void (c.shape!.gradient!.to = v))} />
+                  <ColorField alpha label={t('shapes.gradientTo')} value={shape.gradient.to} onChange={(v) => v && set('shape.gradient.to', (c) => void (c.shape!.gradient!.to = v))} />
                   {shape.gradient.kind === 'linear' && (
                     <NumberField label={t('shapes.gradientAngle')} value={shape.gradient.angle} min={0} max={360} step={1} unit="°" onChange={(v) => set('shape.gradient.angle', (c) => void (c.shape!.gradient!.angle = v))} />
                   )}
@@ -166,6 +170,7 @@ export function ShapeSection({ clipId, shape, set, maxSize, keyAt, fps }: { clip
       )}
 
       <ColorField
+        alpha
         label={t('inspector.shadow')}
         optional
         fallback="#000000"
@@ -178,7 +183,26 @@ export function ShapeSection({ clipId, shape, set, maxSize, keyAt, fps }: { clip
         }
       />
       {shape.shadowColor && (
-        <NumberField label={t('inspector.shadowBlur')} value={shape.shadowBlur ?? 0} min={0} max={80} step={1} unit="px" onChange={(v) => setShape('shadowBlur', v)} />
+        <>
+          <NumberField label={t('inspector.shadowBlur')} value={shape.shadowBlur ?? 0} min={0} max={80} step={1} unit="px" onChange={(v) => setShape('shadowBlur', v)} />
+          {(['shadowX', 'shadowY'] as const).map((key) => (
+            <NumberField
+              key={key}
+              label={t(`shapes.${key}`)}
+              value={shadowOffset(shape)[key]}
+              min={-500}
+              max={500}
+              step={1}
+              unit="px"
+              onChange={(v) =>
+                set(`shape.${key}`, (c) => {
+                  // The first change pins both, so the other one keeps what it showed.
+                  Object.assign(c.shape!, shadowOffset(c.shape!), { [key]: v });
+                })
+              }
+            />
+          ))}
+        </>
       )}
 
       <Segmented
@@ -245,7 +269,49 @@ function PathControls({ clipId, shape, set, keyAt, fps }: { clipId: ID; shape: S
           </button>
         )}
       </div>
+      <div className="flex flex-wrap gap-1.5 text-xs">
+        <button
+          className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 hover:bg-surface-4"
+          data-testid="path-copy"
+          onClick={() => void copyPath(shape)}
+        >
+          <Icon icon={ClipboardCopy} size={14} />
+          {t('shapes.copyPath')}
+        </button>
+        <button
+          className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-1 hover:bg-surface-4"
+          title={t('shapes.replacePathHint')}
+          data-testid="path-replace"
+          onClick={() => void replacePath(clipId)}
+        >
+          <Icon icon={ClipboardPaste} size={14} />
+          {t('shapes.replacePath')}
+        </button>
+      </div>
       <p className="text-[11px] text-neutral-400">{t('shapes.pathHint')}</p>
     </div>
   );
+}
+
+async function copyPath(shape: ShapeProps) {
+  if (!shape.path) return;
+  try {
+    await navigator.clipboard.writeText(toPathData(shape.path.value, !!shape.closed));
+    showToast(i18n.t('shapes.pathCopied'));
+  } catch {
+    showToast(i18n.t('shapes.clipboardBlocked'));
+  }
+}
+
+/** The path's points from SVG path data on the clipboard (or typed in, when the clipboard is blocked). */
+async function replacePath(clipId: ID) {
+  let text: string | null;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    text = window.prompt(i18n.t('shapes.replacePathPrompt'));
+  }
+  if (!text) return;
+  const err = setShapePathData(clipId, text);
+  if (err) showToast(i18n.t('shapes.badPath', { error: err }));
 }

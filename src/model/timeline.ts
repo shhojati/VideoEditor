@@ -372,6 +372,48 @@ export function moveTrack(p: Project, trackId: ID, dir: 1 | -1): boolean {
   return true;
 }
 
+export const ARRANGE_ACTIONS = ['bringToFront', 'forward', 'backward', 'sendToBack'] as const;
+export type ArrangeAction = (typeof ARRANGE_ACTIONS)[number];
+
+/**
+ * Change what a visual clip is drawn in front of (After Effects' Arrange): it moves to another track
+ * of its kind, in front of (or behind) the next — or every — visual clip it overlaps in time. A free
+ * track of its kind there is used, otherwise a new one. A track it leaves empty is removed when
+ * another track of that kind remains. Returns whether it moved.
+ */
+export function arrangeClip(p: Project, clipId: ID, action: ArrangeAction): boolean {
+  const ref = findClip(p, clipId);
+  if (!ref || ref.track.locked || ref.track.kind === 'audio') return false;
+  const { clip, track } = ref;
+  const from = p.tracks.indexOf(track);
+  const hit = p.tracks.flatMap((t, j) =>
+    t !== track && t.kind !== 'audio' && t.clips.some((c) => c.start < clipEnd(clip) - EPS && clip.start < clipEnd(c) - EPS) ? [j] : [],
+  );
+  const up = action === 'bringToFront' || action === 'forward';
+  const side = hit.filter((j) => (up ? j > from : j < from));
+  if (!side.length) return false;
+  const pivot = { bringToFront: Math.max(...side), forward: Math.min(...side), backward: Math.max(...side), sendToBack: Math.min(...side) }[action];
+  // Between the pivot and the next overlapping track beyond it, no track has a clip in the way.
+  const beyond = hit.filter((j) => (up ? j > pivot : j < pivot));
+  const limit = beyond.length ? (up ? Math.min(...beyond) : Math.max(...beyond)) : up ? p.tracks.length : -1;
+  let target: Track | undefined;
+  for (let j = pivot + (up ? 1 : -1); up ? j < limit : j > limit; j += up ? 1 : -1) {
+    const t = p.tracks[j];
+    if (t !== track && t.kind === track.kind && !t.locked && isFree(t, clip.start, clip.duration)) {
+      target = t;
+      break;
+    }
+  }
+  if (!target) {
+    target = createTrack(track.kind);
+    p.tracks.splice(up ? pivot + 1 : pivot, 0, target);
+  }
+  track.clips.splice(track.clips.indexOf(clip), 1);
+  insertClip(target, clip);
+  if (!track.clips.length && p.tracks.some((t) => t !== track && t.kind === track.kind)) p.tracks.splice(p.tracks.indexOf(track), 1);
+  return true;
+}
+
 /** A paint layer (brush strokes only), full frame, on a graphics track. */
 export const addPaintClip = (p: Project, time: number, paint: PaintProps): ID =>
   addOverlayClip(p, { ...createOverlayClip(Math.max(0, time), { paint }), duration: PAINT_DEFAULT_DURATION });

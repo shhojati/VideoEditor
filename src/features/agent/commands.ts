@@ -12,13 +12,18 @@ import type { LibraryItem } from '../../lib/library';
 import { acceptsEffects, createEffect, defaultParams, EFFECT_DEFS, EFFECT_KINDS, setFilter } from '../../model/effects';
 import { createSubtitleTrack, createTrack, newId } from '../../model/factories';
 import { addKeyAt, clearKeys, KEY_EASES, keyIndexAt, setKeyEase, srcTime, writeProps } from '../../model/keyframes';
-import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
+import { defaultShape, pathShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
+import { MAX_PATH_DATA, parsePathData, PathDataError, pointsPath, toPathData } from '../../lib/svgPath';
+import { breakApart, makeCompound } from '../../model/sequences';
 import { keyRate } from '../../model/remap';
 import { addCue, deleteCues, findCue, setCueEdge, setCueText } from '../../model/subtitles';
 import { insertTemplate } from '../../model/templates';
 import {
   addShapeClip,
   addSolidClip,
+  ARRANGE_ACTIONS,
+  arrangeClip,
+  type ClipRef,
   addTextClip,
   clipEnd,
   createClip,
@@ -37,14 +42,15 @@ import {
   trimClip,
 } from '../../model/timeline';
 import { setTransition, TRANSITION_KINDS } from '../../model/transitions';
-import type { BlendMode, Clip, EffectKind, ID, LibraryKind, Project, ShapeKind, TextAnimKind } from '../../model/types';
-import { keyTolerance } from '../../model/masks';
+import type { BlendMode, Clip, EffectKind, ID, LibraryKind, MaskVertex, Project, ShapeKind, ShapeProps, TextAnimKind, Track } from '../../model/types';
+import { keyTolerance, pathBounds } from '../../model/masks';
 import { useAccount } from '../../store/account';
 import { currentProject, useProjectStore } from '../../store/projectStore';
 import { useTransport } from '../../store/transport';
 import { aiAccess } from '../account/policy';
 import { useExport } from '../export/exportService';
 import { loadLibrary, ensureLibraryAsset, useLibrary } from '../library/libraryService';
+import { groupPivot } from '../timeline/compoundActions';
 import { startAutoSubtitles, useStt } from '../subtitles/sttService';
 import { translateTrack, useTranslate } from '../subtitles/translateService';
 import { allTemplates, loadServerTemplates, useTemplates } from '../templates/templateService';
@@ -75,9 +81,9 @@ const command = <S extends z.ZodType>(c: Command<S>) => c as unknown as Command;
 
 const seconds = z.number().min(0).max(24 * 3600);
 const id = z.string().min(1).max(100);
-const color = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'a colour like #ff8800');
+const color = z.string().regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/, 'a colour like #ff8800, or #ff880080 with alpha');
 const LIBRARY_KINDS = ['stickers', 'sounds', 'overlays', 'backgrounds'] as const satisfies readonly LibraryKind[];
-const SHAPE_KINDS = ['rectangle', 'square', 'circle', 'oval', 'triangle', 'star', 'polygon', 'line'] as const satisfies readonly ShapeKind[];
+const SHAPE_KINDS = ['rectangle', 'square', 'circle', 'oval', 'triangle', 'star', 'polygon', 'line', 'path'] as const satisfies readonly ShapeKind[];
 const TEXT_ANIMS = ['fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'pop', 'zoom', 'typewriter', 'wordByWord', 'blurIn', 'wipe'] as const satisfies readonly TextAnimKind[];
 const BLENDS = ['normal', 'multiply', 'screen', 'overlay', 'softLight', 'hardLight', 'darken', 'lighten', 'add', 'difference', 'color', 'luminosity'] as const satisfies readonly BlendMode[];
 const ADDABLE_EFFECTS = EFFECT_KINDS.filter((k) => !EFFECT_DEFS[k].later && k !== 'lut3d' && k !== 'look');
@@ -111,12 +117,48 @@ const textStyle = z
 
 const shapeStyle = z
   .object({
-    width: z.number().min(1).max(10000),
+    width: z.number().min(1).max(10000).describe('Pixels. For a path: scales the outline to this width'),
     height: z.number().min(1).max(10000),
-    fill: color,
-    stroke: color,
+    fill: color.nullable().describe('null: no fill'),
+    stroke: color.nullable().describe('null: no outline'),
     strokeWidth: z.number().min(0).max(500),
+    fillOpacity: z.number().min(0).max(1),
+    strokeOpacity: z.number().min(0).max(1),
     cornerRadius: z.number().min(0).max(5000),
+    dash: z.enum(['solid', 'dash', 'dot']),
+    lineCap: z.enum(['butt', 'round', 'square']).describe('Ends of lines and open paths'),
+    lineJoin: z.enum(['miter', 'round', 'bevel']).describe('Corners of outlines'),
+    feather: z.number().min(0).max(500).describe('Soft edge of the fill, pixels'),
+    gradient: z
+      .object({ kind: z.enum(['linear', 'radial']), to: color, angle: z.number().min(-360).max(360).default(90).describe('Linear only, degrees') })
+      .nullable()
+      .describe('Fill from `fill` to `to`; null removes it'),
+    shadow: z
+      .object({ color, blur: z.number().min(0).max(200).default(12), x: z.number().min(-1000).max(1000).default(0), y: z.number().min(-1000).max(1000).default(6) })
+      .nullable()
+      .describe('Drop shadow, pixels; colour may have alpha (#00000080). null removes it'),
+    sides: z.number().int().min(3).max(12).describe('Polygon'),
+    starPoints: z.number().int().min(3).max(20).describe('Star'),
+    innerRadius: z.number().min(0.05).max(0.95).describe('Star, fraction of the outer radius'),
+  })
+  .partial();
+
+const pathInput = z
+  .object({
+    d: z
+      .string()
+      .min(1)
+      .max(MAX_PATH_DATA)
+      .describe(
+        'kind path: SVG path data (M L H V C S Q T A Z, absolute or lower-case relative) in project pixels. (0,0) is the point at transform x/y, so parts drawn with the same transform line up. One subpath (one M) per shape; Z closes it (only closed paths are filled).',
+      ),
+    points: z
+      .array(z.object({ x: z.number().min(-20000).max(20000), y: z.number().min(-20000).max(20000) }))
+      .min(2)
+      .max(2000)
+      .describe('kind path, instead of d: points in pixels (same origin as d), joined by straight lines, or by a curve through them with smooth'),
+    smooth: z.boolean().describe('points: a smooth curve through the points'),
+    closed: z.boolean().describe('points: close the outline (default true)'),
   })
   .partial();
 
@@ -137,11 +179,33 @@ function edit<T>(label: string, fn: (d: Project) => T): T {
   return out;
 }
 
-function clipIn(p: Project, clipId: ID) {
-  const ref = findClip(p, clipId);
-  if (!ref) throw new AgentError(`No clip with id ${clipId}. Call get_project for the current ids.`);
-  if (ref.track.locked) throw new AgentError(`Clip ${clipId} is on a locked track.`);
-  return ref;
+/** A clip inside a group (compound clip) at any depth: where it is, and inner time + offset = timeline time. */
+function findNested(p: Project, clipId: ID, tracks: Track[] = p.tracks, offset = 0, depth = 0): { ref: ClipRef; tracks: Track[]; offset: number } | undefined {
+  if (depth > 8) return undefined;
+  for (const t of tracks)
+    for (const c of t.clips) {
+      const seq = c.sequenceId ? p.sequences?.[c.sequenceId] : undefined;
+      if (!seq) continue;
+      const inner = offset + c.start - c.inPoint;
+      const ref = findClip({ ...p, tracks: seq.tracks }, clipId);
+      if (ref) return { ref, tracks: seq.tracks, offset: inner };
+      const deeper = findNested(p, clipId, seq.tracks, inner, depth + 1);
+      if (deeper) return deeper;
+    }
+  return undefined;
+}
+
+/**
+ * A clip by id on the open timeline, or with `nested` also inside groups. `tracks` is the timeline
+ * that holds it; `offset` turns its times into timeline times.
+ */
+function clipIn(p: Project, clipId: ID, nested = false): ClipRef & { tracks: Track[]; offset: number } {
+  const top = findClip(p, clipId);
+  const found = top ? { ref: top, tracks: p.tracks, offset: 0 } : findNested(p, clipId);
+  if (!found) throw new AgentError(`No clip with id ${clipId}. Call get_project for the current ids.`);
+  if (!top && !nested) throw new AgentError(`Clip ${clipId} is inside a group (compound clip). update_clip, animate and effects work inside groups; for this, ungroup it first.`);
+  if (found.ref.track.locked) throw new AgentError(`Clip ${clipId} is on a locked track.`);
+  return { ...found.ref, tracks: found.tracks, offset: found.offset };
 }
 
 const round = (v: number) => Math.round(v * 1000) / 1000;
@@ -157,13 +221,16 @@ function clipType(p: Project, c: Clip): string {
   return (c.assetId && p.assets[c.assetId]?.kind) || 'unknown';
 }
 
-function clipSummary(p: Project, c: Clip) {
+/** `offset`: for a clip inside a group, its inner times + offset are timeline times. */
+function clipSummary(p: Project, c: Clip, offset = 0) {
   const asset = c.assetId ? p.assets[c.assetId] : undefined;
+  const seq = c.sequenceId ? p.sequences?.[c.sequenceId] : undefined;
   return {
     id: c.id,
     type: clipType(p, c),
-    start: round(c.start),
-    end: round(clipEnd(c)),
+    start: round(c.start + offset),
+    end: round(clipEnd(c) + offset),
+    ...(seq && { name: seq.name, children: seq.tracks.flatMap((t) => t.clips.map((x) => x.id)).slice(0, 200) }),
     ...(asset && { asset: asset.name, assetId: asset.id, inPoint: round(c.inPoint) }),
     ...(c.speed !== 1 && { speed: c.speed }),
     ...(c.text && { text: c.text.content }),
@@ -178,6 +245,49 @@ function applyText(c: Clip, { animIn, animOut, ...rest }: z.infer<typeof textSty
   Object.assign(c.text, rest);
   if (animIn || animOut) c.text.anim = { ...c.text.anim, ...(animIn && { in: animIn }), ...(animOut && { out: animOut }) };
   if (rest.content) c.text.rtl = detectRtl(rest.content);
+}
+
+/** Shape style from the agent onto a shape (width/height of paths are handled by the caller). */
+function applyShape(s: ShapeProps, { fill, stroke, lineCap, lineJoin, gradient, shadow, starPoints, ...rest }: z.infer<typeof shapeStyle>) {
+  Object.assign(s, rest);
+  if (fill !== undefined) s.fill = fill ?? undefined;
+  if (stroke !== undefined) s.stroke = stroke ?? undefined;
+  if (stroke && rest.strokeWidth === undefined && !s.strokeWidth) s.strokeWidth = 6;
+  if (lineCap) s.cap = lineCap;
+  if (lineJoin) s.join = lineJoin;
+  if (starPoints) s.points = starPoints;
+  if (gradient !== undefined) s.gradient = gradient ?? undefined;
+  if (shadow) Object.assign(s, { shadowColor: shadow.color, shadowBlur: shadow.blur, shadowX: shadow.x, shadowY: shadow.y });
+  else if (shadow === null) for (const k of ['shadowColor', 'shadowBlur', 'shadowX', 'shadowY'] as const) delete s[k];
+}
+
+/** The outline from d or points (absolute pixels, origin at the shape's anchor point). */
+function pathFrom({ d, points, smooth, closed }: z.infer<typeof pathInput>): { points: MaskVertex[]; closed: boolean } {
+  if (d !== undefined) {
+    let subs;
+    try {
+      subs = parsePathData(d);
+    } catch (e) {
+      throw e instanceof PathDataError ? new AgentError(`Invalid d: ${e.message}.`) : e;
+    }
+    if (subs.length > 1)
+      throw new AgentError(`d has ${subs.length} subpaths (one per M); a shape holds one. Add one path shape per subpath with the same transform (they line up) and group them with group_clips.`);
+    if (subs[0].points.length < 2) throw new AgentError('d needs at least two points.');
+    return subs[0];
+  }
+  if (points) return { points: pointsPath(points, closed ?? true, !!smooth), closed: closed ?? true };
+  throw new AgentError('A path shape needs d (SVG path data) or points.');
+}
+
+/** Scale an outline (about its origin) so its bounding box is width × height (one given: in proportion). */
+function fitPath(points: MaskVertex[], width?: number, height?: number): MaskVertex[] {
+  if (!width && !height) return points;
+  const b = pathBounds(points);
+  const fx = width && b.width > 1e-6 ? width / b.width : undefined;
+  const fy = height && b.height > 1e-6 ? height / b.height : undefined;
+  const sx = fx ?? fy ?? 1;
+  const sy = fy ?? fx ?? 1;
+  return points.map(([x, y, ix, iy, ox, oy]): MaskVertex => [x * sx, y * sy, ix * sx, iy * sy, ox * sx, oy * sy]);
 }
 
 /** Set the length of a clip from its start (clamped like a trim). */
@@ -277,14 +387,21 @@ export const COMMANDS: Command[] = [
 
   command({
     name: 'get_clip',
-    description: 'Every setting of one clip (transform, text, shape, audio, effects with params, keyframes).',
+    description: 'Every setting of one clip (transform, text, shape, audio, effects with params, keyframes), also inside groups. Path shapes include their outline as SVG path data `d` (centred on the shape position).',
     input: z.object({ clipId: id }),
     readOnly: true,
     run: ({ clipId }) => {
       const p = project();
-      const ref = findClip(p, clipId);
+      const ref = findClip(p, clipId) ?? findNested(p, clipId)?.ref;
       if (!ref) throw new AgentError(`No clip with id ${clipId}.`);
-      return { trackId: ref.track.id, type: clipType(p, ref.clip), ...JSON.parse(JSON.stringify(ref.clip)) };
+      const s = ref.clip.shape;
+      return {
+        trackId: ref.track.id,
+        type: clipType(p, ref.clip),
+        ...(!findClip(p, clipId) && { insideGroup: true }),
+        ...(s?.kind === 'path' && s.path && { d: toPathData(s.path.value, !!s.closed) }),
+        ...JSON.parse(JSON.stringify(ref.clip)),
+      };
     },
   }),
 
@@ -326,13 +443,36 @@ export const COMMANDS: Command[] = [
 
   command({
     name: 'add_shape',
-    description: 'Add a vector shape (rectangle, circle, star, line…) on a graphics track. Sizes are project pixels.',
-    input: shapeStyle.extend({ kind: z.enum(SHAPE_KINDS), start: seconds.default(0), duration: z.number().positive().max(3600).optional(), transform: transform.optional() }),
-    run: ({ kind, start, duration, transform: tr, ...style }) =>
+    description:
+      'Add a vector shape on a graphics track (a new track on top when the time is taken). Kinds: rectangle, square, circle, oval, triangle, star, polygon, line, and path: any outline with curves from SVG path data `d` or `points` (faces, hair, objects). Sizes are project pixels. Colours may have alpha (#RRGGBBAA). Draw a figure as several paths with the same transform, then group_clips and reorder_clip.',
+    input: shapeStyle.extend({ kind: z.enum(SHAPE_KINDS), start: seconds.default(0), duration: z.number().positive().max(3600).optional(), transform: transform.optional() }).merge(pathInput),
+    run: ({ kind, start, duration, transform: tr, d: pathData, points, smooth, closed, ...style }) =>
       edit('ops.addShape', (d) => {
-        const clipId = addShapeClip(d, start, { ...defaultShape(kind), ...style });
+        if (kind !== 'path' && (pathData !== undefined || points)) throw new AgentError('d and points are for kind "path".');
+        let shape = defaultShape(kind);
+        let centre = { x: 0, y: 0 };
+        const { width, height, ...look } = style;
+        if (kind === 'path') {
+          const outline = pathFrom({ d: pathData, points, smooth, closed });
+          ({ shape, centre } = pathShape(fitPath(outline.points, width, height), outline.closed));
+          // As in SVG: what is given is drawn, nothing else.
+          if (look.fill !== undefined || look.stroke !== undefined) {
+            shape.fill = undefined;
+            shape.stroke = undefined;
+          }
+        } else Object.assign(shape, width !== undefined && { width }, height !== undefined && { height });
+        applyShape(shape, look);
+        const clipId = addShapeClip(d, start, shape);
         const c = findClip(d, clipId)!.clip;
         if (tr) Object.assign(c.transform, tr);
+        if (centre.x || centre.y) {
+          // The outline's middle, from its origin at the transform position (turned and scaled with it).
+          const { width: W, height: H } = d.settings;
+          const a = (c.transform.rotation * Math.PI) / 180;
+          const k = c.transform.scale;
+          c.transform.x += ((centre.x * Math.cos(a) - centre.y * Math.sin(a)) * k) / W;
+          c.transform.y += ((centre.x * Math.sin(a) + centre.y * Math.cos(a)) * k) / H;
+        }
         if (duration) c.duration = duration;
         return clipSummary(d, c);
       }),
@@ -354,7 +494,7 @@ export const COMMANDS: Command[] = [
   command({
     name: 'update_clip',
     description:
-      'Change a clip: length, transform (position/scale/rotation/opacity), blend mode, sound (volume 0..2, fades), text style or shape style. On a clip with keyframes, transform and volume changes land in a keyframe at `time` (default the clip start).',
+      'Change a clip (also one inside a group): length, transform (position/scale/rotation/opacity), blend mode, sound (volume 0..2, fades), text style or shape style. shape.d / shape.points replace a shape\'s outline (it becomes a path), centred where the shape is now. On a clip with keyframes, transform and volume changes land in a keyframe at timeline time `time` (default the clip start).',
     input: z.object({
       clipId: id,
       duration: z.number().positive().optional(),
@@ -364,18 +504,18 @@ export const COMMANDS: Command[] = [
       fadeIn: z.number().min(0).max(60).optional(),
       fadeOut: z.number().min(0).max(60).optional(),
       text: textStyle.optional(),
-      shape: shapeStyle.optional(),
+      shape: shapeStyle.merge(pathInput).optional(),
       time: seconds.optional(),
     }),
     run: ({ clipId, duration, transform: tr, blend, volume, fadeIn, fadeOut, text, shape, time }) =>
       edit('ops.clipProp', (d) => {
-        const { clip } = clipIn(d, clipId);
+        const { clip, offset } = clipIn(d, clipId, true);
         if (text && !clip.text) throw new AgentError('That clip is not a text clip.');
         if (shape && !clip.shape) throw new AgentError('That clip is not a shape clip.');
         const values: Record<string, number> = { ...tr, ...(volume !== undefined && { volume }) };
         if (!clip.keyframes?.length) writeProps(clip, values);
         else if (Object.keys(values).length) {
-          const s = srcTime(clip, Math.min(clipEnd(clip), Math.max(clip.start, time ?? clip.start)));
+          const s = srcTime(clip, Math.min(clipEnd(clip), Math.max(clip.start, time === undefined ? clip.start : time - offset)));
           const tol = keyTolerance(d.settings.fps, keyRate(clip));
           addKeyAt(clip, s, tol);
           Object.assign(clip.keyframes[keyIndexAt(clip, s, tol)].v, values);
@@ -384,9 +524,28 @@ export const COMMANDS: Command[] = [
         if (fadeIn !== undefined) (clip.text ?? clip.shape ?? clip.audio).fadeIn = fadeIn;
         if (fadeOut !== undefined) (clip.text ?? clip.shape ?? clip.audio).fadeOut = fadeOut;
         if (text) applyText(clip, text);
-        if (shape && clip.shape) Object.assign(clip.shape, shape);
-        if (duration) setDuration(d, clipId, duration);
-        return clipSummary(d, findClip(d, clipId)!.clip);
+        if (shape && clip.shape) {
+          const { d: pathData, points, smooth, closed, width, height, ...look } = shape;
+          const s = clip.shape;
+          if (pathData !== undefined || points) {
+            const outline = pathFrom({ d: pathData, points, smooth, closed });
+            const next = pathShape(fitPath(outline.points, width, height), outline.closed).shape;
+            Object.assign(s, { kind: 'path', path: next.path, closed: next.closed, width: next.width, height: next.height });
+            if (next.closed) s.fill ??= next.fill;
+            else if (!s.stroke) Object.assign(s, { stroke: next.stroke, strokeWidth: s.strokeWidth || next.strokeWidth });
+          } else if (s.kind === 'path' && s.path && (width || height)) {
+            const scaled = (v: MaskVertex[]) => fitPath(v, width && (width / s.width) * pathBounds(v).width, height && (height / s.height) * pathBounds(v).height);
+            s.path = { value: scaled(s.path.value), ...(s.path.keys && { keys: s.path.keys.map((k) => ({ t: k.t, v: scaled(k.v) })) }) };
+            if (width) s.width = width;
+            if (height) s.height = height;
+          } else Object.assign(s, width !== undefined && { width }, height !== undefined && { height });
+          applyShape(s, look);
+        }
+        if (duration) {
+          if (offset || !findClip(d, clipId)) clip.duration = Math.max(0.1, duration);
+          else setDuration(d, clipId, duration);
+        }
+        return clipSummary(d, clip, offset);
       }),
   }),
 
@@ -400,6 +559,61 @@ export const COMMANDS: Command[] = [
         if (!moveClips(d, [{ clipId, trackId: trackId ?? ref.track.id, start }]))
           throw new AgentError('Cannot move there: it overlaps another clip, the track is locked, or the track kind differs.');
         return clipSummary(d, findClip(d, clipId)!.clip);
+      }),
+  }),
+
+  command({
+    name: 'reorder_clip',
+    description:
+      "Change the layer order of a visual clip: what it is drawn in front of or behind (e.g. arms in front of the head). action bringToFront / sendToBack: past every clip it overlaps in time; forward / backward: one step. Or trackIndex (from get_project) to put it on that track. Inside a group the order is among the group's clips.",
+    input: z.object({ clipId: id, action: z.enum(ARRANGE_ACTIONS).optional(), trackIndex: z.number().int().min(0).max(1000).optional() }),
+    run: ({ clipId, action, trackIndex }) =>
+      edit('ops.arrange', (d) => {
+        if ((action === undefined) === (trackIndex === undefined)) throw new AgentError('Give either action or trackIndex.');
+        const { clip, tracks, offset } = clipIn(d, clipId, true);
+        const view = { ...d, tracks };
+        if (action) {
+          if (!arrangeClip(view, clipId, action))
+            throw new AgentError('Nothing to move past: no visual clip overlaps it in time on that side (or it is a sound clip).');
+        } else {
+          const target = tracks[trackIndex!];
+          if (!target) throw new AgentError(`No track at index ${trackIndex}.`);
+          if (!moveClips(view, [{ clipId, trackId: target.id, start: clip.start }]))
+            throw new AgentError('Cannot put it on that track: a different kind of track, locked, or another clip is in the way at that time.');
+        }
+        return { ...clipSummary(d, clip, offset), trackIndex: tracks.findIndex((t) => t.clips.some((c) => c.id === clipId)) };
+      }),
+  }),
+
+  command({
+    name: 'group_clips',
+    description:
+      'Group clips (e.g. the parts of a drawn character) into one compound clip that moves, scales, turns and animates as one object about the centre of its parts. The parts keep their ids: get_clip, update_clip, animate, reorder_clip and effects still work on them inside the group.',
+    input: z.object({ clipIds: z.array(id).min(2).max(200), name: z.string().min(1).max(100).optional() }),
+    run: ({ clipIds, name }) =>
+      edit('ops.group', (d) => {
+        for (const c of clipIds) clipIn(d, c);
+        const n = Object.keys(d.sequences ?? {}).length + 1;
+        const groupId = makeCompound(d, clipIds, name ?? `Group ${n}`, { pivot: groupPivot(d, clipIds, useTransport.getState().time) });
+        if (!groupId) throw new AgentError('Could not group them: it needs at least two clips on unlocked tracks.');
+        return clipSummary(d, findClip(d, groupId)!.clip);
+      }),
+  }),
+
+  command({
+    name: 'ungroup',
+    description: "Break a group (compound clip) apart: its clips go back on the timeline where they are drawn, with the group's position, turn, scale and opacity folded into them.",
+    input: z.object({ groupId: id }),
+    run: ({ groupId }) =>
+      edit('ops.breakApart', (d) => {
+        const { clip } = clipIn(d, groupId);
+        if (!clip.sequenceId) throw new AgentError(`Clip ${groupId} is not a group.`);
+        const inner = d.sequences?.[clip.sequenceId]?.tracks.flatMap((t) => t.clips.map((c) => c.id)) ?? [];
+        const done = breakApart(d, groupId);
+        return {
+          clipIds: inner.filter((c) => findClip(d, c)),
+          ...(done === 'approx' && { warning: "The group's own keyframes, effects, masks, blend mode or crop were not carried over to its clips." }),
+        };
       }),
   }),
 
@@ -479,7 +693,7 @@ export const COMMANDS: Command[] = [
         const unknown = Object.keys(params ?? {}).filter((k) => !(k in known));
         if (unknown.length) throw new AgentError(`Unknown ${kind} parameters: ${unknown.join(', ')}. Known: ${Object.keys(known).join(', ')}.`);
         return clipIds.map((clipId) => {
-          const { clip } = clipIn(d, clipId);
+          const { clip } = clipIn(d, clipId, true);
           if (!acceptsEffects(clip, clip.assetId ? d.assets[clip.assetId]?.kind : undefined)) throw new AgentError(`Clip ${clipId} cannot take effects.`);
           const e = createEffect(kind, params);
           (clip.effects ??= []).push(e);
@@ -500,7 +714,7 @@ export const COMMANDS: Command[] = [
     }),
     run: ({ clipId, effectId, params, enabled, remove }) =>
       edit('ops.clipProp', (d) => {
-        const { clip } = clipIn(d, clipId);
+        const { clip } = clipIn(d, clipId, true);
         const e = clip.effects?.find((x) => x.id === effectId);
         if (!e) throw new AgentError(`Clip ${clipId} has no effect ${effectId}.`);
         if (remove) {
@@ -543,7 +757,7 @@ export const COMMANDS: Command[] = [
   command({
     name: 'animate',
     description:
-      'Animate a clip with keyframes at timeline times. Values: x, y, scale, rotation, opacity, volume, and for text text.size; shapes shape.width/shape.height. Ease: linear, easeIn, easeOut, easeInOut (default), hold.',
+      'Animate a clip (also a part inside a group, or a whole group) with keyframes at timeline times. Values: x, y, scale, rotation, opacity, volume, and for text text.size; shapes shape.width/shape.height. Ease: linear, easeIn, easeOut, easeInOut (default), hold.',
     input: z.object({
       clipId: id,
       keyframes: z
@@ -553,12 +767,13 @@ export const COMMANDS: Command[] = [
     }),
     run: ({ clipId, keyframes }) =>
       edit('ops.addKeyframe', (d) => {
-        const { clip } = clipIn(d, clipId);
+        const { clip, offset } = clipIn(d, clipId, true);
         const tol = keyTolerance(d.settings.fps, keyRate(clip));
         for (const k of keyframes) {
-          if (k.time < clip.start - 1e-6 || k.time > clipEnd(clip) + 1e-6)
-            throw new AgentError(`Keyframe time ${k.time} is outside the clip (${round(clip.start)}–${round(clipEnd(clip))}).`);
-          const s = srcTime(clip, k.time);
+          const t = k.time - offset;
+          if (t < clip.start - 1e-6 || t > clipEnd(clip) + 1e-6)
+            throw new AgentError(`Keyframe time ${k.time} is outside the clip (${round(clip.start + offset)}–${round(clipEnd(clip) + offset)}).`);
+          const s = srcTime(clip, t);
           addKeyAt(clip, s, tol);
           const key = clip.keyframes![keyIndexAt(clip, s, tol)];
           Object.assign(key.v, k.values);
@@ -574,7 +789,7 @@ export const COMMANDS: Command[] = [
     input: z.object({ clipId: id }),
     run: ({ clipId }) =>
       edit('ops.clearKeyframes', (d) => {
-        const { clip } = clipIn(d, clipId);
+        const { clip } = clipIn(d, clipId, true);
         clearKeys(clip, srcTime(clip, clip.start));
         return { ok: true };
       }),

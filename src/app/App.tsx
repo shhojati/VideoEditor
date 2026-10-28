@@ -27,6 +27,7 @@ import { Splash } from './Splash';
 import { StartupCheck } from './StartupCheck';
 import { Toasts } from './toasts';
 import { TopBar } from './TopBar';
+import { ClipMenu } from '../features/timeline/ClipMenu';
 
 export function App() {
   return (
@@ -123,6 +124,7 @@ function Editor() {
       )}
       <NewProjectDialog />
       <ShortcutSheet />
+      <ClipMenu />
       <AccountDialogs />
     </>
   );

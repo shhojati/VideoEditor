@@ -2,7 +2,7 @@
 // shape of `Project` changes in a way old documents would not satisfy.
 import { ellipsePath, rectPath } from './masks';
 
-export const CURRENT_VERSION = 8;
+export const CURRENT_VERSION = 9;
 
 /** migrations[n] upgrades a version-n document to version n+1. */
 export type MigrationTable = Record<number, (doc: Record<string, unknown>) => Record<string, unknown>>;
@@ -50,6 +50,8 @@ export const MIGRATIONS: MigrationTable = {
   // 7 → 8: polygon shapes, gradient fills, soft edges, line caps/joins, text size and colour
   // keyframes. Nothing to convert.
   7: (stored) => structuredClone(stored),
+  // 8 → 9: shadow offsets on shapes (ShapeProps.shadowX/Y) and colours with alpha. Nothing to convert.
+  8: (stored) => structuredClone(stored),
 };
 
 export class MigrationError extends Error {}

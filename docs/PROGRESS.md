@@ -768,3 +768,61 @@ Owner to try the MVP plus transitions on real footage, the internal server and V
 
 ### Known issues / not done
 - A soft edge and a drop shadow are not combined on the fill (the shadow then shows on the outline only).
+
+## Drawing D1 — SVG paths, alpha colours, shadow offset, arrange, groups ✅ (2026-10-28)
+
+Plan: [DRAWING-PLAN.md](DRAWING-PLAN.md). The owner chose model A: each part of a drawing is its own shape clip, and parts are grouped with compound clips.
+
+### Done
+- **SVG path data** (`lib/svgPath.ts`):
+  - It reads M L H V C S Q T A Z, absolute and relative, including arc flags without separators. Q and T become cubics; arcs become cubics of at most 90° each.
+  - Errors name the place, e.g. `invalid path command "X" at index 6`.
+  - It also writes Bézier points back as `d`, and makes smooth Catmull-Rom curves through points.
+- **Paths in the UI**:
+  - Right-click a clip (long press on touch) → **Paste SVG path** makes one path shape per subpath, placed where its points are around the frame centre.
+  - Inspector → Shape on a path: **Copy SVG path** and **Replace from clipboard**. When the browser refuses clipboard access, a prompt asks for the text instead.
+- **Colours with alpha** (`#rrggbbaa`): an opacity % field beside these colour pickers:
+  - shape: gradient end colour, shadow
+  - text: colour, outline, background, shadow
+  - solid: colour
+
+  Text colour keyframes keep the alpha.
+- **Shadow offset** for shapes (Shadow X / Y, px): `ShapeProps.shadowX/Y`. Without them, the shadow keeps the old 2 % offset down. Shadow blur and offset now scale with the preview zoom. Before, they were in screen pixels, so the preview did not match the export when zoomed.
+- **Arrange** (`model/timeline.ts` `arrangeClip`), with the right-click menu and After Effects' keys:
+  - Bring to front (Ctrl+Shift+]) and send to back (Ctrl+Shift+[) move the clip past every visual clip it overlaps in time. Bring forward (Ctrl+]) and send backward (Ctrl+[) move it past the next one.
+  - It uses a free track of its kind in between, or makes a new one. A track it leaves empty is removed.
+- **Group / Ungroup** (Ctrl+G / Ctrl+Shift+G, and in the right-click menu) are compound clips with three differences:
+  - The group goes where the lowest of its clips was in the stack.
+  - Tracks the clips left empty are removed.
+  - It pivots about the middle of its content. The insides are moved so that point is the compound's centre, and the compound by as much the other way. Nothing moves on screen. This is skipped when the content is larger than the frame.
+
+  Ctrl+Shift+C (precompose) is unchanged.
+- **Break apart / Ungroup** now folds the compound's position, turn, scale, opacity and volume (at its start) into its clips and their keyframes. Clips stay where they were drawn. When the compound had its own keyframes, effects, masks, blend mode or crop, a toast says those were not carried over. An emptied track is removed.
+- **Agent** (`features/agent/commands.ts`):
+  - `add_shape` takes `kind: 'path'` with `d` or `points` (+ `smooth`, `closed`). (0,0) is the point at transform x/y, so parts drawn with the same transform line up. Only what is given is drawn: `fill` and/or `stroke`.
+  - New shape settings in `add_shape` and `update_clip.shape`: `lineCap`, `lineJoin`, `dash`, `feather`, opacities, `gradient`, `shadow { color, blur, x, y }`, `sides`, `starPoints`, `innerRadius`. `null` removes a fill, stroke, gradient or shadow. `#RRGGBBAA` is accepted everywhere.
+  - `update_clip.shape.d` replaces an outline, keeping the shape where it is.
+  - `get_clip` returns `d` for path shapes.
+  - New tools: `reorder_clip`, `group_clips`, `ungroup`.
+  - `get_clip`, `update_clip`, `animate`, `clear_keyframes`, `add_effect`, `update_effect` and `reorder_clip` work on clips **inside groups**, with timeline times. Other tools say to ungroup first.
+  - `get_project` lists a group's `name` and `children`.
+- Project version 9.
+
+### Verified
+- 461 unit tests. New tests cover:
+  - path parsing: lines, H/V, cubic, S reflection, Q/T, arcs on their circle, flags, subpaths, errors, round trip
+  - arrange: front, back, step, a free track in between, only clips that overlap in time
+  - group pivot: positions and keyframes unchanged on screen, tracks cleaned up
+  - break apart of a turned, scaled, faded group: centres match to 6 decimals; 'approx' for a blended one
+  - shadow offset default
+  - agent: path from `d` around the transform point and read back; subpaths refused with advice; outline from smooth points; gradient and shadow set and removed; group, animate a part inside, `move_clip` refused inside, ungroup, undo
+- In the browser, through the agent tools: the example face from the plan (face, closed eyes, smile, hair) drawn as 5 paths and grouped. The group landed on one track where the parts were, pivoting at the face's centre.
+  - Turned 25°, scaled 0.8 and faded to 70 %, then ungrouped: the snapshot is the same before and after.
+  - Right-click menu on the timeline: Arrange, Group, Ungroup and the SVG path items show with their keys, and Ungroup works.
+  - Inspector: the shadow alpha shows 50 % for `#00000080`. Setting 25 % gives `#00000040`. Shadow X −5 keeps Y at 8.
+  - No console errors.
+
+### Known issues / not done
+- A shape holds one subpath, so no holes (`evenodd`). A pasted multi-part path becomes several shapes, each on its own track.
+- Ungroup cannot carry the group's own keyframes, effects, masks, blend mode or crop over to its clips (it says so).
+- Group, Ungroup and Arrange have no toolbar buttons; they are in the right-click menu and on the keys.

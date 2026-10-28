@@ -305,6 +305,9 @@ export interface ShapeProps {
   shadowColor?: string;
   /** Blur radius in project pixels at scale 1. */
   shadowBlur?: number;
+  /** Shadow offset in project pixels at scale 1 (+x right, +y down, not turned with the shape). Absent: 0 and 2 % of the size down. */
+  shadowX?: number;
+  shadowY?: number;
   fadeIn: number;
   fadeOut: number;
 }

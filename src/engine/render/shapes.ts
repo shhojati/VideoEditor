@@ -1,5 +1,6 @@
 import type { Clip, ShapeProps } from '../../model/types';
 import { pathAt } from '../../model/masks';
+import { shadowOffset } from '../../model/overlays';
 import { keyTimeAt } from '../../model/remap';
 import { fadeAlpha } from '../fade';
 import { tracePath } from './masks';
@@ -142,6 +143,8 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
   const lw = s.strokeWidth * k;
   const base = ctx.globalAlpha * alpha;
 
+  // Shadow blur and offset are device pixels (the canvas transform does not apply to them).
+  const view = s.shadowColor ? deviceScale(ctx) : 1;
   ctx.save();
   ctx.translate(canvasW / 2 + clip.transform.x * canvasW, canvasH / 2 + clip.transform.y * canvasH);
   if (clip.transform.rotation) ctx.rotate((clip.transform.rotation * Math.PI) / 180);
@@ -152,11 +155,14 @@ export function drawShapeClip(ctx: Ctx2D, clip: Clip, t: number, canvasW: number
   const paint = (fn: () => void) => {
     if (shadow) {
       ctx.shadowColor = s.shadowColor!;
-      ctx.shadowBlur = s.shadowBlur! * k;
-      ctx.shadowOffsetY = Math.max(w, h) * 0.02;
+      ctx.shadowBlur = s.shadowBlur! * k * view;
+      const off = shadowOffset(s);
+      ctx.shadowOffsetX = off.shadowX * k * view;
+      ctx.shadowOffsetY = off.shadowY * k * view;
     }
     fn();
     ctx.shadowColor = 'transparent';
+    ctx.shadowOffsetX = ctx.shadowOffsetY = 0;
     shadow = false;
   };
 

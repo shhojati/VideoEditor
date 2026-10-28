@@ -57,20 +57,20 @@ export function readProps(clip: Clip): KeyValues {
   return v;
 }
 
-/** '#rrggbb' → [r, g, b] (0..255), or undefined for any other colour notation. */
+/** '#rrggbb' or '#rrggbbaa' → [r, g, b] (0..255), or undefined for any other colour notation. */
 function hexRgb(c: string): [number, number, number] | undefined {
-  const m = /^#([0-9a-f]{6})$/i.exec(c);
+  const m = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(c);
   if (!m) return undefined;
   const n = parseInt(m[1], 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-/** Replace one channel (0 r, 1 g, 2 b) of a '#rrggbb' colour. */
+/** Replace one channel (0 r, 1 g, 2 b) of a '#rrggbb' colour; an alpha byte is kept. */
 function withChannel(c: string, i: number, v: number): string {
   const rgb = hexRgb(c);
   if (!rgb) return c;
   rgb[i] = Math.max(0, Math.min(255, Math.round(v)));
-  return `#${rgb.map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+  return `#${rgb.map((x) => x.toString(16).padStart(2, '0')).join('')}${c.slice(7)}`;
 }
 
 /** Settings with whole-number steps (levels, counts…) stay whole while animating. */

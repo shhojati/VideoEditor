@@ -41,6 +41,11 @@ disconnects every app.
   `server/src/agentTools.json` is a copy of it, so the server can list the tools before any tab
   connects. `commands.test.ts` fails when that copy is stale. To regenerate it:
   `UPDATE_AGENT_TOOLS=1 npx vitest run src/features/agent`.
+- **Drawing**:
+  - `add_shape` with `kind: 'path'` takes SVG path data (`d`) or `points`. Path coordinates are pixels around the point at `transform.x/y`, so parts drawn with the same transform line up.
+  - `group_clips` / `ungroup` and `reorder_clip` arrange the parts.
+  - Most clip tools also reach clips inside a group by id.
+  - See `docs/DRAWING-PLAN.md`.
 - **Relay** (`server/src/bridge.ts`, in memory):
   - A tab with access on holds `GET /api/bridge/stream` open (server-sent events, cookie auth).
   - Calls go to the user's most recently connected tab, and the tab answers with

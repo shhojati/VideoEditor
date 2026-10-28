@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { openClipMenu } from '../timeline/ClipMenu';
 import { findClip } from '../../model/timeline';
 import { isPaintLayer } from '../../model/overlays';
 import type { Clip, ID, Project } from '../../model/types';
@@ -296,6 +297,11 @@ export function CanvasOverlay({ project }: { project: Project }) {
       onPointerCancel={cancel}
       onPointerLeave={() => !gesture.current && setHover(null)}
       onDoubleClick={onDoubleClick}
+      onContextMenu={(e) => {
+        const id = selecting ? hitTest(local(e)) : null;
+        if (id) openClipMenu(e, id);
+        else e.preventDefault();
+      }}
     >
       {guides.x !== undefined && (
         <line x1={view.ox + guides.x * view.k} x2={view.ox + guides.x * view.k} y1={0} y2={viewport.h} className="stroke-fuchsia-400" strokeDasharray="4 3" />

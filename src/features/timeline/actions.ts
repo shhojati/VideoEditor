@@ -4,6 +4,8 @@ import {
   addShapeClip,
   addSolidClip,
   addTextClip,
+  arrangeClip,
+  type ArrangeAction,
   copyClips,
   deleteClips,
   detachAudio,
@@ -14,9 +16,10 @@ import {
   timelineDuration,
   type ClipboardItem,
 } from '../../model/timeline';
-import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
+import { defaultShape, pathShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
 import type { ID, MaskVertex, Project, ShapeKind } from '../../model/types';
-import { pathBounds } from '../../model/masks';
+import { parsePathData, PathDataError } from '../../lib/svgPath';
+import i18n from '../../i18n';
 import { unparent } from './parentActions';
 import { detectRtl } from '../../engine/render/textLayout';
 import { deleteCues, findCue, splitCue } from '../../model/subtitles';
@@ -141,6 +144,17 @@ export function paste(at = useTransport.getState().time) {
 }
 
 /** Copy + paste right after the end of the selection. */
+/** Arrange (Ctrl+] / Ctrl+[, with Shift to the front / back): the selected visual clips, one undo step. */
+export function arrangeSelection(action: ArrangeAction) {
+  const p = project();
+  if (!p) return;
+  const sel = [...editableSelection(p)];
+  if (!sel.length) return;
+  edit('ops.arrange', (d) => {
+    for (const id of sel) arrangeClip(d, id, action);
+  });
+}
+
 export function duplicateSelection() {
   const p = project();
   if (!p) return;
@@ -215,24 +229,59 @@ export function addShape(kind: ShapeKind, at?: Placement) {
  * centred on its own middle, filled when closed, a white line when open. Selected.
  */
 export function addPathShape(path: MaskVertex[], closed: boolean) {
-  const b = pathBounds(path);
-  const mx = b.x + b.width / 2;
-  const my = b.y + b.height / 2;
+  const { shape, centre } = pathShape(path, closed);
   let id = '';
   edit('ops.addShape', (d) => {
-    const shape = {
-      ...defaultShape('path'),
-      kind: 'path' as const,
-      width: Math.max(4, Math.round(b.width)),
-      height: Math.max(4, Math.round(b.height)),
-      path: { value: path.map(([x, y, ix, iy, ox, oy]): MaskVertex => [x - mx, y - my, ix, iy, ox, oy]) },
-      closed,
-      ...(closed ? { fill: '#2563eb', strokeWidth: 0 } : { fill: undefined, stroke: '#ffffff', strokeWidth: 8 }),
-    };
     id = addShapeClip(d, useTransport.getState().time, shape);
-    place(d, id, { cx: d.settings.width / 2 + mx, cy: d.settings.height / 2 + my });
+    place(d, id, { cx: d.settings.width / 2 + centre.x, cy: d.settings.height / 2 + centre.y });
   });
   select([id]);
+}
+
+/**
+ * Paste SVG path data: each subpath becomes a path shape at the playhead, placed where its points
+ * are (around the frame centre) and selected. Returns the error message for bad data.
+ */
+export function pasteSvgPath(d: string): string | undefined {
+  let subs;
+  try {
+    subs = parsePathData(d.trim());
+  } catch (e) {
+    return e instanceof PathDataError ? e.message : String(e);
+  }
+  const ids: ID[] = [];
+  edit('ops.addShape', (p) => {
+    for (const s of subs) {
+      if (s.points.length < 2) continue;
+      const { shape, centre } = pathShape(s.points, s.closed);
+      const id = addShapeClip(p, useTransport.getState().time, shape);
+      place(p, id, { cx: p.settings.width / 2 + centre.x, cy: p.settings.height / 2 + centre.y });
+      ids.push(id);
+    }
+  });
+  select(ids);
+  return undefined;
+}
+
+/** Replace the selected path shape's points with SVG path data (one subpath; keeps it in place). */
+export function setShapePathData(clipId: ID, d: string): string | undefined {
+  let subs;
+  try {
+    subs = parsePathData(d.trim());
+  } catch (e) {
+    return e instanceof PathDataError ? e.message : String(e);
+  }
+  if (subs.length !== 1) return i18n.t('shapes.onePath', { count: subs.length });
+  const { shape } = pathShape(subs[0].points, subs[0].closed);
+  edit('ops.clipProp', (p) => {
+    const s = findClip(p, clipId)?.clip.shape;
+    if (!s || s.kind !== 'path') return;
+    s.path = shape.path;
+    s.closed = shape.closed;
+    s.width = shape.width;
+    s.height = shape.height;
+  });
+  return undefined;
 }
 
 /** A solid colour layer (full frame) at the playhead, selected. */

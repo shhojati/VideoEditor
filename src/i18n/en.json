@@ -133,7 +133,9 @@
     "toggleSolo": "Toggle solo",
     "detachAudio": "Detach audio",
     "fitToBeat": "Fit to beat",
-    "addFont": "Add font"
+    "addFont": "Add font",
+    "group": "Group",
+    "arrange": "Arrange"
   },
   "panels": {
     "media": "Media",
@@ -369,7 +371,8 @@
     "duckHint": "Gets quieter wherever another clip has speech (for music under a voiceover). Follows your edits.",
     "parent": "Parent",
     "noParent": "None",
-    "motionTracking": "Motion tracking"
+    "motionTracking": "Motion tracking",
+    "colorAlpha": "Opacity of this colour (%)"
   },
   "subtitles": {
     "lane": "Subtitles {{lang}}",
@@ -641,7 +644,10 @@
       "adjustment": "New adjustment layer",
       "null": "New null object",
       "compound": "Make a compound clip from the selection",
-      "fullscreen": "Preview full screen"
+      "fullscreen": "Preview full screen",
+      "group": "Group / ungroup (compound that turns about its content)",
+      "arrangeStep": "Bring forward / send backward",
+      "arrangeEnds": "Bring to front / send to back"
     }
   },
   "transitions": {
@@ -742,7 +748,18 @@
       "miter": "Sharp",
       "round": "Round",
       "bevel": "Bevel"
-    }
+    },
+    "shadowX": "Shadow X",
+    "shadowY": "Shadow Y",
+    "copyPath": "Copy SVG path",
+    "pastePath": "Paste SVG path",
+    "replacePath": "Replace from clipboard",
+    "replacePathHint": "Replace this outline with SVG path data from the clipboard",
+    "replacePathPrompt": "SVG path data, e.g. M 0 0 C 40 -60 120 -60 160 0 Z",
+    "pathCopied": "SVG path copied",
+    "clipboardBlocked": "The browser did not allow the clipboard",
+    "badPath": "That is not SVG path data: {{error}}",
+    "onePath": "That path data has {{count}} parts (subpaths) and a shape holds one. Right-click the timeline or preview → Paste SVG path makes one shape per part."
   },
   "blend": {
     "label": "Blend mode",
@@ -1559,7 +1576,9 @@
     "makeHint": "Make one compound clip from the selected clips (double-click it to edit its insides)",
     "main": "Main timeline",
     "path": "Opened compound clips",
-    "inside": "Editing inside a compound clip: changes show wherever it plays."
+    "inside": "Editing inside a compound clip: changes show wherever it plays.",
+    "groupName": "Group {{n}}",
+    "breakApprox": "The compound's own keyframes, effects, masks, blend mode or crop could not be carried over to its clips."
   },
   "markers": {
     "hint": "Markers (M adds one at the playhead)",
@@ -1658,5 +1677,15 @@
       "type": "That is not a font file (.ttf, .otf, .woff, .woff2).",
       "unreadable": "The browser cannot read this font file."
     }
+  },
+  "clipMenu": {
+    "title": "Clip",
+    "arrange": "Arrange",
+    "bringToFront": "Bring to front",
+    "forward": "Bring forward",
+    "backward": "Send backward",
+    "sendToBack": "Send to back",
+    "group": "Group",
+    "ungroup": "Ungroup"
   }
 }

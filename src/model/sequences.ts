@@ -3,6 +3,7 @@
 // inner clip exists exactly once and keeps a unique id. Like timeline.ts, edits mutate the project
 // inside edit().
 import { newId } from './factories';
+import { keyedClip } from './keyframes';
 import { retime } from './remap';
 import { cloneClip } from './timeline';
 import type { Clip, ID, Project, Sequence, Track } from './types';
@@ -62,8 +63,11 @@ export function cloneSequence(p: Project, seqId: ID, depth = 0): ID | undefined 
  * becomes a track inside it (same order), transitions between two selected clips go along. The
  * compound goes on the lowest involved visual track if there is room there, else on a new track.
  * Returns its id, or null when fewer than two clips can be combined.
+ *
+ * `group` (Group, the agent's group_clips): it goes where the lowest of the clips was in the stack
+ * instead, tracks it left empty are removed, and it pivots about `group.pivot` (see recentre).
  */
-export function makeCompound(p: Project, ids: readonly ID[], name: string): ID | null {
+export function makeCompound(p: Project, ids: readonly ID[], name: string, group?: { pivot?: { x: number; y: number } }): ID | null {
   const picked = new Set(ids);
   const involved = p.tracks.filter((t) => !t.locked && t.clips.some((c) => picked.has(c.id)));
   const clips = involved.flatMap((t) => t.clips.filter((c) => picked.has(c.id)));
@@ -95,12 +99,45 @@ export function makeCompound(p: Project, ids: readonly ID[], name: string): ID |
   let target = involved.find(free);
   if (!target) {
     target = { id: newId(), kind, muted: false, locked: false, clips: [] };
+    const lowest = involved.find((t) => t.kind !== 'audio');
     if (kind === 'audio') p.tracks.unshift(target);
+    else if (group && lowest) p.tracks.splice(p.tracks.indexOf(lowest), 0, target);
     else p.tracks.push(target);
   }
   target.clips.push(compound);
   target.clips.sort((a, b) => a.start - b.start);
+  if (group) {
+    dropEmpty(p, involved);
+    if (group.pivot && visual) recentre(p, compound, inner, group.pivot);
+  }
   return compound.id;
+}
+
+/**
+ * Group pivot: move the insides so `pivot` (project px, the clips' bounding-box centre) is the middle
+ * of the compound's frame, and the compound by as much the other way. Nothing changes on screen, but
+ * the compound now scales and turns about its content. Clips parented to another clip inside follow
+ * their parent. Callers pass a pivot only when the content fits in the frame (the compound's layer
+ * is frame-sized and would cut it).
+ */
+function recentre(p: Project, compound: Clip, inner: Track[], pivot: { x: number; y: number }) {
+  const { width: W, height: H } = p.settings;
+  const dx = (pivot.x - W / 2) / W;
+  const dy = (pivot.y - H / 2) / H;
+  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return;
+  const ids = new Set(inner.flatMap((t) => t.clips.map((c) => c.id)));
+  for (const t of inner)
+    for (const c of t.clips) {
+      if (t.kind === 'audio' || (c.parentId && ids.has(c.parentId))) continue;
+      c.transform.x -= dx;
+      c.transform.y -= dy;
+      for (const k of c.keyframes ?? []) {
+        if (k.v.x !== undefined) k.v.x -= dx;
+        if (k.v.y !== undefined) k.v.y -= dy;
+      }
+    }
+  compound.transform.x = dx;
+  compound.transform.y = dy;
 }
 
 /**
@@ -125,19 +162,76 @@ function placedInner(p: Project, compound: Clip): { kind: Track['kind']; clips: 
   }));
 }
 
-/** Put a compound's clips back on the timeline (on new tracks above it) and remove it. */
-export function breakApart(p: Project, clipId: ID): boolean {
+const RAD = Math.PI / 180;
+
+/** Remove these tracks where they are empty, while another track of their kind remains. */
+function dropEmpty(p: Project, tracks: Track[]) {
+  for (const t of tracks) if (!t.clips.length && p.tracks.some((o) => o !== t && o.kind === t.kind)) p.tracks.splice(p.tracks.indexOf(t), 1);
+}
+
+/**
+ * Fold the compound's position, turn, scale and opacity (at its start) and its volume into the
+ * clips it held, so they stay where they were drawn. Clips parented to another clip inside follow
+ * their parent. Returns false when that cannot be exact: the compound's own keyframes, effects,
+ * masks, blend mode or crop are not carried over.
+ */
+function bake(p: Project, compound: Clip, groups: { kind: Track['kind']; clips: Clip[] }[]): boolean {
+  const { width: W, height: H } = p.settings;
+  const tr = keyedClip(compound, compound.start).transform;
+  const a = tr.rotation * RAD;
+  const place = (x: number, y: number) => {
+    const lx = x * W * tr.scale;
+    const ly = y * H * tr.scale;
+    return { x: tr.x + (lx * Math.cos(a) - ly * Math.sin(a)) / W, y: tr.y + (lx * Math.sin(a) + ly * Math.cos(a)) / H };
+  };
+  const ids = new Set(groups.flatMap((g) => g.clips.map((c) => c.id)));
+  for (const g of groups)
+    for (const c of g.clips) {
+      c.audio = { ...c.audio, volume: c.audio.volume * compound.audio.volume };
+      if (g.kind === 'audio') continue;
+      const own = !(c.parentId && ids.has(c.parentId));
+      const local = c.transform;
+      const t = { ...local };
+      if (own) {
+        Object.assign(t, place(t.x, t.y));
+        t.rotation += tr.rotation;
+        t.scale *= tr.scale;
+      }
+      t.opacity *= tr.opacity;
+      c.transform = t;
+      c.keyframes = c.keyframes?.map((k) => {
+        const v = { ...k.v };
+        if (own && (v.x !== undefined || v.y !== undefined)) Object.assign(v, place(v.x ?? local.x, v.y ?? local.y));
+        if (own && v.rotation !== undefined) v.rotation += tr.rotation;
+        if (own && v.scale !== undefined) v.scale *= tr.scale;
+        if (v.opacity !== undefined) v.opacity *= tr.opacity;
+        return { ...k, v };
+      });
+      if (!c.keyframes) delete c.keyframes;
+    }
+  const keyed = compound.keyframes?.some((k) => ['x', 'y', 'scale', 'rotation', 'opacity'].some((q) => q in k.v));
+  return !keyed && !compound.effects?.length && !compound.masks?.length && (compound.blend ?? 'normal') === 'normal' && !compound.transform.crop;
+}
+
+/**
+ * Put a compound's clips back on the timeline (on new tracks above it) and remove it, keeping them
+ * where they were drawn (see bake). Returns false when it is not a compound (or is locked); 'approx'
+ * when the compound had settings that could not be carried over to its clips.
+ */
+export function breakApart(p: Project, clipId: ID): boolean | 'approx' {
   const track = p.tracks.find((t) => t.clips.some((c) => c.id === clipId && c.sequenceId));
   if (!track || track.locked) return false;
   const compound = track.clips.find((c) => c.id === clipId)!;
   const groups = placedInner(p, compound);
+  const exact = bake(p, compound, groups);
   track.clips = track.clips.filter((c) => c.id !== clipId);
   const at = p.tracks.indexOf(track);
   const fresh: Track[] = groups.filter((g) => g.clips.length).map((g) => ({ id: newId(), kind: g.kind, muted: false, locked: false, clips: g.clips.sort((x, y) => x.start - y.start) }));
   // Visual tracks right above the compound's track (inner order kept); audio at the bottom.
   p.tracks.splice(at + 1, 0, ...fresh.filter((t) => t.kind !== 'audio'));
   p.tracks.unshift(...fresh.filter((t) => t.kind === 'audio'));
-  return true;
+  dropEmpty(p, [track]);
+  return exact || 'approx';
 }
 
 /** After every edit: forget sequences no clip uses, and compound clips whose sequence is gone. */

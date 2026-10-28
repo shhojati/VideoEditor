@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import {
   addNull,
   addSolid,
+  arrangeSelection,
   copySelection,
   deleteSelection,
   duplicateSelection,
@@ -15,7 +16,7 @@ import {
 } from '../features/timeline/actions';
 import i18n from '../i18n';
 import { addAdjustmentLayer } from '../features/effects/effectActions';
-import { makeCompoundFromSelection } from '../features/timeline/compoundActions';
+import { groupSelection, makeCompoundFromSelection, ungroupSelection } from '../features/timeline/compoundActions';
 import { saveProjectFile } from '../features/projects/projectFile';
 import { useNewProjectDialog } from '../features/projects/NewProjectDialog';
 import { openImportPicker } from '../features/media-bin/mediaService';
@@ -67,6 +68,10 @@ const WITH_CTRL: Record<string, Handler> = {
   KeyD: (e) => (e.shiftKey ? splitAtPlayhead() : duplicateSelection()),
   KeyA: selectAll,
   KeyS: saveProject,
+  // Arrange (After Effects: Ctrl+] / Ctrl+[ one step, with Shift to the front / back) and group shapes.
+  BracketRight: (e) => arrangeSelection(e.shiftKey ? 'bringToFront' : 'forward'),
+  BracketLeft: (e) => arrangeSelection(e.shiftKey ? 'sendToBack' : 'backward'),
+  KeyG: (e) => (e.shiftKey ? ungroupSelection() : groupSelection()),
   // Chrome keeps Ctrl+N for a new window; it reaches the page in the installed app.
   KeyN: () => useNewProjectDialog.setState({ open: true }),
   KeyI: () => {

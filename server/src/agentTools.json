@@ -25,7 +25,7 @@
   },
   {
     "name": "get_clip",
-    "description": "Every setting of one clip (transform, text, shape, audio, effects with params, keyframes).",
+    "description": "Every setting of one clip (transform, text, shape, audio, effects with params, keyframes), also inside groups. Path shapes include their outline as SVG path data `d` (centred on the shape position).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -114,11 +114,11 @@
         },
         "color": {
           "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
         },
         "strokeColor": {
           "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
         },
         "strokeWidth": {
           "type": "number",
@@ -127,7 +127,7 @@
         },
         "bgColor": {
           "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
         },
         "align": {
           "type": "string",
@@ -224,7 +224,7 @@
   },
   {
     "name": "add_shape",
-    "description": "Add a vector shape (rectangle, circle, star, line…) on a graphics track. Sizes are project pixels.",
+    "description": "Add a vector shape on a graphics track (a new track on top when the time is taken). Kinds: rectangle, square, circle, oval, triangle, star, polygon, line, and path: any outline with curves from SVG path data `d` or `points` (faces, hair, objects). Sizes are project pixels. Colours may have alpha (#RRGGBBAA). Draw a figure as several paths with the same transform, then group_clips and reorder_clip.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -232,7 +232,8 @@
         "width": {
           "type": "number",
           "minimum": 1,
-          "maximum": 10000
+          "maximum": 10000,
+          "description": "Pixels. For a path: scales the outline to this width"
         },
         "height": {
           "type": "number",
@@ -240,22 +241,171 @@
           "maximum": 10000
         },
         "fill": {
-          "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null: no fill"
         },
         "stroke": {
-          "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null: no outline"
         },
         "strokeWidth": {
           "type": "number",
           "minimum": 0,
           "maximum": 500
         },
+        "fillOpacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "strokeOpacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "cornerRadius": {
           "type": "number",
           "minimum": 0,
           "maximum": 5000
+        },
+        "dash": {
+          "type": "string",
+          "enum": [
+            "solid",
+            "dash",
+            "dot"
+          ]
+        },
+        "lineCap": {
+          "type": "string",
+          "enum": [
+            "butt",
+            "round",
+            "square"
+          ],
+          "description": "Ends of lines and open paths"
+        },
+        "lineJoin": {
+          "type": "string",
+          "enum": [
+            "miter",
+            "round",
+            "bevel"
+          ],
+          "description": "Corners of outlines"
+        },
+        "feather": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500,
+          "description": "Soft edge of the fill, pixels"
+        },
+        "gradient": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "linear",
+                    "radial"
+                  ]
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+                },
+                "angle": {
+                  "default": 90,
+                  "description": "Linear only, degrees",
+                  "type": "number",
+                  "minimum": -360,
+                  "maximum": 360
+                }
+              },
+              "required": [
+                "kind",
+                "to"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Fill from `fill` to `to`; null removes it"
+        },
+        "shadow": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+                },
+                "blur": {
+                  "default": 12,
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 200
+                },
+                "x": {
+                  "default": 0,
+                  "type": "number",
+                  "minimum": -1000,
+                  "maximum": 1000
+                },
+                "y": {
+                  "default": 6,
+                  "type": "number",
+                  "minimum": -1000,
+                  "maximum": 1000
+                }
+              },
+              "required": [
+                "color"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Drop shadow, pixels; colour may have alpha (#00000080). null removes it"
+        },
+        "sides": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 12,
+          "description": "Polygon"
+        },
+        "starPoints": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 20,
+          "description": "Star"
+        },
+        "innerRadius": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 0.95,
+          "description": "Star, fraction of the outer radius"
         },
         "kind": {
           "type": "string",
@@ -267,7 +417,8 @@
             "triangle",
             "star",
             "polygon",
-            "line"
+            "line",
+            "path"
           ]
         },
         "start": {
@@ -313,6 +464,45 @@
               "maximum": 1
             }
           }
+        },
+        "d": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "description": "kind path: SVG path data (M L H V C S Q T A Z, absolute or lower-case relative) in project pixels. (0,0) is the point at transform x/y, so parts drawn with the same transform line up. One subpath (one M) per shape; Z closes it (only closed paths are filled)."
+        },
+        "points": {
+          "minItems": 2,
+          "maxItems": 2000,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -20000,
+                "maximum": 20000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -20000,
+                "maximum": 20000
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "description": "kind path, instead of d: points in pixels (same origin as d), joined by straight lines, or by a curve through them with smooth"
+        },
+        "smooth": {
+          "type": "boolean",
+          "description": "points: a smooth curve through the points"
+        },
+        "closed": {
+          "type": "boolean",
+          "description": "points: close the outline (default true)"
         }
       },
       "required": [
@@ -332,7 +522,7 @@
       "properties": {
         "color": {
           "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
         },
         "start": {
           "default": 0,
@@ -356,7 +546,7 @@
   },
   {
     "name": "update_clip",
-    "description": "Change a clip: length, transform (position/scale/rotation/opacity), blend mode, sound (volume 0..2, fades), text style or shape style. On a clip with keyframes, transform and volume changes land in a keyframe at `time` (default the clip start).",
+    "description": "Change a clip (also one inside a group): length, transform (position/scale/rotation/opacity), blend mode, sound (volume 0..2, fades), text style or shape style. shape.d / shape.points replace a shape's outline (it becomes a path), centred where the shape is now. On a clip with keyframes, transform and volume changes land in a keyframe at timeline time `time` (default the clip start).",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -460,11 +650,11 @@
             },
             "color": {
               "type": "string",
-              "pattern": "^#[0-9a-fA-F]{6}$"
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
             },
             "strokeColor": {
               "type": "string",
-              "pattern": "^#[0-9a-fA-F]{6}$"
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
             },
             "strokeWidth": {
               "type": "number",
@@ -473,7 +663,7 @@
             },
             "bgColor": {
               "type": "string",
-              "pattern": "^#[0-9a-fA-F]{6}$"
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
             },
             "align": {
               "type": "string",
@@ -523,7 +713,8 @@
             "width": {
               "type": "number",
               "minimum": 1,
-              "maximum": 10000
+              "maximum": 10000,
+              "description": "Pixels. For a path: scales the outline to this width"
             },
             "height": {
               "type": "number",
@@ -531,22 +722,210 @@
               "maximum": 10000
             },
             "fill": {
-              "type": "string",
-              "pattern": "^#[0-9a-fA-F]{6}$"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "null: no fill"
             },
             "stroke": {
-              "type": "string",
-              "pattern": "^#[0-9a-fA-F]{6}$"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "null: no outline"
             },
             "strokeWidth": {
               "type": "number",
               "minimum": 0,
               "maximum": 500
             },
+            "fillOpacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "strokeOpacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
             "cornerRadius": {
               "type": "number",
               "minimum": 0,
               "maximum": 5000
+            },
+            "dash": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "dash",
+                "dot"
+              ]
+            },
+            "lineCap": {
+              "type": "string",
+              "enum": [
+                "butt",
+                "round",
+                "square"
+              ],
+              "description": "Ends of lines and open paths"
+            },
+            "lineJoin": {
+              "type": "string",
+              "enum": [
+                "miter",
+                "round",
+                "bevel"
+              ],
+              "description": "Corners of outlines"
+            },
+            "feather": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500,
+              "description": "Soft edge of the fill, pixels"
+            },
+            "gradient": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "linear",
+                        "radial"
+                      ]
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+                    },
+                    "angle": {
+                      "default": 90,
+                      "description": "Linear only, degrees",
+                      "type": "number",
+                      "minimum": -360,
+                      "maximum": 360
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "to"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Fill from `fill` to `to`; null removes it"
+            },
+            "shadow": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "color": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+                    },
+                    "blur": {
+                      "default": 12,
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 200
+                    },
+                    "x": {
+                      "default": 0,
+                      "type": "number",
+                      "minimum": -1000,
+                      "maximum": 1000
+                    },
+                    "y": {
+                      "default": 6,
+                      "type": "number",
+                      "minimum": -1000,
+                      "maximum": 1000
+                    }
+                  },
+                  "required": [
+                    "color"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Drop shadow, pixels; colour may have alpha (#00000080). null removes it"
+            },
+            "sides": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 12,
+              "description": "Polygon"
+            },
+            "starPoints": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 20,
+              "description": "Star"
+            },
+            "innerRadius": {
+              "type": "number",
+              "minimum": 0.05,
+              "maximum": 0.95,
+              "description": "Star, fraction of the outer radius"
+            },
+            "d": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000,
+              "description": "kind path: SVG path data (M L H V C S Q T A Z, absolute or lower-case relative) in project pixels. (0,0) is the point at transform x/y, so parts drawn with the same transform line up. One subpath (one M) per shape; Z closes it (only closed paths are filled)."
+            },
+            "points": {
+              "minItems": 2,
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": -20000,
+                    "maximum": 20000
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -20000,
+                    "maximum": 20000
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              "description": "kind path, instead of d: points in pixels (same origin as d), joined by straight lines, or by a curve through them with smooth"
+            },
+            "smooth": {
+              "type": "boolean",
+              "description": "points: a smooth curve through the points"
+            },
+            "closed": {
+              "type": "boolean",
+              "description": "points: close the outline (default true)"
             }
           }
         },
@@ -590,6 +969,93 @@
       "required": [
         "clipId",
         "start"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "reorder_clip",
+    "description": "Change the layer order of a visual clip: what it is drawn in front of or behind (e.g. arms in front of the head). action bringToFront / sendToBack: past every clip it overlaps in time; forward / backward: one step. Or trackIndex (from get_project) to put it on that track. Inside a group the order is among the group's clips.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "bringToFront",
+            "forward",
+            "backward",
+            "sendToBack"
+          ]
+        },
+        "trackIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "clipId"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "group_clips",
+    "description": "Group clips (e.g. the parts of a drawn character) into one compound clip that moves, scales, turns and animates as one object about the centre of its parts. The parts keep their ids: get_clip, update_clip, animate, reorder_clip and effects still work on them inside the group.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "clipIds": {
+          "minItems": 2,
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "clipIds"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false
+    }
+  },
+  {
+    "name": "ungroup",
+    "description": "Break a group (compound clip) apart: its clips go back on the timeline where they are drawn, with the group's position, turn, scale and opacity folded into them.",
+    "inputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "groupId"
       ]
     },
     "annotations": {
@@ -1024,7 +1490,7 @@
   },
   {
     "name": "animate",
-    "description": "Animate a clip with keyframes at timeline times. Values: x, y, scale, rotation, opacity, volume, and for text text.size; shapes shape.width/shape.height. Ease: linear, easeIn, easeOut, easeInOut (default), hold.",
+    "description": "Animate a clip (also a part inside a group, or a whole group) with keyframes at timeline times. Values: x, y, scale, rotation, opacity, volume, and for text text.size; shapes shape.width/shape.height. Ease: linear, easeIn, easeOut, easeInOut (default), hold.",
     "inputSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",

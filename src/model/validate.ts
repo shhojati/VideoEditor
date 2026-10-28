@@ -68,6 +68,8 @@ const shapeProps = z.object({
   closed: z.boolean().optional(),
   shadowColor: z.string().optional(),
   shadowBlur: nonNeg.optional(),
+  shadowX: num.optional(),
+  shadowY: num.optional(),
   fadeIn: nonNeg,
   fadeOut: nonNeg,
 });

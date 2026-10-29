@@ -73,6 +73,11 @@ export async function sendChat(text: string) {
         const last = messages.at(-1);
         if (last?.role === 'assistant') for (const c of last.tool_calls ?? []) calls[c.id] = 'running';
         if (status) calls[status.callId] = status.ok ? 'ok' : 'error';
+        if (status && !status.ok) {
+          const call = messages.flatMap((m) => (m.role === 'assistant' ? (m.tool_calls ?? []) : [])).find((c) => c.id === status.callId);
+          const result = messages.find((m) => m.role === 'tool' && m.tool_call_id === status.callId);
+          console.warn('AI chat: tool failed', call?.function.name, call?.function.arguments, result?.content);
+        }
         useChat.setState({ messages, calls });
         if (credits !== undefined) setCredits(credits);
       },

@@ -73,3 +73,33 @@ test('out of credits: the chat says so and offers to buy', async ({ page }) => {
   await page.getByTestId('chat-error').getByRole('button', { name: 'Buy credits' }).click();
   await expect(page.getByTestId('account-credits')).toBeVisible();
 });
+
+test('a failed tool call shows why it failed', async ({ page }) => {
+  await page.route('**/api/me', async (route) => {
+    const r = await route.fetch();
+    const body = await r.json();
+    await route.fulfill({ response: r, json: { ...body, chat: true, user: body.user && { ...body.user, credits: 100 } } });
+  });
+  let n = 0;
+  await page.route('**/api/chat/turn', (route) =>
+    route.fulfill({
+      json:
+        n++ === 0
+          ? {
+              message: { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'add_shape', arguments: '{"kind":"circle","fill":"white"}' } }] },
+              charged: 1,
+              credits: 99,
+            }
+          : { message: { role: 'assistant', content: 'Fixed it.' }, charged: 1, credits: 98 },
+    }),
+  );
+  await page.goto('/');
+  await page.getByRole('button', { name: 'English' }).click();
+  await page.getByTestId('right-ai').click();
+  await page.getByTestId('chat-input').fill('draw a face');
+  await page.getByTestId('chat-input').press('Enter');
+  await expect(page.getByTestId('chat-call')).toHaveAttribute('data-state', 'error');
+  await page.getByTestId('chat-call').click();
+  await expect(page.getByTestId('chat-call-detail')).toContainText('#ff8800');
+  await expect(page.getByTestId('chat-call-detail')).toContainText('add_shape({"kind":"circle","fill":"white"})');
+});

@@ -159,6 +159,23 @@ export function addCredits(
   return creditsOf(db, e.userId);
 }
 
+/**
+ * Tool calls that failed in the tab since the model's last reply (the tab marks their results
+ * "Error: …"), as `name(arguments) → error` lines for the log. Earlier ones were logged before.
+ */
+export function failedCalls(messages: Message[]): string[] {
+  let i = messages.length;
+  while (i > 0 && messages[i - 1].role !== 'assistant') i--;
+  const reply = messages[i - 1];
+  if (!reply || reply.role !== 'assistant') return [];
+  const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s).replace(/\s+/g, ' ');
+  return messages.slice(i).flatMap((m) => {
+    if (m.role !== 'tool' || !m.content.startsWith('Error: ')) return [];
+    const call = reply.tool_calls?.find((c) => c.id === m.tool_call_id);
+    return [`${call?.function.name ?? '?'}(${cut(call?.function.arguments ?? '', 400)}) → ${cut(m.content.slice(7), 400)}`];
+  });
+}
+
 /** One line about a conversation for the log: how long, what is in it, how it ends. */
 export function describeMessages(messages: Message[], bytes: number): string {
   const images = messages.reduce(
@@ -197,6 +214,7 @@ export function createChat(opts: {
     async turn(userId: number, rawMessages: unknown) {
       if (!config.apiKey) throw new ChatError(503, 'ai_disabled');
       const messages = checkMessages(rawMessages);
+      for (const line of failedCalls(messages)) console.warn(`chat: u${userId} tool failed ${line}`);
       if (creditsOf(db, userId) < config.minCredits) throw new ChatError(402, 'no_credits');
       const body = JSON.stringify({
         model: config.model,

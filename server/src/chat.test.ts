@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { createApp } from './app.ts';
-import { aiConfigFromEnv, CHAT_TOOLS, checkMessages, createChat } from './chat.ts';
+import { aiConfigFromEnv, CHAT_TOOLS, checkMessages, createChat, failedCalls } from './chat.ts';
 import { openDb, type Db } from './db.ts';
 
 let db: Db;
@@ -158,6 +158,20 @@ describe('checkMessages', () => {
     const pic = { type: 'image_url', image_url: { url: 'data:image/png;base64,AA' } };
     assert.throws(() => checkMessages([{ role: 'user', content: [pic, pic, pic, pic, pic] }]));
     assert.equal(checkMessages([{ role: 'user', content: [pic, pic] }]).length, 1);
+  });
+
+  it('lists the tool calls that failed since the last reply, for the log', () => {
+    const call = (id: string, name: string) => ({ id, type: 'function', function: { name, arguments: `{"n":"${id}"}` } });
+    const msgs = checkMessages([
+      { role: 'user', content: 'draw a face' },
+      { role: 'assistant', content: null, tool_calls: [call('old', 'add_text')] },
+      { role: 'tool', tool_call_id: 'old', content: 'Error: logged last time' },
+      { role: 'assistant', content: null, tool_calls: [call('a', 'add_shape'), call('b', 'add_shape')] },
+      { role: 'tool', tool_call_id: 'a', content: '{"id":"x"}' },
+      { role: 'tool', tool_call_id: 'b', content: 'Error: Invalid arguments:\n✖ Invalid color' },
+    ]);
+    assert.deepEqual(failedCalls(msgs), ['add_shape({"n":"b"}) → Invalid arguments: ✖ Invalid color']);
+    assert.deepEqual(failedCalls(msgs.slice(0, 1)), []);
   });
 
   it('keeps only the fields it knows', () => {

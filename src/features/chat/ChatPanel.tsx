@@ -1,6 +1,6 @@
 // The AI chat: the user asks in words, the model edits the project with the agent tools.
 import { Check, LoaderCircle, Send, Sparkles, Square, Trash2, TriangleAlert } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../app/icons';
 import { Button, Panel } from '../../app/ui';
@@ -18,6 +18,8 @@ export function ChatPanel({ actions }: { actions?: ReactNode }) {
   const { messages, calls, busy, error } = useChat();
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  /** What each tool call answered (the error text of a failed one). */
+  const results = useMemo(() => Object.fromEntries(messages.flatMap((m) => (m.role === 'tool' ? [[m.tool_call_id, m.content]] : []))), [messages]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -58,7 +60,7 @@ export function ChatPanel({ actions }: { actions?: ReactNode }) {
           </div>
         )}
         {messages.map((m, i) => (
-          <Message key={i} message={m} calls={calls} />
+          <Message key={i} message={m} calls={calls} results={results} />
         ))}
         {busy && (
           <p className="flex items-center gap-1.5 text-xs text-muted" data-testid="chat-busy">
@@ -129,8 +131,9 @@ export function ChatPanel({ actions }: { actions?: ReactNode }) {
   );
 }
 
-function Message({ message: m, calls }: { message: ChatMessage; calls: Record<string, CallState> }) {
+function Message({ message: m, calls, results }: { message: ChatMessage; calls: Record<string, CallState>; results: Record<string, string> }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState<string | null>(null);
   if (m.role === 'tool') return null;
   if (m.role === 'user') {
     if (typeof m.content === 'string')
@@ -149,6 +152,7 @@ function Message({ message: m, calls }: { message: ChatMessage; calls: Record<st
       </div>
     );
   }
+  const failed = m.tool_calls?.find((c) => c.id === open);
   return (
     <div className="space-y-1">
       {m.tool_calls?.length ? (
@@ -156,19 +160,32 @@ function Message({ message: m, calls }: { message: ChatMessage; calls: Record<st
           {m.tool_calls.map((c) => {
             const state = calls[c.id] ?? 'running';
             return (
-              <span
+              <button
                 key={c.id}
-                className={`inline-flex items-center gap-1 rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[11px] ${state === 'error' ? 'text-red-300' : 'text-neutral-300'}`}
+                type="button"
+                // A failed call opens what was asked and why it failed.
+                disabled={state !== 'error'}
+                title={state === 'error' ? results[c.id] : undefined}
+                onClick={() => setOpen(open === c.id ? null : c.id)}
+                className={`inline-flex items-center gap-1 rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[11px] ${state === 'error' ? 'text-red-300 hover:bg-surface-4' : 'text-neutral-300'}`}
                 data-testid="chat-call"
                 data-state={state}
               >
                 <Icon icon={state === 'running' ? LoaderCircle : state === 'ok' ? Check : TriangleAlert} size={12} className={state === 'running' ? 'animate-spin' : ''} />
                 {c.function.name}
-              </span>
+              </button>
             );
           })}
         </div>
       ) : null}
+      {failed && (
+        <div className="space-y-1 rounded-md border border-red-900 bg-red-950/30 p-2 font-mono text-[11px] break-words whitespace-pre-wrap" dir="ltr" data-testid="chat-call-detail">
+          <p className="text-red-200">{results[failed.id]}</p>
+          <p className="text-neutral-400">
+            {failed.function.name}({failed.function.arguments})
+          </p>
+        </div>
+      )}
       {m.content && (
         <p className="me-6 flex gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 whitespace-pre-wrap text-neutral-100" data-testid="chat-assistant">
           <Icon icon={Sparkles} size={14} className="mt-0.5 shrink-0 text-accent" />

@@ -17,7 +17,7 @@ export const useIsMobile = () => useSyncExternalStore(subscribe, () => mql().mat
  * Mobile only: the sheet that covers the timeline. 'panels' shows the left-panel tab
  * (Media / Subtitles / Transitions, from useSubtitlesUi.tab); null = timeline visible.
  */
-export const useMobileUi = create<{ sheet: 'panels' | 'inspector' | null }>()(() => ({ sheet: null }));
+export const useMobileUi = create<{ sheet: 'panels' | 'inspector' | 'ai' | null }>()(() => ({ sheet: null }));
 
 /** Share of the editor height given to the timeline, per layout; remembered on this device. */
 export type LayoutKind = 'desktop' | 'mobile';
@@ -72,5 +72,28 @@ export function setColumnShare(col: Column, share: number) {
     localStorage.setItem(columnKey(col), String(share));
   } catch {
     // Not remembered; see setTimelineShare.
+  }
+}
+
+/** Desktop right column: the Inspector, or the AI chat in its place; remembered too. */
+export type RightView = 'inspector' | 'ai';
+const RIGHT_VIEW_KEY = 'videoEditor.rightView';
+
+function loadRightView(): RightView {
+  try {
+    return localStorage.getItem(RIGHT_VIEW_KEY) === 'ai' ? 'ai' : 'inspector';
+  } catch {
+    return 'inspector';
+  }
+}
+
+export const useRightView = create<{ view: RightView }>()(() => ({ view: loadRightView() }));
+
+export function setRightView(view: RightView) {
+  useRightView.setState({ view });
+  try {
+    localStorage.setItem(RIGHT_VIEW_KEY, view);
+  } catch {
+    // blocked storage: not remembered
   }
 }

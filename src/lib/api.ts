@@ -38,6 +38,8 @@ export interface Me {
   plan: Plan;
   /** Unix ms; may be in the past (expired pass). */
   proUntil: number | null;
+  /** AI chat credits (server/src/chat.ts). */
+  credits: number;
 }
 
 export interface AdminUser extends Me {
@@ -55,5 +57,15 @@ export interface Grant {
   amountToman: number;
   note: string;
   proUntil: number | null;
+  createdAt: number;
+}
+
+/** One line of a user's AI chat credits (admin). */
+export interface CreditEntry {
+  id: number;
+  delta: number;
+  reason: 'grant' | 'chat' | 'refund';
+  amountToman: number;
+  note: string;
   createdAt: number;
 }

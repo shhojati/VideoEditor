@@ -24,7 +24,7 @@ const EDITOR_TOOLS = JSON.parse(readFileSync(new URL('./agentTools.json', import
 export const TOOLS: Tool[] = [STATUS_TOOL, ...EDITOR_TOOLS];
 const TOOL_NAMES = new Set(EDITOR_TOOLS.map((t) => t.name));
 
-const INSTRUCTIONS = `Vidora is a video editor that runs in the user's browser. These tools edit the project open in their Vidora tab, live: the user sees every change and can undo it.
+export const INSTRUCTIONS = `Vidora is a video editor that runs in the user's browser. These tools edit the project open in their Vidora tab, live: the user sees every change and can undo it.
 - Every tool needs the user's tab open with Agent access on ("AI agent" button, top bar). If a tool says it is not connected, ask the user to do that.
 - Call get_project first and again after edits: it gives the ids of tracks, clips and subtitle tracks. Times are in seconds on the timeline.
 - Positions: transform x/y are offsets of the centre as fractions of the frame (0,0 = centre; y 0.35 = lower third). Text sizes are pixels at the project resolution.

@@ -1,7 +1,8 @@
-import { Clapperboard, MessageSquareText, Shapes, SlidersHorizontal, WandSparkles, X, type LucideIcon } from 'lucide-react';
+import { Clapperboard, MessageSquareText, Shapes, SlidersHorizontal, Sparkles, WandSparkles, X, type LucideIcon } from 'lucide-react';
 import { Icon } from './icons';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChatPanel } from '../features/chat/ChatPanel';
 import { Inspector } from '../features/inspector/Inspector';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
 import { useSubtitlesUi, type PanelTab } from '../features/subtitles/subtitlesUi';
@@ -13,14 +14,15 @@ import { useMobileUi, useTimelineShare } from './layout';
 import { TimelineSplitter } from './Splitter';
 import { LeftPanel } from './LeftPanel';
 
-type NavId = 'media' | 'subtitles' | 'library' | 'fx' | 'inspector';
-/** Each button opens a group of left-panel tabs (or the inspector). */
+type NavId = 'media' | 'subtitles' | 'library' | 'fx' | 'inspector' | 'ai';
+/** Each button opens a group of left-panel tabs (or the inspector, or the AI chat). */
 const NAV: { id: NavId; icon: LucideIcon; label: string; tabs?: PanelTab[] }[] = [
   { id: 'media', icon: Clapperboard, label: 'panels.media', tabs: ['media'] },
   { id: 'subtitles', icon: MessageSquareText, label: 'panels.subtitles', tabs: ['subtitles'] },
   { id: 'library', icon: Shapes, label: 'panels.library', tabs: ['assets', 'templates'] },
   { id: 'fx', icon: WandSparkles, label: 'panels.fx', tabs: ['fx'] },
   { id: 'inspector', icon: SlidersHorizontal, label: 'panels.inspector' },
+  { id: 'ai', icon: Sparkles, label: 'chat.tab' },
 ];
 const navOf = (tab: PanelTab) => NAV.find((n) => n.tabs?.includes(tab))!.id;
 
@@ -35,11 +37,11 @@ export function MobileLayout({ project }: { project: Project }) {
   const hasSelection = useTimelineUi((s) => s.selection.length > 0);
   const timelineShare = useTimelineShare((s) => s.mobile);
   const timelineRef = useRef<HTMLDivElement>(null);
-  const active: NavId | null = sheet === 'inspector' ? 'inspector' : sheet === 'panels' ? navOf(tab) : null;
+  const active: NavId | null = sheet === 'inspector' || sheet === 'ai' ? sheet : sheet === 'panels' ? navOf(tab) : null;
 
   const open = (id: NavId) => {
     if (id === active) return useMobileUi.setState({ sheet: null });
-    if (id === 'inspector') return useMobileUi.setState({ sheet: 'inspector' });
+    if (id === 'inspector' || id === 'ai') return useMobileUi.setState({ sheet: id });
     const tabs = NAV.find((n) => n.id === id)!.tabs!;
     if (!tabs.includes(tab)) useSubtitlesUi.setState({ tab: tabs[0] });
     useMobileUi.setState({ sheet: 'panels' });
@@ -75,7 +77,11 @@ export function MobileLayout({ project }: { project: Project }) {
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
-              {active === 'inspector' ? (
+              {active === 'ai' ? (
+                <ErrorBoundary area={t('chat.title')}>
+                  <ChatPanel />
+                </ErrorBoundary>
+              ) : active === 'inspector' ? (
                 <ErrorBoundary area={t('panels.inspector')}>
                   <Inspector project={project} />
                 </ErrorBoundary>

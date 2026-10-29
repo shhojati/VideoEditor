@@ -1341,7 +1341,11 @@
     "aiOnly": {
       "login": "Log in to use AI features.",
       "upgrade": "AI features (auto reframe, text-based editing, translation) are part of Pro."
-    }
+    },
+    "credits": "AI assistant credits",
+    "creditsInfo": "Each request to the AI assistant uses credits, depending on how much work it takes.",
+    "creditPack": "{{credits}} credits",
+    "creditsMessage": "Hello, I would like to buy Vidora AI credits. Account code: {{code}} ({{email}})"
   },
   "exportGate": {
     "login": "Log in or create a free account to export.",
@@ -1377,7 +1381,14 @@
     "pro": "Pro until {{date}}",
     "expired": "Expired {{date}}",
     "open": "Open editor",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "creditBalance_one": "{{count}} credit",
+    "creditBalance_other": "{{count}} credits",
+    "credits": "AI credits (+ add, − take back)",
+    "addCredits": "Add credits",
+    "creditsHint": "Uses the amount and note above.",
+    "confirmCredits_one": "Change {{email}}’s AI credits by {{count}}?",
+    "confirmCredits_other": "Change {{email}}’s AI credits by {{count}}?"
   },
   "record": {
     "open": "Record voiceover or camera",
@@ -1721,6 +1732,31 @@
       "subtitleStyle": "Subtitle styles",
       "panels": "Panels",
       "commands": "Commands"
+    }
+  },
+  "chat": {
+    "tab": "AI",
+    "title": "AI assistant",
+    "disabled": "The AI assistant is not available on this server.",
+    "loginFirst": "Log in to edit your video by chatting with the AI assistant.",
+    "intro": "Tell the assistant what to change, in your own words. Every change can be undone. Try:",
+    "example1": "Add a title \"My trip\" at the start for 3 seconds, in the lower third",
+    "example2": "Add a fade transition between every pair of clips",
+    "example3": "Make the whole video brighter and a bit warmer",
+    "working": "Working…",
+    "placeholder": "Ask the AI to edit your video…",
+    "send": "Send",
+    "stop": "Stop",
+    "clear": "Clear the conversation",
+    "credits_one": "{{count}} credit",
+    "credits_other": "{{count}} credits",
+    "buy": "Buy credits",
+    "snapshot": "Frame the assistant looked at",
+    "errors": {
+      "no_credits": "You are out of AI credits. Buy a credit pack to continue.",
+      "ai_unavailable": "The AI service did not answer. Try again in a moment; nothing was charged.",
+      "ai_disabled": "The AI assistant is not available on this server.",
+      "busy": "The assistant is still working on your previous request."
     }
   }
 }

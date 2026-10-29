@@ -59,13 +59,32 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
   last_used_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS oauth_tokens_user ON oauth_tokens(user_id);
+-- AI chat credits (chat.ts): every purchase the owner records and every turn charged. users.credits is the sum.
+CREATE TABLE IF NOT EXISTS credit_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  delta INTEGER NOT NULL,
+  reason TEXT NOT NULL CHECK (reason IN ('grant', 'chat', 'refund')),
+  amount_toman INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS credit_ledger_user ON credit_ledger(user_id);
 `;
+
+/** Columns added after the first release; CREATE TABLE IF NOT EXISTS leaves old databases without them. */
+const COLUMNS: [table: string, column: string, definition: string][] = [['users', 'credits', 'INTEGER NOT NULL DEFAULT 0']];
 
 export function openDb(path: string): Db {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA foreign_keys = ON;');
   if (path !== ':memory:') db.exec('PRAGMA journal_mode = WAL;');
   db.exec(SCHEMA);
+  for (const [table, column, definition] of COLUMNS) {
+    const have = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some((c) => c.name === column);
+    if (!have) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
   return db;
 }
 
@@ -77,6 +96,7 @@ export interface UserRow {
   pro_until: number | null;
   created_at: number;
   last_login_at: number | null;
+  credits: number;
 }
 
 /** Short id users quote on Telegram ("U-1042"). */

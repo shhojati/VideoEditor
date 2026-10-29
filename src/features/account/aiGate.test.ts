@@ -4,7 +4,7 @@ import { useAccount } from '../../store/account';
 import { afterLogin, dropPendingAi, requireAi } from './aiGate';
 import { useAccountUi } from './AccountDialogs';
 
-const user = (proUntil: number | null): Me => ({ id: 1, code: 'A1', email: 'a@b.c', isAdmin: false, plan: proUntil ? 'pro' : 'free', proUntil });
+const user = (proUntil: number | null): Me => ({ id: 1, code: 'A1', email: 'a@b.c', isAdmin: false, plan: proUntil ? 'pro' : 'free', proUntil, credits: 0 });
 
 beforeEach(() => {
   useAccount.setState({ status: 'ready', me: null });

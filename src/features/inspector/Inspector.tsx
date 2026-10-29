@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Panel } from '../../app/ui';
 import { formatDuration } from '../../lib/time';
@@ -21,7 +22,7 @@ import { resetProjectSettings } from './resetActions';
 const FPS_OPTIONS = [24, 25, 30, 50, 60];
 
 /** One selected clip → its properties; otherwise the project settings. */
-export function Inspector({ project }: { project: Project }) {
+export function Inspector({ project, actions }: { project: Project; actions?: ReactNode }) {
   const { t } = useTranslation();
   const selection = useTimelineUi((s) => s.selection);
   const existing = selection.filter((id) => findClip(project, id));
@@ -36,7 +37,7 @@ export function Inspector({ project }: { project: Project }) {
     .find(Boolean);
 
   return (
-    <Panel title={t('panels.inspector')}>
+    <Panel title={t('panels.inspector')} actions={actions}>
       {cut && !existing.length ? (
         <TransitionInspector key={cut.fromId + cut.toId} project={project} fromId={cut.fromId} toId={cut.toId} />
       ) : cueTrack && !existing.length ? (

@@ -5,7 +5,6 @@ import { ExportDialog } from '../features/export/ExportDialog';
 import { RecordDialog } from '../features/record/RecordDialog';
 import { projectDuckPlan } from '../features/media-bin/speechActivity';
 import { readyNoiseProfiles } from '../features/media-bin/audioAnalysis';
-import { Inspector } from '../features/inspector/Inspector';
 import { startMediaWatcher } from '../features/media-bin/mediaService';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
 import { NewProjectDialog } from '../features/projects/NewProjectDialog';
@@ -18,6 +17,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { useColumnShare, useIsMobile, useTimelineShare } from './layout';
 import { LeftPanel } from './LeftPanel';
 import { MobileLayout } from './MobileLayout';
+import { RightPanel } from './RightPanel';
 import { ColumnSplitter, TimelineSplitter } from './Splitter';
 import { Onboarding } from './Onboarding';
 import { useGlobalShortcuts } from './shortcuts';
@@ -104,7 +104,7 @@ function Editor() {
             </ErrorBoundary>
             <ColumnSplitter column="end" container={mainRef} />
             <ErrorBoundary area={t('panels.inspector')}>
-              <Inspector project={project} />
+              <RightPanel project={project} />
             </ErrorBoundary>
           </main>
           <ErrorBoundary area={t('export.title')}>

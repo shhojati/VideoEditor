@@ -26,3 +26,4 @@ no redeploy). Invalid values fall back to the defaults below.
 | `telegram` | your Telegram username (without @); the "Message on Telegram" button opens it |
 | `freeMaxSeconds` | longest video a Free account may export |
 | `passes` | Pro passes: `months` and `priceToman` |
+| `creditPacks` | AI chat credit packs: `credits` and `priceToman`. What a request costs is set on the server (`AI_MARKUP`, `AI_CREDITS_PER_USD`, see docs/DEPLOY.md) |

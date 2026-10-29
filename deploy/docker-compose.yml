@@ -29,6 +29,11 @@ services:
     environment:
       # The editor's public https address: AI apps (MCP, docs/MCP.md) are sent here to log in.
       PUBLIC_URL: ${PUBLIC_URL:-https://editor.shahabdev.ir}
+      # Built-in AI chat (server/src/chat.ts, docs/DEPLOY.md): off until the OpenRouter key is set in .env.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-openai/gpt-4.1-mini}
+      AI_MARKUP: ${AI_MARKUP:-1.5}
+      AI_CREDITS_PER_USD: ${AI_CREDITS_PER_USD:-1000}
     volumes:
       # SQLite database (app.db). Back this folder up.
       - ./data:/data

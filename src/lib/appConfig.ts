@@ -29,6 +29,10 @@ const pricingSchema = z.object({
   passes: z
     .array(z.object({ months: z.number().int().positive(), priceToman: z.number().nonnegative() }))
     .catch([]),
+  /** AI chat credit packs (server/src/chat.ts charges them per request). */
+  creditPacks: z
+    .array(z.object({ credits: z.number().int().positive(), priceToman: z.number().nonnegative() }))
+    .catch([]),
 });
 
 export type PricingConfig = z.infer<typeof pricingSchema>;

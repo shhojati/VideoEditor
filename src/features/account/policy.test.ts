@@ -11,6 +11,7 @@ const user = (proUntil: number | null): Me => ({
   isAdmin: false,
   plan: proUntil && proUntil > NOW ? 'pro' : 'free',
   proUntil,
+  credits: 0,
 });
 
 describe('exportPolicy', () => {

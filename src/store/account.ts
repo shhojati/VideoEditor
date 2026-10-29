@@ -6,17 +6,19 @@ interface AccountState {
   /** 'offline': the API could not be reached; the editor works, export asks to retry. */
   status: 'loading' | 'ready' | 'offline';
   me: Me | null;
+  /** The server has the built-in AI chat on (an AI key is set). */
+  chat: boolean;
 }
 
-export const useAccount = create<AccountState>()(() => ({ status: 'loading', me: null }));
+export const useAccount = create<AccountState>()(() => ({ status: 'loading', me: null, chat: false }));
 
 let lastLoad = 0;
 
 export async function loadAccount() {
   lastLoad = Date.now();
   try {
-    const { user } = await api<{ user: Me | null }>('/me');
-    useAccount.setState({ status: 'ready', me: user });
+    const { user, chat } = await api<{ user: Me | null; chat?: boolean }>('/me');
+    useAccount.setState({ status: 'ready', me: user, chat: !!chat });
   } catch {
     useAccount.setState((s) => ({ status: s.me ? 'ready' : 'offline' }));
   }
@@ -48,4 +50,9 @@ export const changePassword = (current: string, next: string) => api('/auth/pass
 export function initAccount() {
   void loadAccount();
   window.addEventListener('focus', () => refreshAccount());
+}
+
+/** The balance after a chat turn charged it. */
+export function setCredits(credits: number) {
+  useAccount.setState((s) => (s.me ? { me: { ...s.me, credits } } : s));
 }

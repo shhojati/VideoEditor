@@ -250,6 +250,8 @@ function AccountDialog() {
         </div>
       </section>
 
+      <CreditsSection telegram={pricing?.telegram ?? ''} packs={pricing?.creditPacks ?? []} />
+
       <section className="space-y-2 border-t border-line pt-2">
         <button type="button" className="text-xs text-accent hover:underline" onClick={() => setShowPassword(!showPassword)}>
           {t('account.changePassword')}
@@ -264,6 +266,57 @@ function AccountDialog() {
         <Button onClick={close}>{t('account.close')}</Button>
       </div>
     </Modal>
+  );
+}
+
+/** AI chat credits: the balance, the packs and the Telegram message to buy one. Hidden when the server has no AI chat. */
+function CreditsSection({ telegram, packs }: { telegram: string; packs: PricingConfig['creditPacks'] }) {
+  const { t, i18n } = useTranslation();
+  const me = useAccount((s) => s.me)!;
+  const enabled = useAccount((s) => s.chat);
+  const [copied, setCopied] = useState(false);
+  if (!enabled) return null;
+  const message = t('account.creditsMessage', { code: me.code, email: me.email });
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+    } catch {
+      // clipboard blocked: the text is visible to copy by hand
+    }
+  };
+  return (
+    <section className="space-y-2 border-t border-line pt-2" data-testid="account-credits">
+      <h3 className="flex justify-between gap-2 text-sm font-medium text-white">
+        <span>{t('account.credits')}</span>
+        <span data-testid="account-credit-balance">{formatToman(me.credits, i18n.language)}</span>
+      </h3>
+      <p className="text-xs text-neutral-400">{t('account.creditsInfo')}</p>
+      {packs.length > 0 && (
+        <ul className="space-y-1 text-xs">
+          {packs.map((p) => (
+            <li key={p.credits} className="flex justify-between rounded bg-surface-2 px-2 py-1">
+              <span>{t('account.creditPack', { credits: formatToman(p.credits, i18n.language) })}</span>
+              <span>{t('account.toman', { price: formatToman(p.priceToman, i18n.language) })}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="rounded bg-surface-2 p-2 text-xs select-all">{message}</p>
+      <div className="flex flex-wrap gap-2">
+        {telegram && (
+          <a
+            className="rounded bg-accent px-2.5 py-1 text-sm text-on-accent"
+            href={`https://t.me/${encodeURIComponent(telegram.replace(/^@/, ''))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('account.openTelegram')}
+          </a>
+        )}
+        <Button onClick={() => void copy()}>{copied ? t('account.copied') : t('account.copyMessage')}</Button>
+      </div>
+    </section>
   );
 }
 

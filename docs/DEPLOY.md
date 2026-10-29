@@ -85,6 +85,24 @@ Admin page: `https://editor.example.com/admin` — search accounts by email or c
 
 **Owner settings** live in `/srv/video-editor/config/` (mounted at `/config/`; the deploy copies defaults in once and never overwrites them): `watermark.json` (text or image, position, size, opacity…) and `pricing.json` (Telegram username, Free length limit, passes and prices). Every key is described in `public/config/README.md`. Edits apply on the next page load, no restart. For an image watermark, put e.g. `watermark.png` in that folder and set `"image": "watermark.png"`.
 
+### AI assistant (built-in chat, paid with credits)
+
+The editor's right column has an **Inspector | AI** switch (phones: the **AI** button in the bottom bar). Users type what they want changed. The `api` service sends the conversation to an AI model through [OpenRouter](https://openrouter.ai) with **your** key. The model's tool calls run in the user's own tab (the same tools as the MCP server, `src/features/agent/commands.ts`), so the server does no heavy work.
+
+Each request is charged in **credits**: the provider's reported cost × `AI_MARKUP` × `AI_CREDITS_PER_USD`, rounded up, with a minimum of 1. With the defaults (×1.5, 1000 credits per $), a request costing $0.002 uses 3 credits. A request needs at least 5 credits to start, and failed requests are free. Users buy credit packs the same way as Pro (Telegram message with their account code). Give credits on the admin page with **Add credits**; a negative number takes credits back. Every change is kept in the `credit_ledger` table.
+
+Turn it on in `/srv/video-editor/.env`, then run `docker compose up -d`:
+
+```bash
+OPENROUTER_API_KEY=sk-or-...
+# Optional:
+AI_MODEL=openai/gpt-4.1-mini      # any OpenRouter model with tool calling (and pictures, for snapshot)
+AI_MARKUP=1.5                     # your margin over the provider's price
+AI_CREDITS_PER_USD=1000
+```
+
+Without a key, the AI tab says the assistant is not available and the account dialog hides credits. Set the prices of credit packs in `pricing.json` (`creditPacks`). Set a spending limit on the OpenRouter key too. Check that your provider's terms allow serving your users' region.
+
 **Back up** `data/app.db` (e.g. a nightly `sqlite3 data/app.db ".backup /backups/app-$(date +%F).db"` or simply copying `data/` while the API is stopped). Losing it loses every account and Pro pass.
 
 The free-plan limits are applied in the user's browser, so a technical user could patch them out; the API is the source of truth for who is Pro.

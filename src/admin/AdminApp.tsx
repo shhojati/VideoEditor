@@ -116,6 +116,10 @@ function Admin() {
               confirm(t('admin.confirmGrant', { months, email: u.email })) &&
               void act(() => api(`/admin/users/${u.id}/grant`, { months, amountToman, note }))
             }
+            onCredits={(credits, amountToman, note) =>
+              confirm(t('admin.confirmCredits', { count: credits, email: u.email })) &&
+              void act(() => api(`/admin/users/${u.id}/credits`, { credits, amountToman, note }))
+            }
             onRevoke={() =>
               confirm(t('admin.confirmRevoke', { email: u.email })) && void act(() => api(`/admin/users/${u.id}/revoke`, {}))
             }
@@ -160,12 +164,15 @@ function UserRow({
   user: u,
   date,
   onGrant,
+  onCredits,
   onRevoke,
   onReset,
 }: {
   user: AdminUser;
   date: (ms: number) => string;
   onGrant: (months: number, amountToman: number, note: string) => void;
+  /** Negative takes credits back. */
+  onCredits: (credits: number, amountToman: number, note: string) => void;
   onRevoke: () => void;
   onReset: () => void;
 }) {
@@ -173,6 +180,7 @@ function UserRow({
   const [months, setMonths] = useState(1);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [credits, setCredits] = useState('');
   const plan =
     u.plan === 'pro'
       ? t('admin.pro', { date: date(u.proUntil!) })
@@ -188,6 +196,9 @@ function UserRow({
         <span dir="ltr">{u.email}</span>
         <span className={u.plan === 'pro' ? 'text-emerald-300' : 'text-neutral-400'} data-testid="admin-plan">
           {plan}
+        </span>
+        <span className="text-xs text-neutral-300" data-testid="admin-credits">
+          {t('admin.creditBalance', { count: u.credits })}
         </span>
         <span className="text-xs text-neutral-500">
           {t('admin.created')}: {date(u.createdAt)}
@@ -218,6 +229,27 @@ function UserRow({
         </Button>
         {u.plan === 'pro' && <Button onClick={onRevoke}>{t('admin.revoke')}</Button>}
         <Button onClick={onReset}>{t('admin.resetPassword')}</Button>
+      </div>
+      <div className="flex flex-wrap items-end gap-2 text-xs">
+        <label className="flex flex-col gap-1">
+          <span className="text-neutral-400">{t('admin.credits')}</span>
+          <input
+            className="w-32 rounded bg-surface-3 px-2 py-1"
+            dir="ltr"
+            inputMode="numeric"
+            value={credits}
+            onChange={(e) => setCredits(e.target.value.replace(/[^\d-]/g, ''))}
+            data-testid="admin-credit-amount"
+          />
+        </label>
+        <Button
+          disabled={!Number.isInteger(Number(credits)) || !Number(credits)}
+          onClick={() => onCredits(Number(credits), Number(amount || 0), note)}
+          data-testid="admin-add-credits"
+        >
+          {t('admin.addCredits')}
+        </Button>
+        <span className="text-neutral-500">{t('admin.creditsHint')}</span>
       </div>
     </div>
   );

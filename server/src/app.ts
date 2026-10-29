@@ -13,6 +13,7 @@ import {
   verifyPassword,
 } from './auth.ts';
 import { Bridge } from './bridge.ts';
+import { addCredits, ChatError, createChat } from './chat.ts';
 import { addMonths, idFromCode, userCode, type Db, type UserRow } from './db.ts';
 import { handleRpc } from './mcp.ts';
 import { createOAuth, OAuthError } from './oauth.ts';
@@ -23,7 +24,12 @@ const DAY = 86_400_000;
 export const SESSION_MS = 30 * DAY;
 const MAX_BODY = 16 * 1024;
 /** Bigger bodies: tool results (snapshots are pictures) and MCP calls (SRT text). */
-const BODY_LIMITS: Record<string, number> = { '/api/bridge/result': 4 * 1024 * 1024, '/mcp': 1024 * 1024 };
+const BODY_LIMITS: Record<string, number> = {
+  '/api/bridge/result': 4 * 1024 * 1024,
+  '/mcp': 1024 * 1024,
+  // The whole chat so far, with up to four pictures.
+  '/api/chat/turn': 8 * 1024 * 1024,
+};
 const VERSION = '1.0.0';
 
 export interface AppOptions {
@@ -36,6 +42,8 @@ export interface AppOptions {
   /** The editor's public address, e.g. https://editor.example.com (OAuth issuer, MCP resource). Default: from the Host header. */
   publicUrl?: string;
   bridge?: Bridge;
+  /** The built-in AI chat (chat.ts); off when absent. */
+  chat?: ReturnType<typeof createChat>;
 }
 
 /** Error codes the editor translates (src/i18n: account.errors.*). */
@@ -68,6 +76,8 @@ export interface Me {
   isAdmin: boolean;
   plan: Plan;
   proUntil: number | null;
+  /** AI chat credits (chat.ts). */
+  credits: number;
 }
 
 export function createApp(opts: AppOptions) {
@@ -83,6 +93,7 @@ export function createApp(opts: AppOptions) {
     isAdmin: !!u.is_admin,
     plan: u.pro_until != null && u.pro_until > now() ? 'pro' : 'free',
     proUntil: u.pro_until,
+    credits: u.credits,
   });
 
   const userById = (id: number) => db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
@@ -193,6 +204,8 @@ export function createApp(opts: AppOptions) {
   });
   const clientLimit = new RateLimiter(20, 60 * 60_000, now);
   const mcpLimit = new RateLimiter(300, 60_000, now);
+  const chatLimit = new RateLimiter(60, 60_000, now);
+  const chatBusy = new Set<number>();
 
   type Handler = (ctx: Ctx, params: string[]) => Promise<unknown> | unknown;
   const routes: [string, RegExp, Handler][] = [
@@ -260,7 +273,7 @@ export function createApp(opts: AppOptions) {
       /^\/api\/me$/,
       (ctx) => {
         const u = currentUser(ctx);
-        return { user: u ? toMe(u) : null };
+        return { user: u ? toMe(u) : null, chat: !!opts.chat?.enabled };
       },
     ],
 
@@ -289,6 +302,29 @@ export function createApp(opts: AppOptions) {
         const u = requireUser(ctx);
         oauth.disconnect(u.id, str((await ctx.body()).clientId, 200) ?? '');
         return { ok: true };
+      },
+    ],
+
+    // ---- built-in AI chat ----
+
+    [
+      'POST',
+      /^\/api\/chat\/turn$/,
+      async (ctx) => {
+        const u = requireUser(ctx);
+        if (!opts.chat) throw new ApiError(503, 'ai_disabled');
+        if (!chatLimit.hit(String(u.id))) throw new ApiError(429, 'rate_limited');
+        // One turn at a time per user, so parallel turns cannot all pass the credit check.
+        if (chatBusy.has(u.id)) throw new ApiError(409, 'busy');
+        chatBusy.add(u.id);
+        try {
+          return await opts.chat.turn(u.id, (await ctx.body()).messages);
+        } catch (e) {
+          if (e instanceof ChatError) throw new ApiError(e.status, e.code);
+          throw e;
+        } finally {
+          chatBusy.delete(u.id);
+        }
       },
     ],
 
@@ -347,6 +383,38 @@ export function createApp(opts: AppOptions) {
           'INSERT INTO grants (user_id, admin_id, months, amount_toman, note, pro_until, created_at) VALUES (?, ?, 0, 0, ?, NULL, ?)',
         ).run(u.id, admin.id, str(b.note ?? '', 500) ?? '', now());
         return { user: adminUser(userById(u.id)!) };
+      },
+    ],
+
+    [
+      'POST',
+      /^\/api\/admin\/users\/(\d+)\/credits$/,
+      async (ctx, [id]) => {
+        const admin = requireAdmin(ctx);
+        const u = targetUser(id);
+        const b = await ctx.body();
+        // Negative takes credits back (a mistake, a refund paid out).
+        const delta = int(b.credits, -10_000_000, 10_000_000);
+        const amount = b.amountToman == null ? 0 : int(b.amountToman, 0, 1e12);
+        const note = str(b.note ?? '', 500);
+        if (!delta || amount == null || note == null) throw new ApiError(400, 'bad_request');
+        addCredits(db, now(), { userId: u.id, delta, reason: delta > 0 ? 'grant' : 'refund', adminId: admin.id, amountToman: amount, note });
+        return { user: adminUser(userById(u.id)!) };
+      },
+    ],
+
+    [
+      'GET',
+      /^\/api\/admin\/users\/(\d+)\/credits$/,
+      (ctx, [id]) => {
+        requireAdmin(ctx);
+        const u = targetUser(id);
+        const rows = db
+          .prepare('SELECT id, delta, reason, amount_toman, note, created_at FROM credit_ledger WHERE user_id = ? ORDER BY id DESC LIMIT 200')
+          .all(u.id) as unknown as { id: number; delta: number; reason: string; amount_toman: number; note: string; created_at: number }[];
+        return {
+          entries: rows.map((r) => ({ id: r.id, delta: r.delta, reason: r.reason, amountToman: r.amount_toman, note: r.note, createdAt: r.created_at })),
+        };
       },
     ],
 

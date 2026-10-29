@@ -20,7 +20,7 @@ describe('watermark config', () => {
   });
 
   it('pricing defaults', () => {
-    expect(parsePricing({ passes: 'x' })).toEqual({ telegram: '', freeMaxSeconds: 60, passes: [] });
+    expect(parsePricing({ passes: 'x' })).toEqual({ telegram: '', freeMaxSeconds: 60, passes: [], creditPacks: [] });
     expect(parsePricing({ freeMaxSeconds: 90 }).freeMaxSeconds).toBe(90);
   });
 });

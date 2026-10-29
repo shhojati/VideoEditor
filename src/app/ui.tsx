@@ -29,7 +29,7 @@ export function Panel({ title, children, className = '', hideTitle, actions }: {
     <section className={`flex min-h-0 min-w-0 flex-col bg-surface-1 md:rounded-lg md:border md:border-line ${className}`} aria-label={title}>
       {/* Phones: the mobile layout names panels in its own chrome, so the heading is for screen readers only. */}
       <div className={`flex items-center border-b border-line px-3 py-1.5 md:px-4 md:py-2.5 ${hideTitle ? 'sr-only' : 'max-md:sr-only'}`}>
-        <h2 className="flex-1 text-xs font-medium tracking-[0.15em] text-muted uppercase md:text-xs">{title}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-xs font-medium tracking-[0.15em] text-muted uppercase md:text-xs">{title}</h2>
         {actions}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">{children}</div>

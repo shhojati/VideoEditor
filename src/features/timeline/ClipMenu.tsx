@@ -1,6 +1,6 @@
 // Right-click (long press on touch) menu for clips, on the timeline and the preview: Arrange,
-// Group / Ungroup, and SVG path copy / paste for shapes.
-import { BringToFront, ClipboardCopy, ClipboardPaste, Group, MoveDown, MoveUp, SendToBack, Ungroup, type LucideIcon } from 'lucide-react';
+// Group / Ungroup, SVG path copy / paste for shapes, and Reset.
+import { BringToFront, ClipboardCopy, ClipboardPaste, Group, MoveDown, MoveUp, RotateCcw, SendToBack, Ungroup, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { toPathData } from '../../lib/svgPath';
 import { findClip, type ArrangeAction } from '../../model/timeline';
 import type { ID } from '../../model/types';
 import { currentProject } from '../../store/projectStore';
+import { resetClipsToDefault } from '../inspector/resetActions';
 import { arrangeSelection, pasteSvgPath } from './actions';
 import { groupSelection, ungroupSelection } from './compoundActions';
 import { select, useTimelineUi } from './timelineUi';
@@ -19,7 +20,7 @@ import { select, useTimelineUi } from './timelineUi';
 const useClipMenu = create<{ at: { x: number; y: number } | null }>()(() => ({ at: null }));
 
 const MENU_W = 220;
-const MENU_H = 320;
+const MENU_H = 360;
 
 /** Open the menu at the pointer for this clip (selecting it first unless it is already selected). */
 export function openClipMenu(e: { clientX: number; clientY: number; preventDefault(): void }, clipId: ID) {
@@ -84,6 +85,7 @@ export function ClipMenu() {
   const p = currentProject();
   if (!at || !p) return null;
   const refs = selection.map((id) => findClip(p, id)).filter((r) => !!r);
+  const editable = refs.filter((r) => !r.track.locked).map((r) => r.clip.id);
   const visual = refs.some((r) => r.track.kind !== 'audio' && !r.track.locked);
   const compound = refs.some((r) => r.clip.sequenceId);
   const pathClip = refs.length === 1 && refs[0].clip.shape?.kind === 'path' && refs[0].clip.shape.path ? refs[0].clip.id : undefined;
@@ -128,6 +130,8 @@ export function ClipMenu() {
       <div className="my-1 border-t border-line/60" />
       {item('copyPath', ClipboardCopy, t('shapes.copyPath'), () => pathClip && void copyPathData(pathClip), { disabled: !pathClip })}
       {item('pastePath', ClipboardPaste, t('shapes.pastePath'), () => void pastePathData())}
+      <div className="my-1 border-t border-line/60" />
+      {item('reset', RotateCcw, t('clipMenu.reset'), () => resetClipsToDefault(editable), { disabled: !editable.length })}
     </div>,
     document.body,
   );

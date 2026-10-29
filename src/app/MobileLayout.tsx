@@ -1,4 +1,4 @@
-import { Clapperboard, MessageSquareText, Shapes, SlidersHorizontal, Sparkles, WandSparkles, X, type LucideIcon } from 'lucide-react';
+import { Clapperboard, MessageSquareText, Search, Shapes, SlidersHorizontal, Sparkles, WandSparkles, X, type LucideIcon } from 'lucide-react';
 import { Icon } from './icons';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { ChatPanel } from '../features/chat/ChatPanel';
 import { Inspector } from '../features/inspector/Inspector';
 import { PreviewPanel } from '../features/preview/PreviewPanel';
 import { useSubtitlesUi, type PanelTab } from '../features/subtitles/subtitlesUi';
+import { focusSearch } from '../features/search/searchUi';
 import { TimelinePanel } from '../features/timeline/TimelinePanel';
 import { useTimelineUi } from '../features/timeline/timelineUi';
 import type { Project } from '../model/types';
@@ -116,6 +117,13 @@ export function MobileLayout({ project }: { project: Project }) {
             )}
           </button>
         ))}
+        {/* Search opens the top bar's search box over the bar. */}
+        <button data-testid="nav-search" className="flex min-w-0 flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] text-neutral-400" onClick={focusSearch}>
+          <span className="text-lg leading-none" aria-hidden>
+            <Icon icon={Search} size={20} />
+          </span>
+          <span className="max-w-full truncate px-1">{t('search.open')}</span>
+        </button>
       </nav>
     </main>
   );

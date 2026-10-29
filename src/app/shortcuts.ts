@@ -33,6 +33,7 @@ import { currentProject, useProjectStore } from '../store/projectStore';
 import { useTransport } from '../store/transport';
 import { useShortcutSheet } from './ShortcutSheet';
 import { toggleMarkerAtPlayhead } from '../features/timeline/beatActions';
+import { focusSearch } from '../features/search/searchUi';
 
 type Handler = (e: KeyboardEvent) => void;
 
@@ -42,7 +43,7 @@ function stepSelectedDrawing(dir: -1 | 1) {
 }
 
 /** Ctrl+S: the project as a file, like Project → Save. */
-function saveProject() {
+export function saveProject() {
   const project = useProjectStore.getState().history?.present;
   if (!project) return;
   saveProjectFile(project, false).then(
@@ -79,6 +80,7 @@ const WITH_CTRL: Record<string, Handler> = {
     openImportPicker();
   },
   KeyM: () => currentProject() && useExport.setState({ open: true }),
+  KeyK: focusSearch,
   Equal: () => zoomBy(1.5),
   NumpadAdd: () => zoomBy(1.5),
   Minus: () => zoomBy(1 / 1.5),

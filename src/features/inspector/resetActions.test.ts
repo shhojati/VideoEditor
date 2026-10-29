@@ -5,7 +5,7 @@ import { defaultShape, TEXT_STYLE_DEFAULTS } from '../../model/overlays';
 import { addShapeClip, addTextClip, createClip } from '../../model/timeline';
 import type { Asset, Clip, Project } from '../../model/types';
 import { useProjectStore } from '../../store/projectStore';
-import { resetClipSection, resetSubtitleSection } from './resetActions';
+import { resetClipSection, resetClipsToDefault, resetSubtitleSection } from './resetActions';
 
 const video: Asset = { id: 'v', kind: 'video', name: 'v.mp4', duration: 10, hasAudio: true, fileRef: { opfsPath: 'v' } } as Asset;
 
@@ -94,5 +94,38 @@ describe('section reset', () => {
     expect(style.position).toBe('top');
     resetSubtitleSection('s', 'preset');
     expect(useProjectStore.getState().history!.present.subtitleTracks[0].style).toEqual({ ...DEFAULT_SUBTITLE_STYLE, digits: 'latin' });
+  });
+});
+
+describe('clip menu reset', () => {
+  it('removes everything added to the clips in one undo step, keeping trim and content', () => {
+    edit(ids.video.id, (c) => {
+      c.effects = [createEffect('gaussianBlur'), createEffect('look', { preset: 'mono' })];
+      c.blend = 'screen';
+      c.masks = [{ id: 'm' } as unknown as NonNullable<Clip['masks']>[number]];
+      c.keyframes = [{ t: 0, v: { x: 0.3, volume: 0.5 } }];
+      Object.assign(c.transform, { x: 0.3, scale: 2 });
+      Object.assign(c.audio, { volume: 0.2, voice: { kind: 'robot', pitch: 0, amount: 1 } });
+    });
+    edit(ids.text, (c) => void (c.effects = [createEffect('gaussianBlur')]));
+    const before = clip(ids.video.id);
+    const steps = useProjectStore.getState().history!.past.length;
+
+    resetClipsToDefault([ids.video.id, ids.text]);
+    const c = clip(ids.video.id);
+    expect(c.effects).toBeUndefined();
+    expect(c.blend).toBeUndefined();
+    expect(c.masks).toBeUndefined();
+    expect(c.keyframes).toBeUndefined();
+    expect(c.transform).toEqual({ x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
+    expect(c.audio).toEqual({ volume: 1, fadeIn: 0, fadeOut: 0 });
+    expect([c.start, c.duration]).toEqual([before.start, before.duration]);
+    expect(clip(ids.text).effects).toBeUndefined();
+    expect(clip(ids.text).text!.content).toBe('سلام');
+    expect(useProjectStore.getState().history!.past.length).toBe(steps + 1);
+
+    useProjectStore.getState().undo();
+    expect(clip(ids.video.id).effects).toHaveLength(2);
+    expect(clip(ids.video.id).blend).toBe('screen');
   });
 });

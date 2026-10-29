@@ -17,6 +17,7 @@ import { useExport } from '../features/export/exportService';
 import { useShortcutSheet } from './ShortcutSheet';
 import { AccountButton } from '../features/account/AccountDialogs';
 import { AgentButton } from '../features/agent/AgentButton';
+import { GlobalSearch } from '../features/search/GlobalSearch';
 import { ChevronDown, Globe, Keyboard, Redo2, Undo2, Upload } from 'lucide-react';
 import { Icon } from './icons';
 import { Logo } from './Logo';
@@ -74,6 +75,7 @@ export function TopBar() {
         <span className="max-md:hidden">{t(`save.${status}`)}</span>
       </span>
       {project && <LengthWarning project={project} />}
+      {project && <GlobalSearch />}
       <div className="ms-auto flex shrink-0 items-center gap-2 max-md:gap-1 md:gap-2.5">
         <AgentButton />
         <AccountButton />

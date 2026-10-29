@@ -27,6 +27,7 @@ export const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Ctrl + N', label: 'newProject' },
   { keys: 'Ctrl + I', label: 'import' },
   { keys: 'Ctrl + M', label: 'export' },
+  { keys: 'Ctrl + K', label: 'search' },
   { keys: 'Ctrl + Y', label: 'solid' },
   { keys: 'Ctrl + Alt + Y', label: 'adjustment' },
   { keys: 'Ctrl + Alt + Shift + Y', label: 'null' },

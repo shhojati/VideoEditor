@@ -23,7 +23,107 @@ function dropKeys(clip: Clip, props: readonly string[]) {
   if (!clip.keyframes.length) delete clip.keyframes;
 }
 
-function resetClip(clipId: ID, keys: readonly string[], recipe: (clip: Clip, p: Project) => void) {
+export type ClipSection = 'speed' | 'text' | 'shape' | 'transform' | 'effects' | 'audio' | 'cleanup' | 'voice' | 'masks' | 'tracking' | 'reframe';
+
+const TRANSFORM_KEYS = ['x', 'y', 'scale', 'rotation', 'opacity'];
+
+/** Each section's reset: the keyframed properties it owns, and what it does to the clip. */
+const SECTIONS: Record<ClipSection, { keys: readonly string[]; recipe: (c: Clip, p: Project) => void }> = {
+  speed: {
+    keys: [],
+    recipe: (c, p) => {
+      if (c.speedCurve) setSpeedCurve(p, c.id, null, 'custom');
+      setClipSpeed(p, c.id, 1);
+      if (c.audio.keepPitch) setKeepPitch(c, false);
+    },
+  },
+  // The words and their direction stay; the look goes back to a new text clip's.
+  text: {
+    keys: [],
+    recipe: (c) => {
+      if (c.text) c.text = { ...TEXT_STYLE_DEFAULTS, content: c.text.content, rtl: c.text.rtl };
+    },
+  },
+  shape: {
+    keys: ['shape.'],
+    recipe: (c) => {
+      if (c.shape) c.shape = defaultShape(c.shape.kind);
+    },
+  },
+  transform: {
+    keys: TRANSFORM_KEYS,
+    recipe: (c, p) => {
+      const sticker = !!c.assetId && p.assets[c.assetId]?.library?.kind === 'stickers';
+      c.transform = { x: 0, y: c.text ? 0.3 : 0, scale: sticker ? 0.35 : 1, rotation: 0, opacity: 1 };
+      // The blend mode sits in Transform, under Opacity.
+      delete c.blend;
+    },
+  },
+  // Every effect keeps its place in the stack, with its default settings (a filter keeps its look).
+  effects: {
+    keys: ['fx.'],
+    recipe: (c) => {
+      for (const e of c.effects ?? []) {
+        e.enabled = true;
+        e.params = { ...defaultParams(e.kind), ...(e.kind === 'look' ? { preset: e.params.preset } : {}) };
+      }
+    },
+  },
+  audio: {
+    keys: ['volume'],
+    recipe: (c) => {
+      c.audio.volume = 1;
+      c.audio.fadeIn = 0;
+      c.audio.fadeOut = 0;
+      delete c.audio.duck;
+    },
+  },
+  cleanup: {
+    keys: [],
+    recipe: (c) => {
+      delete c.audio.clean;
+      delete c.audio.gainDb;
+    },
+  },
+  voice: {
+    keys: ['voice.', 'space.'],
+    recipe: (c) => {
+      delete c.audio.voice;
+      delete c.audio.space;
+    },
+  },
+  masks: { keys: [], recipe: (c) => void delete c.masks },
+  tracking: {
+    keys: [],
+    recipe: (c) => {
+      // A stabilize or reframe link to the clip's own tracker goes with it.
+      if (c.motion && c.trackers?.some((x) => x.id === c.motion!.trackerId)) delete c.motion;
+      delete c.trackers;
+    },
+  },
+  reframe: {
+    keys: [],
+    recipe: (c) => {
+      if (c.motion?.mode !== 'reframe') return;
+      const id = c.motion.trackerId;
+      delete c.motion;
+      c.trackers = c.trackers?.filter((x) => x.id !== id);
+      if (!c.trackers?.length) delete c.trackers;
+      delete c.transform.fit;
+    },
+  },
+};
+
+/** Stop editing this clip's masks and trackers before they are removed. */
+function releaseClipUi(clipId: ID) {
+  if (useMasks.getState().active?.clipId === clipId) setActiveMask(clipId, null);
+  if (useTracking.getState().job?.clipId === clipId) cancelTracking();
+  if (useTracking.getState().active?.clipId === clipId) setActiveTracker(clipId, null);
+}
+
+export function resetClipSection(clipId: ID, section: ClipSection) {
+  if (section === 'masks' || section === 'tracking') releaseClipUi(clipId);
+  const { keys, recipe } = SECTIONS[section];
   useProjectStore.getState().edit('ops.resetSection', (p) => {
     const ref = findClip(p, clipId);
     if (!ref || ref.track.locked) return;
@@ -32,80 +132,30 @@ function resetClip(clipId: ID, keys: readonly string[], recipe: (clip: Clip, p: 
   });
 }
 
-export type ClipSection = 'speed' | 'text' | 'shape' | 'transform' | 'effects' | 'audio' | 'cleanup' | 'voice' | 'masks' | 'tracking' | 'reframe';
+/** What the clip menu's Reset puts back as a newly added clip has it; the look of text and shapes stays. */
+const RESET_ALL: ClipSection[] = ['speed', 'transform', 'audio', 'cleanup', 'voice', 'masks', 'reframe', 'tracking'];
 
-const TRANSFORM_KEYS = ['x', 'y', 'scale', 'rotation', 'opacity'];
-
-export function resetClipSection(clipId: ID, section: ClipSection) {
-  switch (section) {
-    case 'speed':
-      return resetClip(clipId, [], (c, p) => {
-        if (c.speedCurve) setSpeedCurve(p, c.id, null, 'custom');
-        setClipSpeed(p, c.id, 1);
-        if (c.audio.keepPitch) setKeepPitch(c, false);
-      });
-    case 'text':
-      // The words and their direction stay; the look goes back to a new text clip's.
-      return resetClip(clipId, [], (c) => {
-        if (c.text) c.text = { ...TEXT_STYLE_DEFAULTS, content: c.text.content, rtl: c.text.rtl };
-      });
-    case 'shape':
-      return resetClip(clipId, ['shape.'], (c) => {
-        if (c.shape) c.shape = defaultShape(c.shape.kind);
-      });
-    case 'transform':
-      return resetClip(clipId, TRANSFORM_KEYS, (c, p) => {
-        const sticker = !!c.assetId && p.assets[c.assetId]?.library?.kind === 'stickers';
-        c.transform = { x: 0, y: c.text ? 0.3 : 0, scale: sticker ? 0.35 : 1, rotation: 0, opacity: 1 };
-        // The blend mode sits in Transform, under Opacity.
-        delete c.blend;
-      });
-    case 'effects':
-      // Every effect keeps its place in the stack, with its default settings (a filter keeps its look).
-      return resetClip(clipId, ['fx.'], (c) => {
-        for (const e of c.effects ?? []) {
-          e.enabled = true;
-          e.params = { ...defaultParams(e.kind), ...(e.kind === 'look' ? { preset: e.params.preset } : {}) };
-        }
-      });
-    case 'audio':
-      return resetClip(clipId, ['volume'], (c) => {
-        c.audio.volume = 1;
-        c.audio.fadeIn = 0;
-        c.audio.fadeOut = 0;
-        delete c.audio.duck;
-      });
-    case 'cleanup':
-      return resetClip(clipId, [], (c) => {
-        delete c.audio.clean;
-        delete c.audio.gainDb;
-      });
-    case 'voice':
-      return resetClip(clipId, ['voice.', 'space.'], (c) => {
-        delete c.audio.voice;
-        delete c.audio.space;
-      });
-    case 'masks':
-      if (useMasks.getState().active?.clipId === clipId) setActiveMask(clipId, null);
-      return resetClip(clipId, [], (c) => void delete c.masks);
-    case 'tracking':
-      if (useTracking.getState().job?.clipId === clipId) cancelTracking();
-      if (useTracking.getState().active?.clipId === clipId) setActiveTracker(clipId, null);
-      return resetClip(clipId, [], (c) => {
-        // A stabilize or reframe link to the clip's own tracker goes with it.
-        if (c.motion && c.trackers?.some((x) => x.id === c.motion!.trackerId)) delete c.motion;
-        delete c.trackers;
-      });
-    case 'reframe':
-      return resetClip(clipId, [], (c) => {
-        if (c.motion?.mode !== 'reframe') return;
-        const id = c.motion.trackerId;
-        delete c.motion;
-        c.trackers = c.trackers?.filter((x) => x.id !== id);
-        if (!c.trackers?.length) delete c.trackers;
-        delete c.transform.fit;
-      });
-  }
+/**
+ * The clip menu's Reset, in one undo step: the clips lose everything added to them — effects and
+ * filters, blend, masks, tracking and attachments, keyframes, voice and space, speed changes — and
+ * their transform and audio go back to a new clip's. Their place, trim and content stay.
+ */
+export function resetClipsToDefault(clipIds: readonly ID[]) {
+  for (const id of clipIds) releaseClipUi(id);
+  useProjectStore.getState().edit('ops.resetClip', (p) => {
+    for (const id of clipIds) {
+      const ref = findClip(p, id);
+      if (!ref || ref.track.locked) continue;
+      const c = ref.clip;
+      // A background's cover fit is how it was added; a reframe's fit goes with the reframe.
+      const fit = c.motion?.mode === 'reframe' ? undefined : c.transform.fit;
+      for (const s of RESET_ALL) SECTIONS[s].recipe(c, p);
+      if (fit) c.transform.fit = fit;
+      delete c.effects;
+      delete c.motion;
+      delete c.keyframes;
+    }
+  });
 }
 
 /** Project settings as a new project starts (16:9, 30 fps, no platform). */

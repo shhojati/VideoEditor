@@ -15,6 +15,7 @@ import { cutSelectionToBeat, fitSelectionToBeat } from './beatActions';
 import { Breadcrumb, MakeCompoundButton, MarkersMenu } from './CompoundBar';
 import { ClipBox, ClipView } from './ClipView';
 import { onLaneDragLeave, onLaneDragOver, onLaneDrop } from './interactions';
+import { beginMarquee, useMarquee } from './marquee';
 import { Ruler } from './Ruler';
 import { SubtitleLane } from './SubtitleLane';
 import { CutMarkers } from './CutMarkers';
@@ -199,6 +200,7 @@ function TimelineBody({ project, duration }: { project: Project; duration: numbe
         <NewTrackZone pps={pps} project={project} />
 
         <Playhead pps={pps} />
+        <MarqueeBox pps={pps} headerWidth={headerWidth} />
         {guide !== undefined && (
           <div
             className="pointer-events-none absolute top-0 bottom-0 z-20 w-px bg-yellow-300"
@@ -242,7 +244,10 @@ const TrackRow = memo(function TrackRow({
         data-track-id={track.id}
         className={`relative flex-1 ${off ? 'opacity-40' : ''} ${track.locked ? 'bg-[repeating-linear-gradient(45deg,#15171c,#15171c_6px,#1a1d23_6px,#1a1d23_12px)]' : 'bg-surface-0'}`}
         onPointerDown={(e) => {
-          if (e.target === e.currentTarget && !e.shiftKey && !e.ctrlKey) select([]);
+          if (e.target !== e.currentTarget) return;
+          // Mouse and pen draw a selection box; touch keeps scrolling the timeline.
+          if (e.pointerType !== 'touch' && e.button === 0) beginMarquee(e);
+          else if (!e.shiftKey && !e.ctrlKey) select([]);
         }}
         onDragOver={(e) => onTransitionDragOver(e, project, track.id) || onLaneDragOver(e, track.id)}
         onDragLeave={onLaneDragLeave}
@@ -475,6 +480,19 @@ function Playhead({ pps }: { pps: number }) {
     >
       <div className="absolute -left-[5px] top-0 h-0 w-0 border-x-[6px] border-t-[8px] border-x-transparent border-t-playhead" />
     </div>
+  );
+}
+
+/** The rubber-band selection box while one is being dragged. */
+function MarqueeBox({ pps, headerWidth }: { pps: number; headerWidth: number }) {
+  const box = useMarquee((s) => s.box);
+  if (!box) return null;
+  return (
+    <div
+      data-testid="marquee"
+      className="pointer-events-none absolute z-20 rounded-sm border border-accent bg-accent/15"
+      style={{ left: headerWidth + box.t0 * pps, width: (box.t1 - box.t0) * pps, top: box.y0, height: box.y1 - box.y0 }}
+    />
   );
 }
 

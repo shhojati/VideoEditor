@@ -64,6 +64,7 @@ test('LUT pack, imported .cube, color wheels and scopes; preview = export', asyn
   await clip.click({ position: { x: 20, y: 10 } });
 
   // Built-in Sepia from the Filters pane: red → (100, 89, 69).
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-filters').click();
   await page.locator('[data-testid=lut-item][data-lut=sepia]').click();
   const sepia = await centrePixel(page);
@@ -73,6 +74,7 @@ test('LUT pack, imported .cube, color wheels and scopes; preview = export', asyn
 
   // Apply LUT with an imported .cube that inverts: red → cyan.
   await clip.click({ position: { x: 20, y: 10 } });
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-effects').click();
   await page.locator('[data-testid=effect-item][data-kind=lut3d]').click();
   await page.getByTestId('lut-input').setInputFiles({ name: 'invert.cube', mimeType: 'text/plain', buffer: Buffer.from(INVERT) });

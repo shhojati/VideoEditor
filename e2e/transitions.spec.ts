@@ -78,6 +78,7 @@ test('crossfade dropped on a cut: preview = export, equal-power audio; dip to bl
   await expect(page.getByTestId('cut-handle')).toHaveCount(1);
 
   // Drag "Crossfade" from the Transitions tab onto the cut.
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-transitions').click();
   await page.getByTestId('transition-crossfade').dragTo(lane, { targetPosition: { x: 2.5 * 40, y: 20 } });
   await expect(page.getByTestId('transition-badge')).toHaveAttribute('data-kind', 'crossfade');

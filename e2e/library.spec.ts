@@ -186,6 +186,7 @@ test('stickers (animated GIF), sound effects and overlays from the server librar
   expect(p.assets[sound.assetId!]).toMatchObject({ kind: 'audio', library: { kind: 'sounds' } });
 
   // Overlays: a new video track above, blended with Screen (blue over the red sticker frame → magenta).
+  await page.getByTestId('tab-assets').click();
   await page.getByTestId('tab-overlays').click();
   await page.getByTestId('timeline').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('Home');
@@ -224,6 +225,7 @@ test('a server without a library folder explains how to add one', async ({ page 
   await page.route((url) => url.pathname.startsWith('/library/'), (route) => route.fulfill({ status: 404 }));
   await page.goto('/');
   await page.getByRole('button', { name: 'English' }).click();
+  await page.getByTestId('tab-assets').click();
   await page.getByTestId('tab-overlays').click();
   await expect(page.getByTestId('library-empty')).toContainText('No overlays on this server yet');
   await expect(page.getByTestId('library-empty')).toContainText('library/overlays/');

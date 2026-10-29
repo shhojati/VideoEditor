@@ -80,6 +80,7 @@ test('keylight keys a green screen; matte view; preview = export', async ({ page
     placeAssetAt(id('screen.mp4'), null, 0);
   });
   await page.locator('[data-testid=clip]', { hasText: 'screen.mp4' }).click({ position: { x: 20, y: 10 } });
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-effects').click();
   await page.locator('[data-testid=effect-item][data-kind=keylight]').click();
   const card = page.locator('[data-testid=effect-card][data-kind=keylight]');

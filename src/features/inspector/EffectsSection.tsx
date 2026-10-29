@@ -6,7 +6,7 @@ import { defaultParams, EFFECT_DEFS, moveEffect, type ParamSpec } from '../../mo
 import type { Asset, Clip, Effect, Project } from '../../model/types';
 import { useProject } from '../../store/projectStore';
 import { LutField, WheelField } from './ColorControls';
-import { useSubtitlesUi } from '../subtitles/subtitlesUi';
+import { openPane } from '../subtitles/subtitlesUi';
 import type { SetFn } from './ClipInspector';
 import { ColorField, NumberField, Section, SelectField } from './controls';
 import { FramePicker } from './FramePicker';
@@ -24,7 +24,7 @@ export function EffectsSection({ clip, asset, set }: { clip: Clip; asset?: Asset
       {effects.length === 0 && (
         <p className="text-xs text-neutral-400">
           {t('effects.none')}{' '}
-          <button className="text-accent underline" onClick={() => useSubtitlesUi.setState({ tab: 'effects' })}>
+          <button className="text-accent underline" onClick={() => openPane('effects')}>
             {t('effects.open')}
           </button>
         </p>

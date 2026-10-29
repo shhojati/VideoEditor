@@ -18,8 +18,8 @@ type NavId = 'media' | 'subtitles' | 'library' | 'fx' | 'inspector';
 const NAV: { id: NavId; icon: LucideIcon; label: string; tabs?: PanelTab[] }[] = [
   { id: 'media', icon: Clapperboard, label: 'panels.media', tabs: ['media'] },
   { id: 'subtitles', icon: MessageSquareText, label: 'panels.subtitles', tabs: ['subtitles'] },
-  { id: 'library', icon: Shapes, label: 'panels.library', tabs: ['assets', 'overlays', 'templates'] },
-  { id: 'fx', icon: WandSparkles, label: 'panels.fx', tabs: ['effects', 'transitions', 'filters', 'layouts'] },
+  { id: 'library', icon: Shapes, label: 'panels.library', tabs: ['assets', 'templates'] },
+  { id: 'fx', icon: WandSparkles, label: 'panels.fx', tabs: ['fx'] },
   { id: 'inspector', icon: SlidersHorizontal, label: 'panels.inspector' },
 ];
 const navOf = (tab: PanelTab) => NAV.find((n) => n.tabs?.includes(tab))!.id;

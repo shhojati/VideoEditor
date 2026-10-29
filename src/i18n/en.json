@@ -49,6 +49,7 @@
     "addText": "Add text",
     "clipProp": "Change clip property",
     "resetSection": "Reset section",
+    "resetClip": "Reset clip",
     "moveCues": "Move subtitles",
     "trimCue": "Retime subtitle",
     "splitCue": "Split subtitle",
@@ -647,7 +648,8 @@
       "fullscreen": "Preview full screen",
       "group": "Group / ungroup (compound that turns about its content)",
       "arrangeStep": "Bring forward / send backward",
-      "arrangeEnds": "Bring to front / send to back"
+      "arrangeEnds": "Bring to front / send to back",
+      "search": "Search everything"
     }
   },
   "transitions": {
@@ -1686,6 +1688,39 @@
     "backward": "Send backward",
     "sendToBack": "Send to back",
     "group": "Group",
-    "ungroup": "Ungroup"
+    "ungroup": "Ungroup",
+    "reset": "Reset"
+  },
+  "search": {
+    "open": "Search",
+    "label": "Search everything",
+    "placeholder": "Search effects, templates, commands…",
+    "none": "Nothing found",
+    "needsCut": "Needs a cut near the playhead",
+    "needsClip": "Select a clip first",
+    "needsText": "Select a text clip first",
+    "needsSubtitles": "Open a subtitle track first",
+    "addText": "Add text",
+    "shape": "Shape",
+    "mask": "Mask",
+    "groups": {
+      "effects": "Effects",
+      "filters": "Filters",
+      "transitions": "Transitions",
+      "templates": "Templates",
+      "layouts": "Layouts",
+      "add": "Add",
+      "stickers": "Stickers",
+      "overlays": "Overlays",
+      "backgrounds": "Backgrounds",
+      "sounds": "Sound FX",
+      "blend": "Blend modes",
+      "masks": "Masks",
+      "voice": "Voice & space",
+      "textAnim": "Text animations",
+      "subtitleStyle": "Subtitle styles",
+      "panels": "Panels",
+      "commands": "Commands"
+    }
   }
 }

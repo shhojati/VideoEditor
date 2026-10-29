@@ -91,6 +91,7 @@ test('effects on a clip and on adjustment layers, a filter, drag onto a clip; pr
 
   // On the selected clip: Brightness & Contrast, darker.
   await red.click();
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-effects').click();
   await page.locator('[data-testid=effect-item][data-kind=brightnessContrast]').click();
   await expect(red.getByTestId('fx-badge')).toHaveText('fx');
@@ -109,12 +110,14 @@ test('effects on a clip and on adjustment layers, a filter, drag onto a clip; pr
   // …the Mono filter for 1–2 s…
   await deselect(page);
   await seek(page, 1);
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-filters').click();
   await page.locator('[data-testid=filter-item][data-preset=mono]').first().click();
   await setDuration(page, '1');
   // …and Fill (blue) for 2–3 s.
   await deselect(page);
   await seek(page, 2);
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-effects').click();
   await page.locator('[data-testid=effect-item][data-kind=fill]').click();
   await page.getByTestId('effect-card').first().locator('input[type=color]').fill('#0000ff');
@@ -172,6 +175,7 @@ test('a wipe effect animates over the start of its clip; "soon" effects cannot b
   await page.getByRole('button', { name: 'English' }).click();
   await page.getByTestId('btn-add-shape').click();
   await page.getByTestId('add-shape-square').click();
+  await page.getByTestId('tab-fx').click();
   await page.getByTestId('tab-effects').click();
   await page.locator('[data-testid=effect-item][data-kind=linearWipe]').click();
   const card = page.getByTestId('effect-card').first();

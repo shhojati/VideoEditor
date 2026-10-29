@@ -94,6 +94,7 @@ test('split screen and circle layouts; preview = export', async ({ page }) => {
   const clips = page.locator('[data-testid=clip]');
   await expect(clips).toHaveCount(2);
 
+  await page.getByTestId('tab-templates').click();
   await page.getByTestId('tab-layouts').click();
   await lane.click({ position: { x: 400, y: 20 } }); // empty lane: nothing selected
   await expect(page.getByTestId('layouts-selected')).toContainText('Select one or more');

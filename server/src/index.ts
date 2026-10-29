@@ -23,7 +23,9 @@ const aiConfig = aiConfigFromEnv(process.env);
 const handle = createApp({
   db,
   bridge,
-  chat: aiConfig.apiKey ? createChat({ db, config: aiConfig, now: Date.now }) : undefined,
+  chat: aiConfig.apiKey
+    ? createChat({ db, config: aiConfig, now: Date.now, failedRequestFile: join(dirname(dbPath), 'chat-refused.json') })
+    : undefined,
   publicUrl: process.env.PUBLIC_URL || undefined,
   secureCookies: flag('COOKIE_SECURE', !dev),
   trustProxy: flag('TRUST_PROXY', !dev),

@@ -1,6 +1,9 @@
 // node --test server/src  (npm run test:api)
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { createApp } from './app.ts';
@@ -124,6 +127,17 @@ describe('chat turns', () => {
     assert.equal(r.status, 502);
     assert.equal(r.data.error, 'ai_unavailable');
     assert.equal((db.prepare('SELECT credits FROM users WHERE id = ?').get(id) as { credits: number }).credits, 100);
+  });
+
+  it('saves a refused request for the owner to look at', async () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'chat-')), 'refused.json');
+    handle = createApp({ db, chat: createChat({ db, config, now: () => 1, fetch: fakeFetch, failedRequestFile: file }) });
+    const { c } = await user('a@example.com', 100);
+    reply = { status: 403, body: { success: false, error: 'Access denied by security policy.' } };
+    assert.equal((await c('POST', '/api/chat/turn', { messages: hi })).status, 502);
+    const saved = JSON.parse(readFileSync(file, 'utf8'));
+    assert.deepEqual(saved.messages.at(-1), hi[0]);
+    assert.equal(saved.model, config.model);
   });
 
   it('needs a login, and is off without a key', async () => {

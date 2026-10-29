@@ -2,7 +2,7 @@
 // the owner's key) for the next step and charges the user's credits for what it actually cost. Tool
 // calls come back to the tab, which runs them itself (src/features/agent/commands.ts) and sends the
 // results in the next turn: nothing of the project is stored here.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import type { Db } from './db.ts';
 import { INSTRUCTIONS } from './mcp.ts';
 
@@ -159,7 +159,26 @@ export function addCredits(
   return creditsOf(db, e.userId);
 }
 
-export function createChat(opts: { db: Db; config: AiConfig; now: () => number; fetch?: typeof fetch }) {
+/** One line about a conversation for the log: how long, what is in it, how it ends. */
+export function describeMessages(messages: Message[], bytes: number): string {
+  const images = messages.reduce(
+    (n, m) => n + (m.role === 'user' && typeof m.content !== 'string' ? m.content.filter((p) => p.type === 'image_url').length : 0),
+    0,
+  );
+  const tools = messages.flatMap((m) => (m.role === 'assistant' ? (m.tool_calls ?? []).map((c) => c.function.name) : []));
+  const last = messages.at(-1)!;
+  const end = last.role === 'tool' ? `tool result (${last.content.length} chars)` : last.role === 'user' && typeof last.content !== 'string' ? 'picture' : last.role;
+  return `${messages.length} messages, ${Math.round(bytes / 1024)} KB, ${images} picture(s), tools so far: ${tools.join(' ') || 'none'}; ends with ${end}`;
+}
+
+export function createChat(opts: {
+  db: Db;
+  config: AiConfig;
+  now: () => number;
+  fetch?: typeof fetch;
+  /** Where the last request the provider refused is saved, to see what it objected to. */
+  failedRequestFile?: string;
+}) {
   const { db, config } = opts;
   const fetchImpl = opts.fetch ?? fetch;
 
@@ -179,6 +198,14 @@ export function createChat(opts: { db: Db; config: AiConfig; now: () => number; 
       if (!config.apiKey) throw new ChatError(503, 'ai_disabled');
       const messages = checkMessages(rawMessages);
       if (creditsOf(db, userId) < config.minCredits) throw new ChatError(402, 'no_credits');
+      const body = JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'system', content: SYSTEM }, ...messages],
+        tools: CHAT_TOOLS,
+        max_tokens: config.maxTokens,
+        usage: { include: true },
+        user: `u${userId}`,
+      });
       let r: Response;
       try {
         r = await fetchImpl(`${config.baseUrl}/chat/completions`, {
@@ -188,14 +215,7 @@ export function createChat(opts: { db: Db; config: AiConfig; now: () => number; 
             'Content-Type': 'application/json',
             'X-Title': 'Vidora',
           },
-          body: JSON.stringify({
-            model: config.model,
-            messages: [{ role: 'system', content: SYSTEM }, ...messages],
-            tools: CHAT_TOOLS,
-            max_tokens: config.maxTokens,
-            usage: { include: true },
-            user: `u${userId}`,
-          }),
+          body,
           signal: AbortSignal.timeout(config.timeoutMs),
         });
       } catch (e) {
@@ -205,7 +225,14 @@ export function createChat(opts: { db: Db; config: AiConfig; now: () => number; 
       const data = (await r.json().catch(() => null)) as Completion | null;
       const msg = data?.choices?.[0]?.message;
       if (!r.ok || !msg) {
-        console.error('chat: provider error', r.status, JSON.stringify(data).slice(0, 500));
+        console.error('chat: provider error', r.status, JSON.stringify(data).slice(0, 500), '|', describeMessages(messages, body.length));
+        if (opts.failedRequestFile)
+          try {
+            writeFileSync(opts.failedRequestFile, body);
+            console.error('chat: refused request saved to', opts.failedRequestFile);
+          } catch (e) {
+            console.error('chat: could not save the refused request', e);
+          }
         throw new ChatError(502, 'ai_unavailable');
       }
       const charged = price(data.usage);

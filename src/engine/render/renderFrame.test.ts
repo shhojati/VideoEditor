@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createProject, createTrack } from '../../model/factories';
-import { createClip, insertClip } from '../../model/timeline';
+import { makeCompound } from '../../model/sequences';
+import { createClip, findClip, insertClip } from '../../model/timeline';
 import type { Asset, Clip, Transform } from '../../model/types';
 import { clipGainAt, fadeAlpha } from '../fade';
-import { placeMedia, renderFrame, sourceTimeAt, type Ctx2D, type Drawable } from './renderFrame';
+import { passesThrough, placeMedia, renderFrame, sourceTimeAt, type Ctx2D, type Drawable } from './renderFrame';
 
 const tr = (over: Partial<Transform> = {}): Transform => ({ x: 0, y: 0, scale: 1, rotation: 0, opacity: 1, ...over });
 
@@ -88,6 +89,39 @@ describe('renderFrame', () => {
     p.tracks.find((t) => t.clips.some((c) => c.id === 'low'))!.clips[0].transform.opacity = 0;
     renderFrame(p, 3, ctx2, (c) => (c.id === 'high' ? undefined : drawable(c.id, ctx2.calls)));
     expect(ctx2.calls).toEqual([]);
+  });
+});
+
+describe('groups', () => {
+  const asset: Asset = { id: 'a', kind: 'video', name: 'a', duration: 10, fileRef: {} };
+
+  function grouped(group: boolean) {
+    const p = createProject('t');
+    const lower = p.tracks.find((t) => t.kind === 'video')!;
+    const upper = createTrack('video');
+    p.tracks.push(upper);
+    insertClip(lower, { ...createClip(asset, 0), id: 'sky' });
+    insertClip(upper, { ...createClip(asset, 0), id: 'hills' });
+    const id = makeCompound(p, ['sky', 'hills'], 'G', group ? { pivot: { x: 960, y: 540 } } : undefined)!;
+    return { p, group: findClip(p, id)!.clip };
+  }
+
+  it('a group draws its clips straight onto the frame, so their blend modes see what is below', () => {
+    const { p, group } = grouped(true);
+    expect(group.group).toBe(true);
+    expect(passesThrough(group)).toBe(true);
+    const ctx = recordingCtx();
+    // No layer of its own: the parts reach the frame's context (OffscreenCanvas is not even needed).
+    renderFrame(p, 1, ctx, (c) => (c.sequenceId ? undefined : drawable(c.id, ctx.calls)));
+    expect(ctx.calls).toEqual(['sky', 'hills']);
+  });
+
+  it('a group with its own blend, effects or masks, and a compound clip, keep their own layer', () => {
+    const { group } = grouped(true);
+    expect(passesThrough({ ...group, blend: 'screen' })).toBe(false);
+    expect(passesThrough({ ...group, masks: [{} as never] })).toBe(false);
+    expect(passesThrough({ ...group, transform: { ...group.transform, crop: { x: 0, y: 0, width: 0.5, height: 1 } } })).toBe(false);
+    expect(passesThrough(grouped(false).group)).toBe(false);
   });
 });
 

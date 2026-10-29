@@ -405,6 +405,12 @@ export interface Clip {
   transcript?: ClipTranscript;
   /** A compound clip: plays this sequence (Project.sequences) instead of a media file. */
   sequenceId?: ID;
+  /**
+   * A compound clip made by Group (Ctrl+G, the agent's group_clips): while it has no effects, masks,
+   * blend mode, crop or paint of its own, its clips are drawn straight onto the frame (pass-through),
+   * so their blend modes see what is below the group and nothing is cut at the frame's edge.
+   */
+  group?: true;
   transform: Transform;
   audio: ClipAudio;
   text?: TextProps;

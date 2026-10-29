@@ -267,6 +267,47 @@ function compoundDrawable(project: Project, clip: Clip, t: number, lookup: Frame
   };
 }
 
+/** A group with nothing of its own to apply to its picture as a whole: its clips draw in place. */
+export const passesThrough = (clip: Clip) =>
+  !!clip.group && (clip.blend ?? 'normal') === 'normal' && !hasLiveEffects(clip.effects) && !clip.masks?.length && !clip.transform.crop && !clip.paint && !clip.adjustment;
+
+/**
+ * A pass-through group: its tracks drawn straight onto `ctx` under the group's transform, so blend
+ * modes inside it blend with what is below and parts moving past the frame are not cut. Below full
+ * opacity the parts are drawn over a copy of the backdrop and that fades in as one, so the group
+ * fades as a whole (parts do not show through each other) while their blends still see the scene.
+ */
+function drawGroupInPlace(project: Project, clip: Clip, t: number, ctx: Ctx2D, base: FrameLookup, depth: number) {
+  const seqId = clip.sequenceId!;
+  const opacity = clip.transform.opacity;
+  if (depth >= MAX_NEST || !project.sequences?.[seqId] || opacity <= 0) return;
+  const at = Math.max(0, mediaTimeAt(clip, t));
+  if (at >= sequenceDuration(project, seqId)) return;
+  const { width: W, height: H } = project.settings;
+  const p = placeMedia(W, H, W, H, clip.transform);
+  const inside = (c: Ctx2D) => {
+    c.save();
+    c.translate(p.cx, p.cy);
+    if (p.rotation) c.rotate(p.rotation);
+    c.translate(p.frame.x, p.frame.y);
+    c.scale(p.frame.w / W, p.frame.h / H);
+    drawTracks(sequenceView(project, seqId), at, c, base, depth + 1);
+    c.restore();
+  };
+  if (opacity * ctx.globalAlpha >= 1) {
+    inside(ctx);
+    return;
+  }
+  const backdropThenParts = (c: Ctx2D) => {
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(ctx.canvas, 0, 0);
+    c.restore();
+    inside(c);
+  };
+  drawBlended(ctx, 'normal', backdropThenParts, { post: () => {}, alpha: opacity });
+}
+
 /** Every visual track of a timeline at time t, bottom to top (compound clips draw their insides). */
 function drawTracks(project: Project, t: number, ctx: Ctx2D, base: FrameLookup, depth: number) {
   const { width, height } = project.settings;
@@ -276,7 +317,8 @@ function drawTracks(project: Project, t: number, ctx: Ctx2D, base: FrameLookup, 
   const draw = (clip: Clip) => {
     const keyed = keyedClip(clip, t);
     const moved = withParent(project, withMotion(project, keyed, t), t);
-    drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, keyed, t, moved), project.luts);
+    if (moved.sequenceId && passesThrough(moved)) drawGroupInPlace(project, moved, t, ctx, base, depth);
+    else drawClip(ctx, moved, t, lookup, width, height, resolveMasks(project, keyed, t, moved), project.luts);
   };
   for (const item of drawPlanAt(project, t)) {
     if (item.kind === 'clip') draw(item.clip);

@@ -120,6 +120,7 @@ const clip = z.object({
   audioDetached: z.literal(true).optional(),
   transcript: z.object({ language: z.string(), rtl: z.boolean(), words: z.array(z.object({ text: z.string(), s: nonNeg, e: nonNeg })) }).optional(),
   sequenceId: z.string().optional(),
+  group: z.literal(true).optional(),
   transform: z.object({
     x: num,
     y: num,

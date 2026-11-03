@@ -29,11 +29,18 @@ services:
     environment:
       # The editor's public https address: AI apps (MCP, docs/MCP.md) are sent here to log in.
       PUBLIC_URL: ${PUBLIC_URL:-https://editor.shahabdev.ir}
-      # Built-in AI chat (server/src/chat.ts, docs/DEPLOY.md): off until the OpenRouter key is set in .env.
+      # Built-in AI chat (server/src/chat.ts, docs/DEPLOY.md): off until the provider's key is set in .env.
+      AI_PROVIDER: ${AI_PROVIDER:-openrouter}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      AI_MODEL: ${AI_MODEL:-openai/gpt-4.1-mini}
+      GAPGPT_API_KEY: ${GAPGPT_API_KEY:-}
+      # Empty: the provider's default (openai/gpt-4.1-mini on OpenRouter, gpt-4.1-mini on GapGPT).
+      AI_MODEL: ${AI_MODEL:-}
       AI_MARKUP: ${AI_MARKUP:-1.5}
       AI_CREDITS_PER_USD: ${AI_CREDITS_PER_USD:-1000}
+      # GapGPT only: its price list in Toman per million tokens, and what one credit sells for.
+      AI_PRICE_IN_TOMAN: ${AI_PRICE_IN_TOMAN:-}
+      AI_PRICE_OUT_TOMAN: ${AI_PRICE_OUT_TOMAN:-}
+      AI_TOMAN_PER_CREDIT: ${AI_TOMAN_PER_CREDIT:-200}
     volumes:
       # SQLite database (app.db). Back this folder up.
       - ./data:/data

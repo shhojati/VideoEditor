@@ -1,6 +1,8 @@
 // Account API and MCP server. Env: PORT (3000), DB_PATH (/data/app.db), COOKIE_SECURE (1), TRUST_PROXY (1),
 // PUBLIC_URL (the editor's https address, for OAuth; default: from the Host header).
-// AI chat (chat.ts): OPENROUTER_API_KEY turns it on; AI_MODEL, AI_MARKUP, AI_CREDITS_PER_USD, AI_MIN_CREDITS tune it.
+// AI chat (chat.ts): AI_PROVIDER picks openrouter (OPENROUTER_API_KEY) or gapgpt (GAPGPT_API_KEY plus
+// AI_PRICE_IN_TOMAN / AI_PRICE_OUT_TOMAN); AI_MODEL, AI_MARKUP, AI_CREDITS_PER_USD, AI_TOMAN_PER_CREDIT,
+// AI_MIN_CREDITS tune it.
 // `--dev` (npm run dev:api): server/data/dev.db, plain-http cookies, no proxy in front.
 import { mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -8,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
 import { Bridge } from './bridge.ts';
-import { aiConfigFromEnv, createChat } from './chat.ts';
+import { aiConfigFromEnv, aiConfigProblem, createChat } from './chat.ts';
 import { openDb } from './db.ts';
 
 const dev = process.argv.includes('--dev');
@@ -20,10 +22,12 @@ mkdirSync(dirname(dbPath), { recursive: true });
 const db = openDb(dbPath);
 const bridge = new Bridge();
 const aiConfig = aiConfigFromEnv(process.env);
+const aiProblem = aiConfigProblem(aiConfig);
+console.log(aiProblem ? `chat: off (${aiConfig.provider}: ${aiProblem})` : `chat: ${aiConfig.provider}, model ${aiConfig.model}`);
 const handle = createApp({
   db,
   bridge,
-  chat: aiConfig.apiKey
+  chat: !aiProblem
     ? createChat({ db, config: aiConfig, now: Date.now, failedRequestFile: join(dirname(dbPath), 'chat-refused.json') })
     : undefined,
   publicUrl: process.env.PUBLIC_URL || undefined,

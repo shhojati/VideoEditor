@@ -1,13 +1,17 @@
-// The editor's built-in AI chat. The tab sends the conversation, this asks the model (OpenRouter,
-// the owner's key) for the next step and charges the user's credits for what it actually cost. Tool
+// The editor's built-in AI chat. The tab sends the conversation, this asks the model (OpenRouter or
+// GapGPT, the owner's key) for the next step and charges the user's credits for what it cost. Tool
 // calls come back to the tab, which runs them itself (src/features/agent/commands.ts) and sends the
 // results in the next turn: nothing of the project is stored here.
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Db } from './db.ts';
 import { INSTRUCTIONS } from './mcp.ts';
 
+export type AiProvider = 'openrouter' | 'gapgpt';
+
 export interface AiConfig {
-  /** OpenRouter key; chat is off without it. */
+  /** Both speak OpenAI chat/completions; OpenRouter reports a USD cost, GapGPT is priced in Toman. */
+  provider: AiProvider;
+  /** The provider's key; chat is off without it. */
   apiKey: string;
   model: string;
   baseUrl: string;
@@ -20,25 +24,68 @@ export interface AiConfig {
   maxTokens: number;
   /** Price per million tokens when the provider does not report a cost. */
   fallbackUsdPerMTok: number;
+  /** GapGPT: its price list, Toman per million input / output tokens (0 = not set, chat stays off). */
+  tomanPerMTokIn: number;
+  tomanPerMTokOut: number;
+  /** GapGPT: what one credit is sold for (a 500-credit pack for 100,000 Toman = 200). */
+  tomanPerCredit: number;
   timeoutMs: number;
 }
 
-/** Env: OPENROUTER_API_KEY, AI_MODEL, AI_BASE_URL, AI_MARKUP, AI_CREDITS_PER_USD, AI_MIN_CREDITS, AI_MAX_TOKENS. */
+/**
+ * Env: AI_PROVIDER (openrouter | gapgpt), OPENROUTER_API_KEY / GAPGPT_API_KEY, AI_MODEL, AI_BASE_URL,
+ * AI_MARKUP, AI_CREDITS_PER_USD, AI_PRICE_IN_TOMAN, AI_PRICE_OUT_TOMAN, AI_TOMAN_PER_CREDIT,
+ * AI_MIN_CREDITS, AI_MAX_TOKENS.
+ */
 export function aiConfigFromEnv(env: NodeJS.ProcessEnv): AiConfig {
   const num = (name: string, def: number) => {
     const v = Number(env[name]);
     return env[name] && Number.isFinite(v) && v > 0 ? v : def;
   };
+  const gap = env.AI_PROVIDER?.trim().toLowerCase() === 'gapgpt';
   return {
-    apiKey: env.OPENROUTER_API_KEY ?? '',
-    model: env.AI_MODEL || 'openai/gpt-4.1-mini',
-    baseUrl: (env.AI_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/+$/, ''),
+    provider: gap ? 'gapgpt' : 'openrouter',
+    apiKey: (gap ? env.GAPGPT_API_KEY : env.OPENROUTER_API_KEY) ?? '',
+    model: env.AI_MODEL || (gap ? 'gpt-4.1-mini' : 'openai/gpt-4.1-mini'),
+    baseUrl: (env.AI_BASE_URL || (gap ? 'https://api.gapgpt.app/v1' : 'https://openrouter.ai/api/v1')).replace(/\/+$/, ''),
+    tomanPerMTokIn: num('AI_PRICE_IN_TOMAN', 0),
+    tomanPerMTokOut: num('AI_PRICE_OUT_TOMAN', 0),
+    tomanPerCredit: num('AI_TOMAN_PER_CREDIT', 200),
     markup: num('AI_MARKUP', 1.5),
     creditsPerUsd: num('AI_CREDITS_PER_USD', 1000),
     minCredits: num('AI_MIN_CREDITS', 5),
     maxTokens: num('AI_MAX_TOKENS', 2048),
     fallbackUsdPerMTok: num('AI_FALLBACK_USD_PER_MTOK', 5),
     timeoutMs: num('AI_TIMEOUT_MS', 120_000),
+  };
+}
+
+/** Why chat cannot run with this config (for the startup log), or null when it can. */
+export function aiConfigProblem(config: AiConfig): string | null {
+  if (!config.apiKey) return `no ${config.provider === 'gapgpt' ? 'GAPGPT_API_KEY' : 'OPENROUTER_API_KEY'}`;
+  // Without a price every turn would cost 1 credit, whatever the owner pays GapGPT.
+  if (config.provider === 'gapgpt' && !(config.tomanPerMTokIn && config.tomanPerMTokOut)) return 'no AI_PRICE_IN_TOMAN / AI_PRICE_OUT_TOMAN';
+  return null;
+}
+
+/** The request for one turn: OpenRouter's extras (cost in usage, app name) only go to OpenRouter. */
+export function completionRequest(config: AiConfig, userId: number, messages: unknown[]) {
+  const openRouter = config.provider === 'openrouter';
+  return {
+    url: `${config.baseUrl}/chat/completions`,
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json',
+      ...(openRouter && { 'X-Title': 'Vidora' }),
+    } as Record<string, string>,
+    body: {
+      model: config.model,
+      messages: [{ role: 'system', content: SYSTEM }, ...messages],
+      tools: CHAT_TOOLS,
+      max_tokens: config.maxTokens,
+      ...(openRouter && { usage: { include: true } }),
+      user: `u${userId}`,
+    } as Record<string, unknown>,
   };
 }
 
@@ -201,6 +248,10 @@ export function createChat(opts: {
 
   /** Credits for a completion: the reported cost (or a token estimate), marked up, rounded up, at least 1. */
   function price(usage: Completion['usage']): number {
+    if (config.provider === 'gapgpt') {
+      const toman = ((usage?.prompt_tokens ?? 0) * config.tomanPerMTokIn + (usage?.completion_tokens ?? 0) * config.tomanPerMTokOut) / 1e6;
+      return Math.max(1, Math.ceil((toman * config.markup) / config.tomanPerCredit));
+    }
     const tokens = (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0);
     const usd = typeof usage?.cost === 'number' && usage.cost >= 0 ? usage.cost : (tokens * config.fallbackUsdPerMTok) / 1e6;
     return Math.max(1, Math.ceil(usd * config.markup * config.creditsPerUsd));
@@ -208,42 +259,27 @@ export function createChat(opts: {
 
   return {
     get enabled() {
-      return !!config.apiKey;
+      return !aiConfigProblem(config);
     },
 
     async turn(userId: number, rawMessages: unknown) {
-      if (!config.apiKey) throw new ChatError(503, 'ai_disabled');
+      if (aiConfigProblem(config)) throw new ChatError(503, 'ai_disabled');
       const messages = checkMessages(rawMessages);
       for (const line of failedCalls(messages)) console.warn(`chat: u${userId} tool failed ${line}`);
       if (creditsOf(db, userId) < config.minCredits) throw new ChatError(402, 'no_credits');
-      const body = JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'system', content: SYSTEM }, ...messages],
-        tools: CHAT_TOOLS,
-        max_tokens: config.maxTokens,
-        usage: { include: true },
-        user: `u${userId}`,
-      });
+      const req = completionRequest(config, userId, messages);
+      const body = JSON.stringify(req.body);
       let r: Response;
       try {
-        r = await fetchImpl(`${config.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${config.apiKey}`,
-            'Content-Type': 'application/json',
-            'X-Title': 'Vidora',
-          },
-          body,
-          signal: AbortSignal.timeout(config.timeoutMs),
-        });
+        r = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body, signal: AbortSignal.timeout(config.timeoutMs) });
       } catch (e) {
-        console.error('chat: provider unreachable', e);
+        console.error(`chat: ${config.provider} unreachable`, e);
         throw new ChatError(502, 'ai_unavailable');
       }
       const data = (await r.json().catch(() => null)) as Completion | null;
       const msg = data?.choices?.[0]?.message;
       if (!r.ok || !msg) {
-        console.error('chat: provider error', r.status, JSON.stringify(data).slice(0, 500), '|', describeMessages(messages, body.length));
+        console.error(`chat: ${config.provider} error`, r.status, JSON.stringify(data).slice(0, 500), '|', describeMessages(messages, body.length));
         if (opts.failedRequestFile)
           try {
             writeFileSync(opts.failedRequestFile, body);
@@ -254,7 +290,7 @@ export function createChat(opts: {
         throw new ChatError(502, 'ai_unavailable');
       }
       const charged = price(data.usage);
-      const credits = addCredits(db, opts.now(), { userId, delta: -charged, reason: 'chat', note: config.model });
+      const credits = addCredits(db, opts.now(), { userId, delta: -charged, reason: 'chat', note: `${config.provider}:${config.model}` });
       const calls = (msg.tool_calls ?? []).filter((c) => c?.function?.name);
       return {
         message: {

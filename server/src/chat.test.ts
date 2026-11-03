@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { createApp } from './app.ts';
-import { aiConfigFromEnv, CHAT_TOOLS, checkMessages, createChat, failedCalls } from './chat.ts';
+import { aiConfigFromEnv, aiConfigProblem, CHAT_TOOLS, checkMessages, createChat, failedCalls } from './chat.ts';
 import { openDb, type Db } from './db.ts';
 
 let db: Db;
@@ -75,6 +75,8 @@ describe('chat turns', () => {
     const [req] = sent;
     assert.equal(req.url, 'https://openrouter.ai/api/v1/chat/completions');
     assert.equal(req.headers.Authorization, 'Bearer sk-test');
+    assert.equal(req.headers['X-Title'], 'Vidora');
+    assert.deepEqual(req.body.usage, { include: true });
     const msgs = req.body.messages as { role: string }[];
     assert.equal(msgs[0].role, 'system');
     assert.equal(msgs.length, 2);
@@ -138,6 +140,31 @@ describe('chat turns', () => {
     const saved = JSON.parse(readFileSync(file, 'utf8'));
     assert.deepEqual(saved.messages.at(-1), hi[0]);
     assert.equal(saved.model, config.model);
+  });
+
+  it('asks GapGPT without OpenRouter extras and charges its Toman prices', async () => {
+    const env = { AI_PROVIDER: 'gapgpt', GAPGPT_API_KEY: 'gap-key', AI_MARKUP: '1.5', AI_PRICE_IN_TOMAN: '100000', AI_PRICE_OUT_TOMAN: '400000' };
+    const gap = aiConfigFromEnv(env);
+    assert.equal(aiConfigProblem(gap), null);
+    assert.match(aiConfigProblem(aiConfigFromEnv({ ...env, AI_PRICE_OUT_TOMAN: '' })) ?? '', /AI_PRICE/);
+    assert.match(aiConfigProblem(aiConfigFromEnv({ ...env, GAPGPT_API_KEY: '' })) ?? '', /GAPGPT_API_KEY/);
+    handle = createApp({ db, chat: createChat({ db, config: gap, now: () => 1, fetch: fakeFetch }) });
+    const { c } = await user('a@example.com', 100);
+    // 20000 × 100000 + 500 × 400000 = 2200 Toman, × 1.5 ÷ 200 = 16.5 → 17
+    reply.body = { choices: [{ message: { content: 'ok' } }], usage: { prompt_tokens: 20000, completion_tokens: 500 } };
+    const r = await c('POST', '/api/chat/turn', { messages: hi });
+    assert.equal(r.data.charged, 17);
+    assert.equal(r.data.credits, 83);
+    const [req] = sent;
+    assert.equal(req.url, 'https://api.gapgpt.app/v1/chat/completions');
+    assert.equal(req.headers.Authorization, 'Bearer gap-key');
+    assert.equal(req.headers['X-Title'], undefined);
+    assert.equal(req.body.model, 'gpt-4.1-mini');
+    assert.equal(req.body.usage, undefined);
+    assert.equal((req.body.tools as unknown[]).length, CHAT_TOOLS.length);
+    // A tiny request still costs a credit.
+    reply.body = { choices: [{ message: { content: 'ok' } }], usage: { prompt_tokens: 10, completion_tokens: 1 } };
+    assert.equal((await c('POST', '/api/chat/turn', { messages: hi })).data.charged, 1);
   });
 
   it('needs a login, and is off without a key', async () => {

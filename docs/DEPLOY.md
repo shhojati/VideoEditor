@@ -87,9 +87,13 @@ Admin page: `https://editor.example.com/admin` — search accounts by email or c
 
 ### AI assistant (built-in chat, paid with credits)
 
-The editor's right column has an **Inspector | AI** switch (phones: the **AI** button in the bottom bar). Users type what they want changed. The `api` service sends the conversation to an AI model through [OpenRouter](https://openrouter.ai) with **your** key. The model's tool calls run in the user's own tab (the same tools as the MCP server, `src/features/agent/commands.ts`), so the server does no heavy work.
+The editor's right column has an **Inspector | AI** switch (phones: the **AI** button in the bottom bar). Users type what they want changed. The `api` service sends the conversation to an AI model through [OpenRouter](https://openrouter.ai) or [GapGPT](https://gapgpt.app/platform) (`AI_PROVIDER`) with **your** key. The model's tool calls run in the user's own tab (the same tools as the MCP server, `src/features/agent/commands.ts`), so the server does no heavy work.
 
-Each request is charged in **credits**: the provider's reported cost × `AI_MARKUP` × `AI_CREDITS_PER_USD`, rounded up, with a minimum of 1. With the defaults (×1.5, 1000 credits per $), a request costing $0.002 uses 3 credits. A request needs at least 5 credits to start, and failed requests are free. Users buy credit packs the same way as Pro (Telegram message with their account code). Give credits on the admin page with **Add credits**; a negative number takes credits back. Every change is kept in the `credit_ledger` table.
+Each request is charged in **credits**, rounded up, with a minimum of 1:
+- OpenRouter: the reported cost × `AI_MARKUP` × `AI_CREDITS_PER_USD`. With the defaults (×1.5, 1000 credits per $), a request costing $0.002 uses 3 credits.
+- GapGPT (it reports tokens, not a cost): (input tokens × `AI_PRICE_IN_TOMAN` + output tokens × `AI_PRICE_OUT_TOMAN`) ÷ 1,000,000 × `AI_MARKUP` ÷ `AI_TOMAN_PER_CREDIT`. Example: 20,000 tokens in at 100,000 Toman/M and 500 out at 400,000 Toman/M cost 2,200 Toman; ×1.5 ÷ 200 = 17 credits.
+
+A request needs at least 5 credits to start, and failed requests are free. Users buy credit packs the same way as Pro (Telegram message with their account code). Give credits on the admin page with **Add credits**; a negative number takes credits back. Every change is kept in the `credit_ledger` table.
 
 Turn it on in `/srv/video-editor/.env`, then run `docker compose up -d`:
 
@@ -100,6 +104,21 @@ AI_MODEL=openai/gpt-4.1-mini      # any OpenRouter model with tool calling (and 
 AI_MARKUP=1.5                     # your margin over the provider's price
 AI_CREDITS_PER_USD=1000
 ```
+
+Or with GapGPT (Iranian gateway, paid in Toman; key and price list on its platform page after login):
+
+```bash
+AI_PROVIDER=gapgpt
+GAPGPT_API_KEY=...
+AI_PRICE_IN_TOMAN=100000          # Toman per million input tokens of AI_MODEL, from GapGPT's price list
+AI_PRICE_OUT_TOMAN=400000         # per million output tokens
+# Optional:
+AI_MODEL=gpt-4.1-mini             # a GapGPT model id with tool calling (GET https://api.gapgpt.app/v1/models)
+AI_TOMAN_PER_CREDIT=200           # what one credit sells for (500 credits for 100,000 Toman)
+AI_BASE_URL=https://api.gapgpt.app/v1
+```
+
+Chat stays off with GapGPT until both prices are set. `docker compose logs api | grep chat:` shows at start which provider and model are in use, or why chat is off. When a provider refuses a request, the request is saved to `data/chat-refused.json`; `docker compose exec api node src/chatReplay.ts /data/chat-refused.json` finds the message it objects to.
 
 Without a key, the AI tab says the assistant is not available and the account dialog hides credits. Set the prices of credit packs in `pricing.json` (`creditPacks`). Set a spending limit on the OpenRouter key too. Check that your provider's terms allow serving your users' region.
 

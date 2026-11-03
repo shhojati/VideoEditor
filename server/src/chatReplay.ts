@@ -1,8 +1,10 @@
 // Finds what the AI provider refused in a saved chat request (chat.ts saves the last one to
 // data/chat-refused.json). Sends it again, then smaller versions of it, and names the first message
-// that gets it refused. Every request asks for one token, so this costs very little.
+// that gets it refused, by the provider AI_PROVIDER picks. Every request asks for one token, so this
+// costs very little.
 //   docker compose exec api node src/chatReplay.ts /data/chat-refused.json
 import { readFileSync } from 'node:fs';
+import { aiConfigFromEnv, aiConfigProblem, completionRequest } from './chat.ts';
 
 interface Body {
   model: string;
@@ -12,16 +14,18 @@ interface Body {
 }
 
 const file = process.argv[2] ?? '/data/chat-refused.json';
-const key = process.env.OPENROUTER_API_KEY;
-const base = (process.env.AI_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/+$/, '');
-if (!key) throw new Error('OPENROUTER_API_KEY is not set');
+const config = aiConfigFromEnv(process.env);
+const problem = aiConfigProblem(config);
+if (problem) throw new Error(problem);
 const saved = JSON.parse(readFileSync(file, 'utf8')) as Body;
 
 async function send(label: string, body: Body): Promise<number> {
-  const r = await fetch(`${base}/chat/completions`, {
+  // The saved conversation and tools, with the selected provider's model, headers and extras.
+  const req = completionRequest(config, 0, []);
+  const r = await fetch(req.url, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'X-Title': 'Vidora' },
-    body: JSON.stringify({ ...body, max_tokens: 1 }),
+    headers: req.headers,
+    body: JSON.stringify({ ...req.body, messages: body.messages, tools: body.tools, max_tokens: 1 }),
   });
   const text = (await r.text()).replace(/\s+/g, ' ');
   console.log(`${label.padEnd(34)} ${r.status} ${r.ok ? '' : text.slice(0, 120)}`);
@@ -50,7 +54,7 @@ function prefix(b: Body, n: number): Body {
 }
 
 console.log(`${file}: ${saved.messages.length} messages, model ${saved.model}\n`);
-if ((await send('as saved', saved)) !== 403) {
+if ((await send('as saved', saved)) < 400) {
   console.log('\nNot refused now: the refusal was temporary (rate or abuse limits), not the content.');
   process.exit(0);
 }
@@ -63,7 +67,7 @@ let lastGood = 0;
 for (let i = 1; i <= n; i++) {
   const b = prefix(saved, i);
   if (b.messages.length !== i + 1) continue; // ends inside a tool call: not a valid conversation
-  if ((await send(`first ${i} message(s)`, b)) !== 403) {
+  if ((await send(`first ${i} message(s)`, b)) < 400) {
     lastGood = i;
     continue;
   }
@@ -75,4 +79,4 @@ for (let i = 1; i <= n; i++) {
   }
   break;
 }
-if (pics !== 403) console.log('\nWithout pictures it goes through: the provider refuses a picture (snapshot).');
+if (pics < 400) console.log('\nWithout pictures it goes through: the provider refuses a picture (snapshot).');
